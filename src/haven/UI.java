@@ -158,7 +158,7 @@ public class UI {
 
             if (type.equals("sm")) {
                 synchronized (fmAutoSelName) {
-                    if (fmAutoSelName != null && System.currentTimeMillis() - fmAutoTime < FM_AUTO_TIMEOUT) {
+                    if (System.currentTimeMillis() - fmAutoTime < FM_AUTO_TIMEOUT) {
                         Widget w = new WidgetDummy();
                         pwdg.addchild(w, pargs);
                         bind(w, id);
@@ -175,6 +175,42 @@ public class UI {
             }
 
             Widget wdg = pwdg.makechild(f, pargs, cargs);
+
+            if (wdg instanceof ISBox && pwdg instanceof Window && ((Window) pwdg).origcap.equals("Stockpile")) {
+                TextEntry entry = new TextEntry(40, "") {
+                    @Override
+                    public boolean type(char c, KeyEvent ev) {
+                        if (Config.userazerty)
+                            c = Utils.azerty2qwerty(c);
+
+                        if (c >= KeyEvent.VK_0 && c <= KeyEvent.VK_9 && buf.line.length() < 2 || c == '\b') {
+                            return buf.key(ev);
+                        } else if (c == '\n') {
+                            try {
+                                int count = Integer.parseInt(dtext());
+                                for (int i = 0; i < count; i++)
+                                    wdg.wdgmsg("xfer");
+                                return true;
+                            } catch (NumberFormatException e) {
+                            }
+                        }
+                        return false;
+                    }
+                };
+                Button btn = new Button(65, "Take") {
+                    @Override
+                    public void click() {
+                        try {
+                            int count = Integer.parseInt(entry.dtext());
+                            for (int i = 0; i < count; i++)
+                                wdg.wdgmsg("xfer");
+                        } catch (NumberFormatException e) {
+                        }
+                    }
+                };
+                pwdg.add(btn, new Coord(0, wdg.sz.y + 5));
+                pwdg.add(entry, new Coord(btn.sz.x + 5, wdg.sz.y + 5 + 2));
+            }
             bind(wdg, id);
 
             // drop everything except water containers if in area mining mode

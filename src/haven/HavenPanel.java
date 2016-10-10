@@ -39,7 +39,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import javax.media.opengl.*;
 import javax.media.opengl.awt.*;
-import javax.media.opengl.glu.GLU;
 
 public class HavenPanel extends GLCanvas implements Runnable, Console.Directory {
     UI ui;
@@ -64,6 +63,7 @@ public class HavenPanel extends GLCanvas implements Runnable, Console.Directory 
     private GLState.Applier state = null;
     private GLConfig glconf = null;
     public static boolean needtotakescreenshot;
+    public static boolean isATI;
 
     private static GLCapabilities stdcaps() {
         GLProfile prof = GLProfile.getDefault();
@@ -136,7 +136,9 @@ public class HavenPanel extends GLCanvas implements Runnable, Console.Directory 
                     glconf.pref = GLSettings.load(glconf, true);
                     ui.cons.add(glconf);
                     if (h != null) {
-                        h.lsetprop("gl.vendor", gl.glGetString(gl.GL_VENDOR));
+                        String vendor = gl.glGetString(gl.GL_VENDOR);
+                        isATI = vendor.contains("AMD") || vendor.contains("ATI");
+                        h.lsetprop("gl.vendor", vendor);
                         h.lsetprop("gl.version", gl.glGetString(gl.GL_VERSION));
                         h.lsetprop("gl.renderer", gl.glGetString(gl.GL_RENDERER));
                         h.lsetprop("gl.exts", Arrays.asList(gl.glGetString(gl.GL_EXTENSIONS).split(" ")));
@@ -343,6 +345,7 @@ public class HavenPanel extends GLCanvas implements Runnable, Console.Directory 
             FastText.aprintf(g, new Coord(10, y -= 15), 0, 1, "Mem: %,011d/%,011d/%,011d/%,011d", free, total - free, total, rt.maxMemory());
             FastText.aprintf(g, new Coord(10, y -= 15), 0, 1, "Tex-current: %d", TexGL.num());
             FastText.aprintf(g, new Coord(10, y -= 15), 0, 1, "GL progs: %d", g.st.numprogs());
+            FastText.aprintf(g, new Coord(10, y -= 15), 0, 1, "Stats slots: %d", GLState.Slot.num());
             GameUI gi = ui.root.findchild(GameUI.class);
             if ((gi != null) && (gi.map != null)) {
                 try {
@@ -382,10 +385,10 @@ public class HavenPanel extends GLCanvas implements Runnable, Console.Directory 
         if (tt != null) {
             Coord sz = tt.sz();
             Coord pos = mousepos.add(sz.inv());
-            if (pos.x < 0)
-                pos.x = 0;
-            if (pos.y < 0)
-                pos.y = 0;
+            if (pos.x < 10)
+                pos.x = 10;
+            if (pos.y < 10)
+                pos.y = 10;
             g.chcolor(244, 247, 21, 192);
             g.rect(pos.add(-3, -3), sz.add(6, 6));
             g.chcolor(35, 35, 35, 192);

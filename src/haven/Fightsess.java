@@ -26,25 +26,33 @@
 
 package haven;
 
+import java.text.DecimalFormat;
 import java.util.*;
 import java.awt.Color;
 import java.awt.event.KeyEvent;
+import java.awt.event.InputEvent;
 
 public class Fightsess extends Widget {
+    public static final Tex cdframe = Resource.loadtex("gfx/hud/combat/cool");
+    public static final Tex actframe = Buff.frame;
+    public static final Coord actframeo = Buff.imgoff;
+    public static final Tex indframe = Resource.loadtex("gfx/hud/combat/indframe");
+    public static final Coord indframeo = (indframe.sz().sub(32, 32)).div(2);
+    public static final Tex useframe = Resource.loadtex("gfx/hud/combat/lastframe");
+    public static final Coord useframeo = (useframe.sz().sub(32, 32)).div(2);
     private static final Text.Foundry cdfndr = new Text.Foundry(Text.serif, 18).aa(true);
-    private static final Color cdclrpos = new Color(128, 128, 255);
-    private static final Color cdclrneg = new Color(239, 41, 41);
-    public static final Tex lframe = Resource.loadtex("gfx/hud/combat/lframe");
+    //private static final Color cdclrpos = new Color(128, 128, 255);
+    //private static final Color cdclrneg = new Color(239, 41, 41);
     public static final int actpitch = 50;
     public final Indir<Resource>[] actions;
     public final boolean[] dyn;
-    public int use = -1;
+    public int use = -1, useb = -1;
     public Coord pcc;
     public int pho;
     private final Fightview fv;
-    private static final Map<Long, Tex> cdvalues = new HashMap<Long, Tex>(7);
+   // private static final Map<Long, Tex> cdvalues = new HashMap<Long, Tex>(7);
 
-    private static final Map<String, Integer> atkcds = new HashMap<String, Integer>(9){{
+    /*private static final Map<String, Integer> atkcds = new HashMap<String, Integer>(9){{
         put("Chop", 50);
         put("Cleave", 80);
         put("Haymaker", 60);
@@ -54,7 +62,7 @@ public class Fightsess extends Widget {
         put("Low Blow", 30);
         put("Punch", 30);
         put("Sting", 35);
-    }};
+    }};*/
 
     @RName("fsess")
     public static class $_ implements Factory {
@@ -116,7 +124,7 @@ public class Fightsess extends Widget {
     private static final Text.Furnace ipf = new PUtils.BlurFurn(new Text.Foundry(Text.serif, 18, new Color(128, 128, 255)).aa(true), 1, 1, new Color(48, 48, 96));
     private final Text.UText<?> ip = new Text.UText<Integer>(ipf) {
         public String text(Integer v) {
-            return ("IP: " + v);
+            return (Config.altfightui ? v.toString() : "IP: " + v);
         }
 
         public Integer value() {
@@ -125,7 +133,7 @@ public class Fightsess extends Widget {
     };
     private final Text.UText<?> oip = new Text.UText<Integer>(ipf) {
         public String text(Integer v) {
-            return ("IP: " + v);
+            return (Config.altfightui ? v.toString() : "IP: " + v);
         }
 
         public Integer value() {
@@ -133,50 +141,117 @@ public class Fightsess extends Widget {
         }
     };
 
+    private static Coord actc(int i) {
+        int rl = 5;
+        return(new Coord((actpitch * (i % rl)) - (((rl - 1) * actpitch) / 2), 125 + ((i / rl) * actpitch)));
+    }
+
+    private static final Coord cmc = new Coord(0, 67);
+    private static final Coord usec1 = new Coord(-65, 67);
+    private static final Coord usec2 = new Coord(65, 67);
+    private Indir<Resource> lastact1 = null, lastact2 = null;
+    private Text lastacttip1 = null, lastacttip2 = null;
+
     public void draw(GOut g) {
         updatepos();
         double now = System.currentTimeMillis() / 1000.0;
 
+        GameUI gui = gameui();
+        int gcx = gui.sz.x / 2;
+
         for (Buff buff : fv.buffs.children(Buff.class))
-            buff.draw(g.reclip(pcc.add(-buff.c.x - Buff.cframe.sz().x - 20, buff.c.y + pho - Buff.cframe.sz().y), buff.sz));
+            buff.draw(g.reclip(Config.altfightui ? new Coord(gcx - buff.c.x - Buff.cframe.sz().x - 80, 180) : pcc.add(-buff.c.x - Buff.cframe.sz().x - 20, buff.c.y + pho - Buff.cframe.sz().y), buff.sz));
+
         if (fv.current != null) {
             for (Buff buff : fv.current.buffs.children(Buff.class))
-                buff.draw(g.reclip(pcc.add(buff.c.x + 20, buff.c.y + pho - Buff.cframe.sz().y), buff.sz));
+                buff.draw(g.reclip(Config.altfightui ? new Coord(gcx + buff.c.x + 80, 180) : pcc.add(buff.c.x + 20, buff.c.y + pho - Buff.cframe.sz().y), buff.sz));
 
-            g.aimage(ip.get().tex(), pcc.add(-75, 0), 1, 0.5);
-            g.aimage(oip.get().tex(), pcc.add(75, 0), 0, 0.5);
+            g.aimage(ip.get().tex(), Config.altfightui ? new Coord(gcx - 45, 200) : pcc.add(-75, 0), 1, 0.5);
+            g.aimage(oip.get().tex(), Config.altfightui ? new Coord(gcx + 45, 200) : pcc.add(75, 0), 0, 0.5);
 
-	        if(fv.lsrel.size() > 1)
-		        fxon(fv.current.gobid, tgtfx);
+            if (fv.lsrel.size() > 1)
+                fxon(fv.current.gobid, tgtfx);
 
-            if (Config.showcddelta && fv.current != null) {
+            /*if (Config.showcddelta && fv.current != null) {
                 Tex cdtex = cdvalues.get(fv.current.gobid);
                 if (cdtex != null)
-                    g.aimage(cdtex, pcc.add(0, 110), 0.5, 1);
+                    g.aimage(cdtex, pcc.add(0, 175), 0.5, 1);
+            }*/
+        }
+
+        {
+            Coord cdc = Config.altfightui ? new Coord(gcx, 200) : pcc.add(cmc);
+            if (now < fv.atkct) {
+                double cd = fv.atkct - now;
+                double a = (now - fv.atkcs) / (fv.atkct - fv.atkcs);
+                g.chcolor(255, 0, 128, 224);
+                g.fellipse(cdc, Config.altfightui ? new Coord(24, 24) : new Coord(22, 22), Math.PI / 2 - (Math.PI * 2 * Math.min(1.0 - a, 1.0)), Math.PI / 2);
+                g.chcolor();
+                if (Config.showcooldown)
+                    g.atextstroked(Utils.fmt1DecPlace(cd), cdc, 0.5, 0.5, Color.WHITE, Color.BLACK);
+            }
+            g.image(cdframe, Config.altfightui ? new Coord(gameui().sz.x / 2, 200).sub(cdframe.sz().div(2)) : cdc.sub(cdframe.sz().div(2)));
+        }
+        try {
+            Indir<Resource> lastact = fv.lastact;
+            if (lastact != this.lastact1) {
+                this.lastact1 = lastact;
+                this.lastacttip1 = null;
+            }
+            long lastuse = fv.lastuse;
+            if (lastact != null) {
+                Tex ut = lastact.get().layer(Resource.imgc).tex();
+                Coord useul = Config.altfightui ? new Coord(gcx - 69, 120) : pcc.add(usec1).sub(ut.sz().div(2));
+                g.image(ut, useul);
+                g.image(useframe, useul.sub(useframeo));
+                double a = now - (lastuse / 1000.0);
+                if (a < 1) {
+                    Coord off = new Coord((int) (a * ut.sz().x / 2), (int) (a * ut.sz().y / 2));
+                    g.chcolor(255, 255, 255, (int) (255 * (1 - a)));
+                    g.image(ut, useul.sub(off), ut.sz().add(off.mul(2)));
+                    g.chcolor();
+                }
+            }
+        } catch (Loading l) {
+        }
+
+        if (fv.current != null) {
+            try {
+                Indir<Resource> lastact = fv.current.lastact;
+                if (lastact != this.lastact2) {
+                    this.lastact2 = lastact;
+                    this.lastacttip2 = null;
+                }
+                long lastuse = fv.current.lastuse;
+                if (lastact != null) {
+                    Tex ut = lastact.get().layer(Resource.imgc).tex();
+                    Coord useul = Config.altfightui ? new Coord(gcx + 69 - ut.sz().x, 120) : pcc.add(usec2).sub(ut.sz().div(2));
+                    g.image(ut, useul);
+                    g.image(useframe, useul.sub(useframeo));
+                    double a = now - (lastuse / 1000.0);
+                    if (a < 1) {
+                        Coord off = new Coord((int) (a * ut.sz().x / 2), (int) (a * ut.sz().y / 2));
+                        g.chcolor(255, 255, 255, (int) (255 * (1 - a)));
+                        g.image(ut, useul.sub(off), ut.sz().add(off.mul(2)));
+                        g.chcolor();
+                    }
+                }
+            } catch (Loading l) {
             }
         }
 
-        if (now < fv.atkct) {
-            double cd = fv.atkct - now;
-            int w = (int) (cd * 20);
-            g.chcolor(255, 0, 128, 255);
-            g.frect(pcc.add(-w, 20), new Coord(w * 2, 15));
-            g.chcolor();
-            if (Config.showcooldown)
-                g.atextstroked(Utils.fmt1DecPlace(cd), pcc.add(0, 27), 0.5, 0.5, Color.WHITE, Color.BLACK);
-        }
-        Coord ca = pcc.add(-(actions.length * actpitch) / 2, 45);
         for (int i = 0; i < actions.length; i++) {
+            Coord ca = Config.altfightui ? new Coord(gcx - 18, gui.sz.y - 250).add(actc(i)).add(16, 16) : pcc.add(actc(i));
             Indir<Resource> act = actions[i];
             try {
                 if (act != null) {
                     Tex img = act.get().layer(Resource.imgc).tex();
+                    ca = ca.sub(img.sz().div(2));
                     g.image(img, ca);
-                    g.image(dyn[i] ? lframe : Buff.frame, ca.sub(Buff.imgoff));
                     if (i == use) {
-                        g.chcolor(255, 0, 128, 255);
-                        g.frect(ca.add(0, img.sz().y + 3), new Coord(img.sz().x, 5));
-                        g.chcolor();
+                        g.image(indframe, ca.sub(indframeo));
+                    } else {
+                        g.image(actframe, ca.sub(actframeo));
                     }
                 }
             } catch (Loading l) {
@@ -186,10 +261,13 @@ public class Fightsess extends Widget {
     }
 
     private Widget prevtt = null;
-
+    private Text acttip = null;
+    public static final String[] keytips = {"1", "2", "3", "4", "5", "Shift+1", "Shift+2", "Shift+3", "Shift+4", "Shift+5"};
     public Object tooltip(Coord c, Widget prev) {
+        int cx = gameui().sz.x / 2;
+
         for (Buff buff : fv.buffs.children(Buff.class)) {
-            Coord dc = pcc.add(-buff.c.x - Buff.cframe.sz().x - 20, buff.c.y + pho - Buff.cframe.sz().y);
+            Coord dc = Config.altfightui ? new Coord(cx - buff.c.x - Buff.cframe.sz().x - 80, 180) : pcc.add(-buff.c.x - Buff.cframe.sz().x - 20, buff.c.y + pho - Buff.cframe.sz().y);
             if (c.isect(dc, buff.sz)) {
                 Object ret = buff.tooltip(c.sub(dc), prevtt);
                 if (ret != null) {
@@ -198,9 +276,10 @@ public class Fightsess extends Widget {
                 }
             }
         }
+
         if (fv.current != null) {
             for (Buff buff : fv.current.buffs.children(Buff.class)) {
-                Coord dc = pcc.add(buff.c.x + 20, buff.c.y + pho - Buff.cframe.sz().y);
+                Coord dc = Config.altfightui ? new Coord(cx + buff.c.x + 80, 180) : pcc.add(buff.c.x + 20, buff.c.y + pho - Buff.cframe.sz().y);
                 if (c.isect(dc, buff.sz)) {
                     Object ret = buff.tooltip(c.sub(dc), prevtt);
                     if (ret != null) {
@@ -210,22 +289,52 @@ public class Fightsess extends Widget {
                 }
             }
         }
-        Coord ca = pcc.add(-(actions.length * actpitch) / 2, 45);
+
         for (int i = 0; i < actions.length; i++) {
+            Coord ca = Config.altfightui ? new Coord(cx - 18, gameui().sz.y - 250).add(actc(i)).add(16, 16) : pcc.add(actc(i));
             Indir<Resource> act = actions[i];
             try {
                 if (act != null) {
                     Tex img = act.get().layer(Resource.imgc).tex();
+                    ca = ca.sub(img.sz().div(2));
                     if (c.isect(ca, img.sz())) {
                         if (dyn[i])
                             return ("Combat discovery");
-                        return (act.get().layer(Resource.tooltip).t);
+                        String tip = act.get().layer(Resource.tooltip).t + " ($b{$col[255,128,0]{" + keytips[i] + "}})";
+                        if((acttip == null) || !acttip.text.equals(tip))
+                            acttip = RichText.render(tip, -1);
+                        return(acttip);
                     }
                 }
             } catch (Loading l) {
             }
             ca.x += actpitch;
         }
+
+        try {
+            Indir<Resource> lastact = this.lastact1;
+            if(lastact != null) {
+                Coord usesz = lastact.get().layer(Resource.imgc).sz;
+                Coord lac = Config.altfightui ? new Coord(cx - 69, 120).add(usesz.div(2)) : pcc.add(usec1);
+                if(c.isect(lac.sub(usesz.div(2)), usesz)) {
+                    if(lastacttip1 == null)
+                        lastacttip1 = Text.render(lastact.get().layer(Resource.tooltip).t);
+                    return(lastacttip1);
+                }
+            }
+        } catch(Loading l) {}
+        try {
+            Indir<Resource> lastact = this.lastact2;
+            if(lastact != null) {
+                Coord usesz = lastact.get().layer(Resource.imgc).sz;
+                Coord lac = Config.altfightui ? new Coord(cx + 69 - usesz.x, 120).add(usesz.div(2)) : pcc.add(usec2);
+                if(c.isect(lac.sub(usesz.div(2)), usesz)) {
+                    if(lastacttip2 == null)
+                        lastacttip2 = Text.render(lastact.get().layer(Resource.tooltip).t);
+                    return(lastacttip2);
+                }
+            }
+        } catch(Loading l) {}
         return (null);
     }
 
@@ -242,7 +351,7 @@ public class Fightsess extends Widget {
         } else if (msg == "use") {
             this.use = (Integer) args[0];
         } else if (msg == "used") {
-            Indir<Resource> act = actions[(Integer) args[0]];
+            /*Indir<Resource> act = actions[(Integer) args[0]];
             try {
                 if (act != null) {
                     Resource.Tooltip tt = act.get().layer(Resource.Tooltip.class);
@@ -256,26 +365,62 @@ public class Fightsess extends Widget {
                     }
                 }
             } catch (Loading l) {
-            }
-        } else if (msg == "dropped") {
+            }*/
         } else {
             super.uimsg(msg, args);
         }
     }
 
     public boolean globtype(char key, KeyEvent ev) {
-        int c = ev.getKeyChar();
-        if (Config.userazerty)
-            c = Utils.azerty2qwerty((char) c);
-
-        if((key == 0) && (c >= KeyEvent.VK_1) && (c < KeyEvent.VK_1 + actions.length)) {
-            int n = c - KeyEvent.VK_1;
-            if ((ev.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0)
-                wdgmsg("drop", n);
-            else
-                wdgmsg("use", n);
+        if (ev.getKeyCode() == KeyEvent.VK_TAB && ev.isControlDown()) {
+            Fightview.Relation cur = fv.current;
+            if (cur != null) {
+                fv.lsrel.remove(cur);
+                fv.lsrel.addLast(cur);
+            }
+            fv.wdgmsg("bump", (int) fv.lsrel.get(0).gobid);
             return (true);
         }
-        return (super.globtype(key, ev));
+
+        if (Config.combatkeys == 0) {
+            if ((key == 0) && (ev.getModifiersEx() & (InputEvent.CTRL_DOWN_MASK | KeyEvent.META_DOWN_MASK | KeyEvent.ALT_DOWN_MASK)) == 0) {
+                int n = -1;
+                switch(ev.getKeyCode()) {
+                    case KeyEvent.VK_1: n = 0; break;
+                    case KeyEvent.VK_2: n = 1; break;
+                    case KeyEvent.VK_3: n = 2; break;
+                    case KeyEvent.VK_4: n = 3; break;
+                    case KeyEvent.VK_5: n = 4; break;
+                }
+                if((n >= 0) && ((ev.getModifiersEx() & InputEvent.SHIFT_DOWN_MASK) != 0))
+                    n += 5;
+                if((n >= 0) && (n < actions.length)) {
+                    wdgmsg("use", n);
+                    return(true);
+                }
+            }
+        } else { // F1-F5
+             if (key == 0) {
+                int n = -1;
+                switch(ev.getKeyCode()) {
+                    case KeyEvent.VK_1: n = 0; break;
+                    case KeyEvent.VK_2: n = 1; break;
+                    case KeyEvent.VK_3: n = 2; break;
+                    case KeyEvent.VK_4: n = 3; break;
+                    case KeyEvent.VK_5: n = 4; break;
+                    case KeyEvent.VK_F1: n = 5; break;
+                    case KeyEvent.VK_F2: n = 6; break;
+                    case KeyEvent.VK_F3: n = 7; break;
+                    case KeyEvent.VK_F4: n = 8; break;
+                    case KeyEvent.VK_F5: n = 9; break;
+                }
+                if((n >= 0) && (n < actions.length)) {
+                    wdgmsg("use", n);
+                    return(true);
+                }
+            }
+        }
+
+        return(super.globtype(key, ev));
     }
 }

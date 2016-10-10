@@ -1,3 +1,106 @@
+Version 1.38.0
+    New:
+        * Alternative combat UI.
+
+    Fixed:
+        * Fixed circular progress indicators.
+
+
+Version 1.37.0
+    New:
+        * Automatic picking of clustered mussels.
+        * Confirmation dialog for magic actions.
+        * Walk while having an item on the cursor with alt+lmb.
+        * Allow taking specific number of items from stockpiles.
+
+    Fixed:
+        * Aiming vectors not working on ATI/AMD GPUs.
+        * Overlapping flower menus (e.g. cross roads).
+        * Using branches with steel refueler.
+        * Incoming party messages not being saved to file (log chats option).
+        * Buff tooltips not working when pointing at the lower half of buff icons.
+        * Combat moves were mistakenly placed under maneuvers filters and vise versa.
+
+    Misc:
+        * Chinese translation updated by raislin_mage.
+        * Russian translation updated by zebratul.
+        * Settings window was reorganized.
+        * Changed colors of beehive and trough radiuses.
+        * Large window close button is now embedded into the client.
+        * Different sound for lynx alarm.
+
+
+Version 1.36.4
+    Fixed:
+        * ctrl+tab for switching opponents not working on Windows.
+
+    Misc:
+        * Merged upstream changes.
+        * Updated en/ru l10n.
+
+
+Version 1.36.3
+    Misc:
+        * Combat settings UI redesing + action filters.
+
+
+Version 1.36.2
+    Fixed:
+        * Combat settings UI overlapping issues on Windows.
+
+
+Version 1.36.1
+    New:
+        * Option to change combat key bindings.
+        * Option to log combat actions to system log.
+
+
+Version 1.36.0
+    New:
+        * Load indicator for ovens, smelters, forges.
+
+    Fixed:
+        * Rare crash in fill oven/smelters task.
+
+    Misc:
+        * shift+wheel for switching combat opponents has been replaced with ctrl+tab
+        * Display human readable names in map settings instead of resource names.
+
+
+Version 1.35.3
+    Fixed:
+        * Last stage indicator flickering on some crops. 
+
+    Misc:
+        * Updated curio study times.
+        * Standardized controls for moving the F-bar, history bar, and hand slots.
+        * Improved localization support.
+        * Updated Russian localization and English strings.
+        * Various code cleanups.
+
+
+Version 1.35.2
+    Fixed:
+        * Slow auto-mining.
+        * Crash when having non existent resources (e.g. from another client) on the F-belt.
+
+    Misc:
+        * Added windweed to hide icons list.
+        * Open system log by default.
+        * Updated russian localization and english strings.
+
+
+Version 1.35.0
+    Fixed:
+        * Pathfinding issues (by elsid).
+        * Russian localization (by elsid).
+
+    Misc:
+        * Option to set transparency of the quality background (by elsid).
+        * Optimized grid overlay rendering.
+        * Merged vanilla changes.
+
+
 Version 1.34.2
     Misc:
         * Various improvements to localization support.

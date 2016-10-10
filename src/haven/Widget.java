@@ -607,7 +607,7 @@ public class Widget {
             int a = 0;
             Object tt = args[a++];
             if (tt instanceof String) {
-                tooltip = Text.render((String) tt);
+                tooltip = Text.render(Resource.getLocString(Resource.BUNDLE_LABEL, (String)tt));
             } else if (tt instanceof Integer) {
                 final Indir<Resource> tres = ui.sess.getres((Integer) tt);
                 tooltip = new Indir<Tex>() {

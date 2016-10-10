@@ -60,7 +60,7 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
     private Overlay bowvector = null;
     private static final Material.Colors dframeEmpty = new Material.Colors(new Color(0, 255, 0, 255));
     private static final Material.Colors dframeDone = new Material.Colors(new Color(255, 0, 0, 255));
-    private static final Gob.Overlay animalradius = new Gob.Overlay(new BPRadSprite(100.0F, -10.0F));
+    private static final Gob.Overlay animalradius = new Gob.Overlay(new BPRadSprite(100.0F, -10.0F, BPRadSprite.smatDanger));
     private static final Set<String> dangerousanimalrad = new HashSet<String>(Arrays.asList(
             "gfx/kritter/bear/bear", "gfx/kritter/boar/boar", "gfx/kritter/lynx/lynx", "gfx/kritter/badger/badger"));
 
@@ -497,24 +497,21 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
                 if (res != null && res.name.startsWith("gfx/terobjs/plants") && !res.name.endsWith("trellis")) {
                     GAttrib rd = getattr(ResDrawable.class);
                     if (rd != null) {
-                        try {
-                            int stage = ((ResDrawable) rd).sdt.peekrbuf(0);
-                            if (cropstgmaxval == 0) {
-                                for (FastMesh.MeshRes layer : res.layers(FastMesh.MeshRes.class)) {
-                                    int stg = layer.id / 10;
-                                    if (stg > cropstgmaxval)
-                                        cropstgmaxval = stg;
-                                }
+                        int stage = ((ResDrawable) rd).sdt.peekrbuf(0);
+                        if (cropstgmaxval == 0) {
+                            for (FastMesh.MeshRes layer : res.layers(FastMesh.MeshRes.class)) {
+                                int stg = layer.id / 10;
+                                if (stg > cropstgmaxval)
+                                    cropstgmaxval = stg;
                             }
-                            Overlay ol = findol(Sprite.GROWTH_STAGE_ID);
-                            if (ol == null && (stage == cropstgmaxval || stage > 0 && stage < 5)) {
-                                addol(new Gob.Overlay(Sprite.GROWTH_STAGE_ID, new PlantStageSprite(stage, cropstgmaxval)));
-                            } else if (stage <= 0 || stage >= 5) {
-                                ols.remove(ol);
-                            } else if (((PlantStageSprite)ol.spr).stg != stage) {
-                                ((PlantStageSprite)ol.spr).update(stage, cropstgmaxval);
-                            }
-                        } catch (ArrayIndexOutOfBoundsException e) { // ignored
+                        }
+                        Overlay ol = findol(Sprite.GROWTH_STAGE_ID);
+                        if (ol == null && (stage == cropstgmaxval || stage > 0 && stage < 6)) {
+                            addol(new Gob.Overlay(Sprite.GROWTH_STAGE_ID, new PlantStageSprite(stage, cropstgmaxval)));
+                        } else if (stage <= 0 || (stage != cropstgmaxval && stage >= 6)) {
+                            ols.remove(ol);
+                        } else if (((PlantStageSprite)ol.spr).stg != stage) {
+                            ((PlantStageSprite)ol.spr).update(stage, cropstgmaxval);
                         }
                     }
                 }
@@ -522,17 +519,14 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
                 if (res != null && (res.name.startsWith("gfx/terobjs/trees") || res.name.startsWith("gfx/terobjs/bushes"))) {
                     ResDrawable rd = getattr(ResDrawable.class);
                     if (rd != null && !rd.sdt.eom()) {
-                        try {
-                            final int stage = rd.sdt.peekrbuf(0);
-                            if (stage < 100) {
-                                Overlay ol = findol(Sprite.GROWTH_STAGE_ID);
-                                if (ol == null) {
-                                    addol(new Gob.Overlay(Sprite.GROWTH_STAGE_ID, new TreeStageSprite(stage)));
-                                } else if (((TreeStageSprite)ol.spr).val != stage) {
-                                    ((TreeStageSprite)ol.spr).update(stage);
-                                }
+                        final int stage = rd.sdt.peekrbuf(0);
+                        if (stage < 100) {
+                            Overlay ol = findol(Sprite.GROWTH_STAGE_ID);
+                            if (ol == null) {
+                                addol(new Gob.Overlay(Sprite.GROWTH_STAGE_ID, new TreeStageSprite(stage)));
+                            } else if (((TreeStageSprite)ol.spr).val != stage) {
+                                ((TreeStageSprite)ol.spr).update(stage);
                             }
-                        } catch (ArrayIndexOutOfBoundsException e) { // ignored
                         }
                     }
                 }

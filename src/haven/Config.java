@@ -107,17 +107,17 @@ public class Config {
     public static boolean showplayerpaths = Utils.getprefb("showplayerpaths", false);
     public static boolean showanimalpaths = Utils.getprefb("showanimalpaths", false);
     public static boolean showstudylefttime = Utils.getprefb("showstudylefttime", false);
-    public static boolean syslogonlogin = Utils.getprefb("syslogonlogin", false);
     public static boolean showinvonlogin = Utils.getprefb("showinvonlogin", false);
     public static boolean autopick = Utils.getprefb("autopick", false);
     public static boolean autoharvest = Utils.getprefb("autoharvest", false);
     public static boolean autosplit = Utils.getprefb("autosplit", false);
     public static boolean autoeat = Utils.getprefb("autoeat", false);
+    public static boolean autokill = Utils.getprefb("autokill", false);
+    public static boolean autoslice = Utils.getprefb("autoslice", false);
     public static boolean runonlogin = Utils.getprefb("runonlogin", false);
-    public static Coord chatsz = Utils.getprefc("chatsz", Coord.z);
+    public static Coord chatsz = Utils.getprefc("chatsz", new Coord(683, 111));
     public static boolean alternmapctrls = Utils.getprefb("alternmapctrls", true);
     public static boolean autostudy = Utils.getprefb("autostudy", true);
-    public static boolean showcontentsbars = Utils.getprefb("showcontentsbars", false);
     public static boolean showdmgop = Utils.getprefb("showdmgop", false);
     public static boolean showdmgmy = Utils.getprefb("showdmgmy", false);
     public static boolean hidegobs = Utils.getprefb("hidegobs", false);
@@ -128,8 +128,6 @@ public class Config {
     public static boolean userazerty = Utils.getprefb("userazerty", false);
     public static boolean hlightcuropp = Utils.getprefb("hlightcuropp", false);
     public static boolean agroclosest = Utils.getprefb("agroclosest", false);
-    public static boolean ponyalarm = Utils.getprefb("ponyalarm", false);
-    public static double ponyalarmvol = Utils.getprefd("ponyalarmvol", 1.0);
     public static boolean reversebadcamx = Utils.getprefb("reversebadcamx", false);
     public static boolean reversebadcamy = Utils.getprefb("reversebadcamy", false);
     public static boolean showservertime = Utils.getprefb("showservertime", false);
@@ -141,11 +139,11 @@ public class Config {
     public static boolean showboundingboxes = Utils.getprefb("showboundingboxes", false);
     public static boolean alarmonforagables = Utils.getprefb("alarmonforagables", false);
     public static double alarmonforagablesvol = Utils.getprefd("alarmonforagablesvol", 0.8);
-    public static boolean alarmbears = Utils.getprefb("alarmbears", false);
+    public static boolean alarmbears = Utils.getprefb("alarmbears", true);
     public static double alarmbearsvol = Utils.getprefd("alarmbearsvol", 0.8);
     public static boolean alarmtroll = Utils.getprefb("alarmtroll", false);
     public static double alarmtrollvol = Utils.getprefd("alarmtrollvol", 0.8);
-    public static boolean alarmmammoth = Utils.getprefb("alarmmammoth", false);
+    public static boolean alarmmammoth = Utils.getprefb("alarmmammoth", true);
     public static double alarmmammothvol = Utils.getprefd("alarmmammothvol", 0.8);
     public static boolean showcooldown = Utils.getprefb("showcooldown", false);
     public static boolean nodropping = Utils.getprefb("nodropping", false);
@@ -162,10 +160,15 @@ public class Config {
     public static boolean instantflowermenu =  Utils.getprefb("instantflowermenu", false);
     public static double sfxwhipvol = Utils.getprefd("sfxwhipvol", 1.0);
     public static boolean showarchvector =  Utils.getprefb("showarchvector", false);
-    public static boolean showcddelta =  Utils.getprefb("showcddelta", false);
+    //public static boolean showcddelta =  Utils.getprefb("showcddelta", false);
     public static boolean disabledrinkhotkey =  Utils.getprefb("disabledrinkhotkey", false);
     public static boolean autologout =  Utils.getprefb("autologout", false);
-    public static boolean donotaggrofriends =  Utils.getprefb("donotaggrofriends", false);
+    public static int combatkeys =  Utils.getprefi("combatkeys", 0);
+    public static boolean logcombatactions =  Utils.getprefb("logcombatactions", false);
+    public static boolean autopickmussels =  Utils.getprefb("autopickmussels", false);
+    public static boolean confirmmagic =  Utils.getprefb("confirmmagic", true);
+    public static boolean altfightui =  Utils.getprefb("altfightui", true);
+
     public static int avgmode = Utils.getprefi("avgmode", 0);
     private final static Map<String, Integer> defFontSzGlobal =  new HashMap<String, Integer>(3) {{
         put("zh", 16);
@@ -194,33 +197,131 @@ public class Config {
     public static String version;
     public static String gitrev;
 
-
-
     public final static String chatfile = "chatlog.txt";
     public static PrintWriter chatlog = null;
 
-    public final static String[] boulders = new String[]{"basalt", "limonite", "schist", "dolomite", "magnetite", "gneiss",
-            "granite", "malachite", "hematite", "porphyry", "ilmenite", "quartz", "cassiterite", "limestone", "sandstone",
-            "chalcopyrite", "cinnabar", "feldspar", "marble", "ras", "flint", "hornsilver", "blackcoal", "stalagmite"};
-    public static String[] boulderssel = null;
+    public final static HashMap<String, CheckListboxItem> boulders = new HashMap<String, CheckListboxItem>(24) {{
+        put("basalt", new CheckListboxItem("Basalt"));
+        put("limonite", new CheckListboxItem("Limonite"));
+        put("schist", new CheckListboxItem("Schist"));
+        put("dolomite", new CheckListboxItem("Dolomite"));
+        put("magnetite", new CheckListboxItem("Black Ore"));
+        put("gneiss", new CheckListboxItem("Gneiss"));
+        put("granite", new CheckListboxItem("Granite"));
+        put("malachite", new CheckListboxItem("Malachite"));
+        put("hematite", new CheckListboxItem("Bloodstone"));
+        put("porphyry", new CheckListboxItem("Porphyry"));
+        put("ilmenite", new CheckListboxItem("Heavy Earth"));
+        put("quartz", new CheckListboxItem("Quartz"));
+        put("cassiterite", new CheckListboxItem("Cassiterite"));
+        put("limestone", new CheckListboxItem("Limestone"));
+        put("sandstone", new CheckListboxItem("Sandstone"));
+        put("chalcopyrite", new CheckListboxItem("Chalcopyrite"));
+        put("cinnabar", new CheckListboxItem("Cinnabar"));
+        put("feldspar", new CheckListboxItem("Feldspar"));
+        put("marble", new CheckListboxItem("Marble"));
+        put("nagyagite", new CheckListboxItem("Leaf Ore"));
+        put("flint", new CheckListboxItem("Flint"));
+        put("hornsilver", new CheckListboxItem("Horn Silver"));
+        put("blackcoal", new CheckListboxItem("Black Coal"));
+        put("argentite", new CheckListboxItem("Silvershine"));
+    }};
 
-    public final static String[] bushes = new String[]{"arrowwood", "crampbark", "sandthorn", "blackberrybush", "dogrose",
-            "spindlebush", "blackcurrant", "elderberrybush", "teabush", "blackthorn", "gooseberrybush", "tibast",
-            "bogmyrtle", "hawthorn", "tundrarose", "boxwood", "holly", "woodbine", "bsnightshade", "raspberrybush",
-            "caprifole", "redcurrant"};
-    public static String[] bushessel = null;
+    public final static HashMap<String, CheckListboxItem> bushes = new HashMap<String, CheckListboxItem>(22) {{
+        put("arrowwood", new CheckListboxItem("Arrowwood"));
+        put("crampbark", new CheckListboxItem("Crampbark"));
+        put("sandthorn", new CheckListboxItem("Sandthorn"));
+        put("blackberrybush", new CheckListboxItem("Blackberry"));
+        put("dogrose", new CheckListboxItem("Dogrose"));
+        put("spindlebush", new CheckListboxItem("Spindlebush"));
+        put("blackcurrant", new CheckListboxItem("Blackcurrant"));
+        put("elderberrybush", new CheckListboxItem("Elderberry"));
+        put("teabush", new CheckListboxItem("Tea"));
+        put("blackthorn", new CheckListboxItem("Blackthorn"));
+        put("gooseberrybush", new CheckListboxItem("Gooseberry"));
+        put("tibast", new CheckListboxItem("Tibast"));
+        put("bogmyrtle", new CheckListboxItem("Bogmyrtle"));
+        put("hawthorn", new CheckListboxItem("Hawthorn"));
+        put("tundrarose", new CheckListboxItem("Tundrarose"));
+        put("boxwood", new CheckListboxItem("Boxwood"));
+        put("holly", new CheckListboxItem("Hollyberry"));
+        put("woodbine", new CheckListboxItem("Fly Woodbine"));
+        put("bsnightshade", new CheckListboxItem("Bittersweet Nightshade"));
+        put("raspberrybush", new CheckListboxItem("Raspberry"));
+        put("caprifole", new CheckListboxItem("Caprifole"));
+        put("redcurrant", new CheckListboxItem("Redcurrant"));
+    }};
 
-    public final static String[] trees = new String[]{"alder", "corkoak", "plumtree", "juniper", "crabappletree", "kingsoak",
-            "oak", "walnuttree", "birdcherrytree", "larch", "poplar", "whitebeam", "appletree", "cypress", "buckthorn",
-            "laurel", "ash", "elm", "rowan", "willow", "cedar", "linden", "olivetree", "aspen",  "fir", "baywillow",
-            "goldenchain", "peartree", "sallow", "yew", "cherry", "maple", "beech", "chestnuttree", "hazel", "spruce",
-            "hornbeam", "oldtrunk", "conkertree", "mulberry", "sweetgum", "pine", "birch", "planetree"};
-    public static String[] treessel = null;
+    public final static HashMap<String, CheckListboxItem> trees = new HashMap<String, CheckListboxItem>(44) {{
+        put("alder", new CheckListboxItem("Alder"));
+        put("corkoak", new CheckListboxItem("Corkoak"));
+        put("plumtree", new CheckListboxItem("Plum Tree"));
+        put("juniper", new CheckListboxItem("Juniper"));
+        put("crabappletree", new CheckListboxItem("Crabapple"));
+        put("kingsoak", new CheckListboxItem("King's Oak"));
+        put("oak", new CheckListboxItem("Oak"));
+        put("walnuttree", new CheckListboxItem("Walnut Tree"));
+        put("birdcherrytree", new CheckListboxItem("Birdcherry Tree"));
+        put("larch", new CheckListboxItem("Larch"));
+        put("poplar", new CheckListboxItem("Poplar"));
+        put("whitebeam", new CheckListboxItem("Whitebeam"));
+        put("appletree", new CheckListboxItem("Apple Tree"));
+        put("cypress", new CheckListboxItem("Cypress"));
+        put("buckthorn", new CheckListboxItem("Buckthorn"));
+        put("laurel", new CheckListboxItem("Laurel"));
+        put("ash", new CheckListboxItem("Ash"));
+        put("elm", new CheckListboxItem("Elm"));
+        put("rowan", new CheckListboxItem("Rowan"));
+        put("willow", new CheckListboxItem("Willow"));
+        put("cedar", new CheckListboxItem("Cedar"));
+        put("linden", new CheckListboxItem("Linden"));
+        put("olivetree", new CheckListboxItem("Olive Tree"));
+        put("aspen", new CheckListboxItem("Aspen"));
+        put("fir", new CheckListboxItem("Fir"));
+        put("baywillow", new CheckListboxItem("Baywillow"));
+        put("goldenchain", new CheckListboxItem("Goldenchain"));
+        put("peartree", new CheckListboxItem("Pear Tree"));
+        put("sallow", new CheckListboxItem("Sallow"));
+        put("yew", new CheckListboxItem("Yew"));
+        put("cherry", new CheckListboxItem("Cherry"));
+        put("maple", new CheckListboxItem("Maple"));
+        put("beech", new CheckListboxItem("Beech"));
+        put("chestnuttree", new CheckListboxItem("Chestnut Tree"));
+        put("hazel", new CheckListboxItem("Hazel"));
+        put("spruce", new CheckListboxItem("Spruce"));
+        put("hornbeam", new CheckListboxItem("Hornbeam"));
+        put("oldtrunk", new CheckListboxItem("Oldtrunk"));
+        put("conkertree", new CheckListboxItem("Conker Tree"));
+        put("mulberry", new CheckListboxItem("Mulberry"));
+        put("sweetgum", new CheckListboxItem("Sweetgum"));
+        put("pine", new CheckListboxItem("Pine"));
+        put("birch", new CheckListboxItem("Birch"));
+        put("planetree", new CheckListboxItem("Plane Tree"));
+    }};
 
-    public final static String[] icons = new String[]{"dandelion", "chantrelle", "blueberry", "rat", "chicken", "chick",
-            "spindlytaproot", "stingingnettle", "dragonfly", "toad", "bram", "rowboat", "arrow", "boarspear", "frog",
-            "wagon", "wheelbarrow", "cart", "wball"};
-    public static String[] iconssel = null;
+    public final static HashMap<String, CheckListboxItem> icons = new HashMap<String, CheckListboxItem>(20) {{
+        put("dandelion", new CheckListboxItem("Dandelion"));
+        put("chantrelle", new CheckListboxItem("Chantrelle"));
+        put("blueberry", new CheckListboxItem("Blueberry"));
+        put("rat", new CheckListboxItem("Rat"));
+        put("chicken", new CheckListboxItem("Chicken"));
+        put("chick", new CheckListboxItem("Chick"));
+        put("spindlytaproot", new CheckListboxItem("Spindly Taproot"));
+        put("stingingnettle", new CheckListboxItem("Stinging Nettle"));
+        put("dragonfly", new CheckListboxItem("Dragonfly"));
+        put("toad", new CheckListboxItem("Toad"));
+        put("bram", new CheckListboxItem("Battering Ram"));
+        put("rowboat", new CheckListboxItem("Rowboat"));
+        put("arrow", new CheckListboxItem("Arrow"));
+        put("boarspear", new CheckListboxItem("Boar Spear"));
+        put("frog", new CheckListboxItem("Frog"));
+        put("wagon", new CheckListboxItem("Wagon"));
+        put("wheelbarrow", new CheckListboxItem("Wheelbarrow"));
+        put("cart", new CheckListboxItem("Cart"));
+        put("wball", new CheckListboxItem("Wrecking Ball"));
+        put("windweed", new CheckListboxItem("Wild Windsown Weed"));
+        put("mussels", new CheckListboxItem("Mussels"));
+    }};
 
     public final static Map<String, Tex> additonalicons = new HashMap<String, Tex>(13) {{
         put("gfx/terobjs/vehicle/bram", Resource.loadtex("gfx/icons/bram"));
@@ -257,10 +358,6 @@ public class Config {
 
 
     static {
-        Arrays.sort(Config.boulders);
-        Arrays.sort(Config.bushes);
-        Arrays.sort(Config.trees);
-        Arrays.sort(Config.icons);
         Collections.sort(disableanim, (o1, o2) -> o1.a.compareTo(o2.a));
 
         String[] disableanimsel = Utils.getprefsa("disableanim", null);

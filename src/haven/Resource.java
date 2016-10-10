@@ -1827,6 +1827,42 @@ public class Resource implements Serializable {
         }
     }
 
+    private static final String[] fmtLocStringsLabel = new String[]{
+            "Health: %s",
+            "Stamina: %s",
+            "Energy: %s",
+            "Pony Power: %s",
+            "Hunger modifier: %s",
+            "Food event bonus: %s",
+            "Tell %s of your exploits",
+            "Go laugh at %s",
+            "Go rage at %s",
+            "Go wave to %s",
+            "Greet %s",
+            "Visit %s",
+            "Meeting %s",
+            "%s's Biddings",
+            "%s's Labors",
+            "%s's Laundry List",
+            "Believing in %s",
+            "%s's Wild Hunt",
+            "%s's Quest",
+            "By %s's Command",
+            "%s's Quarry",
+            "Hunting for %s",
+            "Grass, Stone, and %s",
+            "%s's Tasks",
+            "%s's Business",
+            "%s Giving the Chase",
+            "A Favor for %s"
+    };
+
+    private static final String[] fmtLocStringsFlower = new String[]{
+            "Gild (%s%% chance)",
+            "Follow %s",
+            "Travel along %s"
+    };
+
     public static String getLocString(String bundle, String key) {
         Map<String, String> map = l10nBundleMap.get(bundle);
         if (map == null || key == null)
@@ -1834,18 +1870,45 @@ public class Resource implements Serializable {
         if (Resource.L10N_DEBUG)
             Resource.saveStrings(bundle, key, key);
         String ll = map.get(key);
-        // labels which require special handling
+        // strings which require special handling
         if (ll == null && bundle == BUNDLE_LABEL) {
-            // party invite
+            for (String s : fmtLocStringsLabel) {
+                String llfmt = fmtLocString(map, key, s);
+                if (llfmt != null)
+                    return llfmt;
+            }
+
+            // following strings are handled differently since character name could contain format characters
             final String partyInvite = " has invited you to join his party. Do you wish to do so?";
             if (key.endsWith(partyInvite)) {
-                String name = key.substring(0, key.indexOf(partyInvite));
                 ll = map.get("%s" + partyInvite);
                 if (ll != null)
-                    ll = String.format(ll, name);
+                    return String.format(ll, key.substring(0, key.indexOf(partyInvite)));
+            }
+            final String spar = "has requested to spar with you. Do you accept?";
+            if (key.endsWith(spar)) {
+                ll = map.get("%s " + spar);
+                if (ll != null)
+                    return String.format(ll, key.substring(0, key.length() - spar.length()));
+            }
+        } else if (ll == null && bundle == BUNDLE_FLOWER) {
+            for (String s : fmtLocStringsFlower) {
+                String llfmt = fmtLocString(map, key, s);
+                if (llfmt != null)
+                    return llfmt;
             }
         }
         return ll != null ? ll : key;
+    }
+
+    private static String fmtLocString(Map<String, String> map, String key, String s) {
+        String ll = map.get(s);
+        if (ll != null) {
+            int vi = s.indexOf("%s");
+            if (key.startsWith(s.substring(0, vi)) && key.endsWith(s.substring(vi + 2)))
+                return String.format(ll, key.substring(vi, key.length() - (s.length() - vi - 2)));
+        }
+        return null;
     }
 
     public static String getLocString(String bundle, Resource key, String def) {
@@ -1868,6 +1931,29 @@ public class Resource implements Serializable {
         return ll != null ? ll : null;
     }
 
+    public static String getLocContent(String str) {
+        String loc;
+        if ((loc = Resource.locContent(str, " l of ")) != null)
+            return loc;
+        if ((loc = Resource.locContent(str, " kg of ")) != null)
+            return loc;
+        if ((loc = Resource.locContent(str, " seeds of ")) != null)
+            return loc;
+        return str;
+    }
+
+    private static String locContent(String str, String type) {
+        int i = str.indexOf(type);
+        if (i > 0) {
+            String contName = str.substring(i);
+            String locContName = Resource.getLocStringOrNull(Resource.BUNDLE_LABEL, contName);
+            if (locContName != null)
+                return str.substring(0, i) + locContName + " (" + str.substring(i + type.length()) + ")";
+            return str;
+        }
+        return null;
+    }
+
     private static void saveStrings(String bundle, String key, String val) {
         synchronized (Resource.class) {
             if (bundle.equals(BUNDLE_FLOWER)) {
@@ -1876,17 +1962,16 @@ public class Resource implements Serializable {
                     return;
             }
 
-            Map<String, String> map;
-            if (key.startsWith("paginae/act") || key.startsWith("paginae/bld")
+            Map<String, String> map = l10nBundleMap.get(bundle);
+
+            if (bundle.equals(BUNDLE_TOOLTIP) &&
+                    (key.startsWith("paginae/act") || key.startsWith("paginae/bld")
                     || key.startsWith("paginae/craft") || key.startsWith("paginae/gov")
                     || key.startsWith("paginae/pose") || key.startsWith("paginae/amber")
-                    || key.startsWith("paginae/atk/ashoot")) {
-                map = l10nBundleMap.get(Resource.BUNDLE_ACTION);
-            } else {
-                map = l10nBundleMap.get(bundle);
-            }
+                    || key.startsWith("paginae/atk/ashoot") || key.startsWith("paginae/seid")))
+                return;
 
-            if (key == null || key.equals("") || map.containsKey(key))
+            if (key == null || key.equals("") || val.equals("") || map.containsKey(key))
                 return;
 
             try {
@@ -1905,6 +1990,29 @@ public class Resource implements Serializable {
                     key.startsWith("Experience points gained:"))
                 return;
 
+
+            if (bundle == BUNDLE_LABEL) {
+                for (String s : fmtLocStringsLabel) {
+                    if (fmtLocString(map, key, s) != null)
+                        return;
+                }
+                final String partyInvite = " has invited you to join his party. Do you wish to do so?";
+                if (key.endsWith(partyInvite)) {
+                    if (map.get("%s" + partyInvite) != null)
+                        return;
+                }
+                final String spar = "has requested to spar with you. Do you accept?";
+                if (key.endsWith(spar)) {
+                    if (map.get("%s " + spar) != null)
+                        return;
+                }
+            } else if (bundle == BUNDLE_FLOWER) {
+                for (String s : fmtLocStringsFlower) {
+                    if (fmtLocString(map, key, s) != null)
+                        return;
+                }
+            }
+
             new File("l10n").mkdirs();
 
             CharsetEncoder encoder = Charset.forName("UTF-8").newEncoder();
@@ -1914,7 +2022,15 @@ public class Resource implements Serializable {
             try {
                 map.put(key, val);
                 key = key.replace(" ", "\\ ").replace(":", "\\:").replace("=", "\\=");
+                if (key.startsWith("\\ "))
+                    key = "\\u0020" + key.substring(2);
+                if (key.endsWith("\\ "))
+                    key = "\\u0020" + key.substring(0, key.length() - 2);
                 val = val.replace("\\", "\\\\").replace("\n", "\\n").replace("\u0000", "");
+                if (val.startsWith(" "))
+                    val = "\\u0020" + val.substring(1);
+                if (val.endsWith(" "))
+                    val = "\\u0020" + val.substring(0, val.length() - 1);
                 out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("l10n/" + bundle + "_new.properties", true), encoder));
                 out.write(key + " = " + val);
                 out.newLine();

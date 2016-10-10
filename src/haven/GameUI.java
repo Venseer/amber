@@ -60,7 +60,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
     private Widget qqview;
     public BuddyWnd buddies;
     private final Zergwnd zerg;
-    public Polity polity;
+    public final Collection<Polity> polities = new ArrayList<Polity>();
     public HelpWnd help;
     public OptWnd opts;
     public Collection<DraggedItem> hand = new LinkedList<DraggedItem>();
@@ -72,7 +72,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
     @SuppressWarnings("unchecked")
     public Indir<Resource>[] belt = new Indir[144];
     public Belt beltwdg = add(new NKeyBelt());
-    public String polowner;
+    public final Map<Integer, String> polowners = new HashMap<Integer, String>();
     public Bufflist buffs;
     public MinimapWnd minimapWnd;
     public TimersWnd timerswnd;
@@ -193,16 +193,16 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             quickslots.hide();
         add(quickslots, Utils.getprefc("quickslotsc", new Coord(430, HavenPanel.h - 160)));
 
-        statuswindow = new StatusWdg();
-        if (!Config.statuswdgvisible)
-            statuswindow.hide();
-        add(statuswindow, new Coord(HavenPanel.w / 2 + 80, 10));
+        if (Config.statuswdgvisible) {
+            statuswindow = new StatusWdg();
+            add(statuswindow, new Coord(HavenPanel.w / 2 + 80, 10));
+        }
 
         if (!chrid.equals("")) {
-            Config.boulderssel = Utils.getprefsa("boulderssel_" + chrid, null);
-            Config.bushessel = Utils.getprefsa("bushessel_" + chrid, null);
-            Config.treessel = Utils.getprefsa("treessel_" + chrid, null);
-            Config.iconssel = Utils.getprefsa("iconssel_" + chrid, null);
+            Utils.loadprefchklist("boulderssel_" + chrid, Config.boulders);
+            Utils.loadprefchklist("bushessel_" + chrid, Config.bushes);
+            Utils.loadprefchklist("treessel_" + chrid, Config.trees);
+            Utils.loadprefchklist("iconssel_" + chrid, Config.icons);
             opts.setMapSettings();
         }
 
@@ -428,7 +428,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
 
     static class Zergwnd extends Hidewnd {
         Tabs tabs = new Tabs(Coord.z, Coord.z, this);
-        final TButton kin, pol;
+        final TButton kin, pol, pol2;
 
         class TButton extends IButton {
             Tabs.Tab tab = null;
@@ -462,12 +462,14 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             kin = add(new TButton("kin", false));
             kin.tooltip = Text.render("Kin");
             pol = add(new TButton("pol", true));
+            pol2 = add(new TButton("rlm", true));
         }
 
         private void repack() {
             tabs.indpack();
             kin.c = new Coord(0, tabs.curtab.contentsz().y + 20);
             pol.c = new Coord(kin.c.x + kin.sz.x + 10, kin.c.y);
+            pol2.c = new Coord(pol.c.x + pol.sz.x + 10, pol.c.y);
             this.pack();
         }
 
@@ -487,6 +489,13 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             btn.tab.destroy();
             btn.tab = null;
             repack();
+        }
+
+        void addpol(Polity p) {
+	        /* This isn't very nice. :( */
+            TButton btn = p.cap.equals("Village")?pol:pol2;
+            ntab(p, btn);
+            btn.tooltip = Text.render(p.cap);
         }
     }
 
@@ -600,12 +609,13 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         } else if (place == "buddy") {
             zerg.ntab(buddies = (BuddyWnd) child, zerg.kin);
         } else if (place == "pol") {
-            zerg.ntab(polity = (Polity) child, zerg.pol);
-            zerg.pol.tooltip = Text.render(polity.cap);
+            Polity p = (Polity)child;
+            polities.add(p);
+            zerg.addpol(p);
         } else if (place == "chat") {
             ChatUI.Channel prevchannel = chat.sel;
             chat.addchild(child);
-            if (Config.syslogonlogin && prevchannel != null && chat.sel.cb == null) {
+            if (prevchannel != null && chat.sel.cb == null) {
                 chat.select(prevchannel);
             }
         } else if (place == "party") {
@@ -662,8 +672,8 @@ public class GameUI extends ConsoleHost implements Console.Directory {
                     updhand();
                 }
             }
-        } else if (w == polity) {
-            polity = null;
+        } else if (polities.contains(w)) {
+            polities.remove(w);
             zerg.dtab(zerg.pol);
         } else if (w == chrwdg) {
             chrwdg = null;
@@ -790,23 +800,20 @@ public class GameUI extends ConsoleHost implements Console.Directory {
                 belt[slot] = ui.sess.getres((Integer) args[1]);
             }
         } else if (msg == "polowner") {
-            String o = (String) args[0];
-            boolean n = ((Integer) args[1]) != 0;
-            if (o.length() == 0)
-                o = null;
-            else
+            int id = (Integer)args[0];
+            String o = (String)args[1];
+            boolean n = ((Integer)args[2]) != 0;
+            if(o != null)
                 o = o.intern();
-            if (o != polowner) {
-                if (map != null) {
-                    if (o == null) {
-                        if (polowner != null)
-                            map.setpoltext("Leaving " + polowner);
-                    } else {
-                        map.setpoltext("Entering " + o);
-                    }
+            String cur = polowners.get(id);
+            if(map != null) {
+                if((o != null) && (cur == null)) {
+                    map.setpoltext(id, "Entering " + o);
+                } else if((o == null) && (cur != null)) {
+                    map.setpoltext(id, "Leaving " + cur);
                 }
-                polowner = o;
             }
+            polowners.put(id, o);
         } else if (msg == "showhelp") {
             Indir<Resource> res = ui.sess.getres((Integer) args[0]);
             if (help == null)
@@ -824,6 +831,8 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             return;
         } else if ((sender == chrwdg) && (msg == "close")) {
             chrwdg.hide();
+        } else if((polities.contains(sender)) && (msg == "close")) {
+            sender.hide();
         } else if ((sender == help) && (msg == "close")) {
             ui.destroy(help);
             help = null;
@@ -858,6 +867,10 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         public boolean globtype(char key, KeyEvent ev) {
             if (Config.agroclosest && key == 9)
                 return super.globtype(key, ev);
+
+            // ctrl + tab is used to rotate opponents
+            if (key == 9 && ev.isControlDown())
+                return true;
 
             if (key == gkey) {
                 click();
@@ -941,15 +954,6 @@ public class GameUI extends ConsoleHost implements Console.Directory {
                 }
             }
             Utils.setprefb("chatvis", chat.targeth != 0);
-        } else if (key == 16) {
-        /*
-        if((polity != null) && polity.show(!polity.visible)) {
-		polity.raise();
-		fitwdg(polity);
-		setfocus(polity);
-	    }
-	    */
-            return (true);
         } else if ((key == 27) && (map != null) && !map.hasfocus) {
             setfocus(map);
             return (true);
@@ -962,10 +966,17 @@ public class GameUI extends ConsoleHost implements Console.Directory {
                 map.togglegrid();
             return true;
         } else if (ev.isControlDown() && ev.getKeyCode() == KeyEvent.VK_M) {
-            boolean curstatus = statuswindow.visible;
-            statuswindow.show(!curstatus);
-            Utils.setprefb("statuswdgvisible", !curstatus);
-            Config.statuswdgvisible = !curstatus;
+            if (Config.statuswdgvisible) {
+                if (statuswindow != null)
+                    statuswindow.reqdestroy();
+                Config.statuswdgvisible = false;
+                Utils.setprefb("statuswdgvisible", false);
+            } else {
+                statuswindow = new StatusWdg();
+                add(statuswindow, new Coord(HavenPanel.w / 2 + 80, 10));
+                Config.statuswdgvisible = true;
+                Utils.setprefb("statuswdgvisible", true);
+            }
             return true;
         } else if (ev.isAltDown() && ev.getKeyCode() == KeyEvent.VK_Z) {
             quickslots.drop(QuickSlotsWdg.lc, Coord.z);
@@ -1065,14 +1076,15 @@ public class GameUI extends ConsoleHost implements Console.Directory {
 
     public void resize(Coord sz) {
         this.sz = sz;
-        chat.resize(Config.chatsz.equals(Coord.z) ? new Coord(sz.x - brpw, 111) : Config.chatsz);
+        chat.resize(Config.chatsz);
         chat.move(new Coord(0, sz.y));
         if (!Utils.getprefb("chatvis", true))
             chat.sresize(0);
         if (map != null)
             map.resize(sz);
         beltwdg.c = new Coord(blpw + 10, sz.y - beltwdg.sz.y - 5);
-        statuswindow.c = new Coord(HavenPanel.w / 2 + 80, 10);
+        if (statuswindow != null)
+            statuswindow.c = new Coord(HavenPanel.w / 2 + 80, 10);
         super.resize(sz);
     }
 
@@ -1294,13 +1306,12 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         }
 
         public boolean globtype(char key, KeyEvent ev) {
-            if (key != 0)
+            if(key != 0)
+                return(false);
+            int c = ev.getKeyCode();
+            if((c < KeyEvent.VK_0) || (c > KeyEvent.VK_9))
                 return (false);
-            int c = ev.getKeyChar();
-            if (Config.userazerty)
-                c = Utils.azerty2qwerty((char) c);
-            if ((c < KeyEvent.VK_0) || (c > KeyEvent.VK_9))
-                return (false);
+
             int i = Utils.floormod(c - KeyEvent.VK_0 - 1, 10);
             boolean M = (ev.getModifiersEx() & (KeyEvent.META_DOWN_MASK | KeyEvent.ALT_DOWN_MASK)) != 0;
             if (M) {

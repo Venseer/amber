@@ -37,8 +37,7 @@ import haven.Glob.Pagina;
 import java.util.*;
 
 public class MenuGrid extends Widget {
-    public final static Tex bg = Resource.loadtex("gfx/hud/invsq");
-    public final static Coord bgsz = bg.sz().add(-1, -1);
+    public final static Coord bgsz = Inventory.invsq.sz().add(-1, -1);
     public final static Pagina next = new Glob.Pagina(Resource.local().loadwait("gfx/hud/sc-next").indir());
     public final static Pagina bk = new Glob.Pagina(Resource.local().loadwait("gfx/hud/sc-back").indir());
     public final static RichText.Foundry ttfnd = new RichText.Foundry(TextAttribute.FAMILY, "SansSerif", TextAttribute.SIZE, Config.fontsizeglobal);
@@ -201,7 +200,7 @@ public class MenuGrid extends Widget {
         for (int y = 0; y < gsz.y; y++) {
             for (int x = 0; x < gsz.x; x++) {
                 Coord p = bgsz.mul(new Coord(x, y));
-                g.image(bg, p);
+                g.image(Inventory.invsq, p);
                 Pagina btn = layout[x][y];
                 if (btn != null) {
                     Tex btex = btn.img.tex();
@@ -212,7 +211,7 @@ public class MenuGrid extends Widget {
                             m += (1 - m) * (double) (now - btn.gettime) / (double) btn.dtime;
                         m = Utils.clip(m, 0, 1);
                         g.chcolor(255, 255, 255, 128);
-			g.fellipse(p.add(bgsz.div(2)), bgsz.div(2), Math.PI / 2, ((Math.PI / 2) + (Math.PI * 2 * m)));
+			            g.fellipse(p.add(bgsz.div(2)), bgsz.div(2), Math.PI / 2, ((Math.PI / 2) + (Math.PI * 2 * m)));
                         g.chcolor();
                     }
                     if (btn.newp != 0) {
@@ -364,8 +363,57 @@ public class MenuGrid extends Widget {
             } else {
                 if (ad.length > 0 && (ad[0].equals("craft") || ad[0].equals("bp")))
                     gameui().histbelt.push(r);
-                wdgmsg("act", (Object[]) ad);
+
+                if (Config.confirmmagic && r.res.get().name.startsWith("paginae/seid/")) {
+                    Window confirmwnd = new Window(new Coord(225, 100), "Confirm") {
+                        @Override
+                        public void wdgmsg(Widget sender, String msg, Object... args) {
+                            if (sender == cbtn)
+                                reqdestroy();
+                            else
+                                super.wdgmsg(sender, msg, args);
+                        }
+
+                        @Override
+                        public boolean type(char key, KeyEvent ev) {
+                            if (key == 27) {
+                                reqdestroy();
+                                return true;
+                            }
+                            return super.type(key, ev);
+                        }
+                    };
+
+                    confirmwnd.add(new Label(Resource.getLocString(Resource.BUNDLE_LABEL, "Using magic costs experience points. Are you sure you want to proceed?")),
+                            new Coord(10, 20));
+                    confirmwnd.pack();
+
+                    MenuGrid mg = this;
+                    Button yesbtn = new Button(70, "Yes") {
+                        @Override
+                        public void click() {
+                            mg.wdgmsg("act", (Object[]) ad);
+                            parent.reqdestroy();
+                        }
+                    };
+                    confirmwnd.add(yesbtn, new Coord(confirmwnd.sz.x / 2 - 60 - yesbtn.sz.x, 60));
+                    Button nobtn = new Button(70, "No") {
+                        @Override
+                        public void click() {
+                            parent.reqdestroy();
+                        }
+                    };
+                    confirmwnd.add(nobtn, new Coord(confirmwnd.sz.x / 2 + 20, 60));
+                    confirmwnd.pack();
+
+                    GameUI gui = gameui();
+                    gui.add(confirmwnd, new Coord(gui.sz.x / 2 - confirmwnd.sz.x / 2, gui.sz.y / 2 - 200));
+                    confirmwnd.show();
+                } else {
+                    wdgmsg("act", (Object[]) ad);
+                }
             }
+
             if (reset)
                 this.cur = null;
             curoff = 0;

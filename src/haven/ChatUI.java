@@ -827,6 +827,7 @@ public class ChatUI extends Widget {
                 } else {
                     Message cmsg = new NamedMessage(from, line, Utils.blendcol(col, Color.WHITE, 0.5), iw());
                     append(cmsg);
+                    save(cmsg.text().text);
                     if (urgency > 0)
                         notify(cmsg, urgency);
 

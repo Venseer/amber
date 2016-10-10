@@ -41,6 +41,14 @@ public abstract class ListWidget<T> extends Widget {
 
     protected abstract void drawitem(GOut g, T item, int i);
 
+    public int find(T item) {
+        for (int i = 0; i < listitems(); i++) {
+            if (listitem(i) == item)
+                return (i);
+        }
+        return (-1);
+    }
+
     public void change(T item) {
         this.sel = item;
     }

@@ -26,6 +26,9 @@
 
 package haven;
 
+import haven.res.ui.tt.ArmorFactory;
+import haven.res.ui.tt.WearFactory;
+
 import java.util.*;
 import java.awt.image.BufferedImage;
 import java.awt.Graphics;
@@ -146,7 +149,7 @@ public abstract class ItemInfo {
         }
 
         public Name(Owner owner, String str) {
-            this(owner, Text.render(locContentName(str)));
+            this(owner, Text.render(Resource.getLocContent(str)));
         }
 
         public BufferedImage tipimg() {
@@ -170,20 +173,6 @@ public abstract class ItemInfo {
         }
     }
 
-    private static String locContentName(String str) {
-        int i = str.indexOf(" l of ");
-        if (i > 0) {
-            String contName = str.substring(i);
-            String locContName = Resource.getLocStringOrNull(Resource.BUNDLE_LABEL, contName);
-            if (locContName != null)
-                return str.substring(0, i) + locContName + " (" + str.substring(i + " l of ".length()) + ")";
-            return str;
-        }
-        // TODO: handling for seeds. will require updating Contents handling below
-
-        return str;
-    }
-
     public static class Contents extends Tip {
         public final List<ItemInfo> sub;
         private static final Text.Line ch = Text.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Contents:"));
@@ -198,8 +187,10 @@ public abstract class ItemInfo {
                 if (info instanceof ItemInfo.Name) {
                     ItemInfo.Name name = (ItemInfo.Name) info;
                     if (name.str != null) {
-                        isseeds = name.str.text.contains(" seed");
+                        // determine whether we are dealing with seeds by testing for
+                        // the absence of decimal separator (this will work irregardless of current localization)
                         int amountend = name.str.text.indexOf(' ');
+                        isseeds = name.str.text.lastIndexOf('.', amountend) < 0;
                         if (amountend > 0) {
                             try {
                                 content = Double.parseDouble(name.str.text.substring(0, amountend));
@@ -329,7 +320,17 @@ public abstract class ItemInfo {
                 } else {
                     throw (new ClassCastException("Unexpected info specification " + a[0].getClass()));
                 }
-                InfoFactory f = ttres.getcode(InfoFactory.class, true);
+
+                InfoFactory f;
+                // custom armor and wear classes are used because server returns identically named class "Wear"
+                // for both of those.
+                if (ttres.name.equals("ui/tt/armor"))
+                    f = new ArmorFactory();
+                else if (ttres.name.equals("ui/tt/wear"))
+                    f = new WearFactory();
+                else
+                    f = ttres.getcode(InfoFactory.class, true);
+
                 ItemInfo inf = f.build(owner, a);
                 if (inf != null)
                     ret.add(inf);

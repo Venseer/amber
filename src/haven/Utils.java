@@ -255,6 +255,42 @@ public class Utils {
         }
     }
 
+    static void loadprefchklist(String prefname, Map<String, CheckListboxItem> data) {
+        try {
+            String jsonstr = Utils.getpref(prefname, null);
+            if (jsonstr == null)
+                return;
+            JSONArray ja = new JSONArray(jsonstr);
+            for (int i = 0; i < ja.length(); i++) {
+                CheckListboxItem itm = data.get(ja.getString(i));
+                if (itm != null)
+                    itm.selected = true;
+            }
+        } catch (SecurityException e) {
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    static void setprefchklst(String prefname, Map<String, CheckListboxItem> val) {
+        try {
+            String jsonarr = "";
+            Iterator it = val.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry entry = (Map.Entry)it.next();
+                CheckListboxItem itm = (CheckListboxItem)entry.getValue();
+                if (itm.selected)
+                    jsonarr += "\"" + entry.getKey() + "\",";
+            }
+            if (jsonarr.length() > 0)
+                jsonarr = jsonarr.substring(0, jsonarr.length() - 1);
+            Utils.setpref(prefname, "[" + jsonarr + "]");
+        } catch (SecurityException e) {
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
     static JSONObject[] getprefjsona(String prefname, JSONObject[] def) {
         try {
             String jsonstr = Utils.getpref(prefname, null);
@@ -1289,7 +1325,7 @@ public class Utils {
         return (null);
     }
 
-    private final static Map<Character, Character> az2qwmap = new HashMap<Character, Character>(10) {{
+    private final static Map<Character, Character> az2qwmap = new HashMap<Character, Character>(12) {{
         put('&', '1');
         put('é', '2');
         put('"', '3');
@@ -1300,6 +1336,8 @@ public class Utils {
         put('_', '8');
         put('ç', '9');
         put('à', '0');
+        put('a', 'q');
+        put('z', 'w');
     }};
 
     public static char azerty2qwerty(char az) {
@@ -1316,7 +1354,28 @@ public class Utils {
             return null;
         }
     }
-    
+
+    public static class MapBuilder<K, V> {
+        private final Map<K, V> bk;
+
+        public MapBuilder(Map<K, V> bk) {
+            this.bk = bk;
+        }
+
+        public MapBuilder<K, V> put(K k, V v) {
+            bk.put(k, v);
+            return(this);
+        }
+
+        public Map<K, V> map() {
+            return(Collections.unmodifiableMap(bk));
+        }
+    }
+
+    public static <K, V> MapBuilder<K, V> map() {
+        return (new MapBuilder<K, V>(new HashMap<K, V>()));
+    }
+
     public static final Comparator<Object> idcmd = new Comparator<Object>() {
         int eid = 0;
         final Map<Ref, Long> emerg = new HashMap<Ref, Long>();
