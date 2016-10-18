@@ -38,6 +38,7 @@ import java.lang.ref.*;
 import java.lang.reflect.*;
 import java.util.prefs.*;
 import java.util.*;
+import java.util.function.*;
 import java.awt.Graphics;
 import java.awt.Color;
 import java.awt.image.*;
@@ -1227,6 +1228,12 @@ public class Utils {
         return (ret);
     }
 
+    public static <T, E extends T> T[] extend(T[] src, E[] ne) {
+        T[] ret = extend(src, 0, src.length + ne.length);
+        System.arraycopy(ne, 0, ret, src.length, ne.length);
+        return (ret);
+    }
+
     public static int[] extend(int[] src, int nl) {
         int[] dst = new int[nl];
         System.arraycopy(src, 0, dst, 0, Math.min(src.length, dst.length));
@@ -1255,6 +1262,14 @@ public class Utils {
         Iterator<T> i = c.iterator();
         if (!i.hasNext()) return (null);
         return (i.next());
+    }
+
+    public static boolean strcheck(String str, IntPredicate p) {
+        for (int i = 0; i < str.length(); i++) {
+            if (!p.test(str.charAt(i)))
+                return (false);
+        }
+        return (true);
     }
 
     public static <T> T construct(Constructor<T> cons, Object... args) {
@@ -1462,12 +1477,12 @@ public class Utils {
     }
 
     // NOTE: following fmt*DecPlace methods will not work with values having large integer part
-    static String fmt1DecPlace(double value) {
+    public static String fmt1DecPlace(double value) {
         double rvalue = (double) Math.round(value * 10) / 10;
         return (rvalue % 1 == 0) ? Integer.toString((int)rvalue) : Double.toString(rvalue);
     }
 
-    static String fmt3DecPlace(double value) {
+    public static String fmt3DecPlace(double value) {
         double rvalue = (double) Math.round(value * 1000) / 1000;
         return (rvalue % 1 == 0) ? Integer.toString((int)rvalue) : Double.toString(rvalue);
     }

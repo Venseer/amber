@@ -931,6 +931,28 @@ public class OptWnd extends Window {
                 a = val;
             }
         });
+        appender.add(new CheckBox("Simplified opening indicators") {
+            {
+                a = Config.combaltopenings;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("combaltopenings", val);
+                Config.combaltopenings = val;
+                a = val;
+            }
+        });
+        appender.add(new CheckBox("Show key bindings in combat UI") {
+            {
+                a = Config.combshowkeys;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("combshowkeys", val);
+                Config.combshowkeys = val;
+                a = val;
+            }
+        });
         appender.addRow(new Label("Combat key bindings:"), combatkeysDropdown());
 
         combat.add(new PButton(200, "Back", 27, main), new Coord(210, 360));
@@ -966,7 +988,8 @@ public class OptWnd extends Window {
                         Utils.setprefi("badcamsensitivity", val);
                     }
                 });
-        appender.add(new CheckBox("Minimap: use MMB to drag & L/RMB to move") {
+        // TODO: deprecated. pending complete removal.
+        /*appender.add(new CheckBox("Minimap: use MMB to drag & L/RMB to move") {
             {
                 a = Config.alternmapctrls;
             }
@@ -976,7 +999,7 @@ public class OptWnd extends Window {
                 Config.alternmapctrls = val;
                 a = val;
             }
-        });
+        });*/
         appender.add(new CheckBox("Use French (AZERTY) keyboard layout") {
             {
                 a = Config.userazerty;
@@ -1629,7 +1652,31 @@ public class OptWnd extends Window {
                 Utils.setprefd("alarmmammothvol", vol);
             }
         });
+        appender.setVerticalMargin(0);
+        appender.add(new CheckBox("Alarm on localized resources") {
+            {
+                a = Config.alarmlocres;
+            }
 
+            public void set(boolean val) {
+                Utils.setprefb("alarmlocres", val);
+                Config.alarmlocres = val;
+                a = val;
+            }
+        });
+        appender.setVerticalMargin(VERTICAL_AUDIO_MARGIN);
+        appender.add(new HSlider(200, 0, 1000, 0) {
+            protected void attach(UI ui) {
+                super.attach(ui);
+                val = (int) (Config.alarmlocresvol * 1000);
+            }
+
+            public void changed() {
+                double vol = val / 1000.0;
+                Config.alarmlocresvol = vol;
+                Utils.setprefd("alarmlocresvol", vol);
+            }
+        });
         soundalarms.add(new PButton(200, "Back", 27, main), new Coord(210, 360));
         soundalarms.pack();
     }
@@ -1767,99 +1814,6 @@ public class OptWnd extends Window {
     }
 
     private static final List<Integer> fontSize = Arrays.asList(10, 11, 12, 13, 14, 15, 16);
-
-    private Dropbox<Integer> makeFontSizeGlobalDropdown() {
-        List<String> values = fontSize.stream().map(x -> x.toString()).collect(Collectors.toList());
-        return new Dropbox<Integer>(fontSize.size(), values) {
-            {
-                super.change(Config.fontsizeglobal);
-            }
-
-            @Override
-            protected Integer listitem(int i) {
-                return fontSize.get(i);
-            }
-
-            @Override
-            protected int listitems() {
-                return fontSize.size();
-            }
-
-            @Override
-            protected void drawitem(GOut g, Integer item, int i) {
-                g.text(item.toString(), Coord.z);
-            }
-
-            @Override
-            public void change(Integer item) {
-                super.change(item);
-                Config.fontsizeglobal = item;
-                Utils.setprefi("fontsizeglobal", item);
-            }
-        };
-    }
-
-    private Dropbox<Integer> makeFontSizeButtonDropdown() {
-        List<String> values = fontSize.stream().map(x -> x.toString()).collect(Collectors.toList());
-        return new Dropbox<Integer>(fontSize.size(), values) {
-            {
-                super.change(Config.fontsizebutton);
-            }
-
-            @Override
-            protected Integer listitem(int i) {
-                return fontSize.get(i);
-            }
-
-            @Override
-            protected int listitems() {
-                return fontSize.size();
-            }
-
-            @Override
-            protected void drawitem(GOut g, Integer item, int i) {
-                g.text(item.toString(), Coord.z);
-            }
-
-            @Override
-            public void change(Integer item) {
-                super.change(item);
-                Config.fontsizebutton = item;
-                Utils.setprefi("fontsizebutton", item);
-            }
-        };
-    }
-
-    private Dropbox<Integer> makeFontSizeWndCapDropdown() {
-        List<String> values = fontSize.stream().map(x -> x.toString()).collect(Collectors.toList());
-        return new Dropbox<Integer>(fontSize.size(), values) {
-            {
-                super.change(Config.fontsizewndcap);
-            }
-
-            @Override
-            protected Integer listitem(int i) {
-                return fontSize.get(i);
-            }
-
-            @Override
-            protected int listitems() {
-                return fontSize.size();
-            }
-
-            @Override
-            protected void drawitem(GOut g, Integer item, int i) {
-                g.text(item.toString(), Coord.z);
-            }
-
-            @Override
-            public void change(Integer item) {
-                super.change(item);
-                Config.fontsizewndcap = item;
-                Utils.setprefi("fontsizewndcap", item);
-            }
-        };
-    }
 
     private Dropbox<Integer> makeFontSizeChatDropdown() {
         List<String> values = fontSize.stream().map(x -> x.toString()).collect(Collectors.toList());

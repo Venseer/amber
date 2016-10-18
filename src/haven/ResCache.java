@@ -37,12 +37,7 @@ public interface ResCache {
 
     public static class StupidJavaCodeContainer {
         private static ResCache makeglobal() {
-            ResCache ret;
-            if (Config.fscache) {
-                if ((ret = FileCache.foruser()) != null)
-                    return (ret);
-            }
-            return (null);
+	    return(HashDirCache.create());
         }
     }
 

@@ -1854,7 +1854,9 @@ public class Resource implements Serializable {
             "%s's Tasks",
             "%s's Business",
             "%s Giving the Chase",
-            "A Favor for %s"
+            "A Favor for %s",
+            "%s's Laughter",
+            "Blood for %s"
     };
 
     private static final String[] fmtLocStringsFlower = new String[]{

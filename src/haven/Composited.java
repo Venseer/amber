@@ -30,8 +30,9 @@ import java.util.*;
 
 import haven.Skeleton.Pose;
 import haven.Skeleton.PoseMod;
+import haven.MapView.ClickInfo;
 
-public class Composited implements Rendered {
+public class Composited implements Rendered, MapView.Clickable {
     public final Skeleton skel;
     public final Pose pose;
     private final PoseMorph morph;
@@ -148,6 +149,7 @@ public class Composited implements Rendered {
 
     public class Model implements Rendered {
         public final MorphedMesh m;
+        public final int id;
         int z = 0, lz = 0;
 
         public class Layer implements FRendered {
@@ -178,8 +180,9 @@ public class Composited implements Rendered {
 
         public final List<Layer> lay = new ArrayList<Layer>();
 
-        private Model(FastMesh m) {
+        private Model(FastMesh m, int id) {
             this.m = new MorphedMesh(m, morph);
+            this.id = id;
         }
 
         private void addlay(Material mat) {
@@ -238,10 +241,12 @@ public class Composited implements Rendered {
     public abstract class Equ implements Rendered {
         private final GLState et;
         public final ED desc;
+        public final int id;
         private boolean matched;
 
         private Equ(ED ed) {
             this.desc = ed.clone();
+            this.id = desc.id;
             GLState bt = null;
             if (bt == null) {
                 Skeleton.BoneOffset bo = ed.res.res.get().layer(Skeleton.BoneOffset.class, ed.at);
@@ -273,6 +278,7 @@ public class Composited implements Rendered {
     public static class MD implements Cloneable {
         public Indir<Resource> mod;
         public List<ResData> tex;
+        public int id = -1;
         private Model real;
 
         public MD(Indir<Resource> mod, List<ResData> tex) {
@@ -304,7 +310,7 @@ public class Composited implements Rendered {
     }
 
     public static class ED implements Cloneable {
-        public int t;
+        public int t, id = -1;
         public String at;
         public ResData res;
         public Coord3f off;
@@ -354,9 +360,9 @@ public class Composited implements Rendered {
                     FastMesh.MeshRes mr = md.mod.get().layer(FastMesh.MeshRes.class);
                     if (mr == null)
                         throw (new Sprite.ResourceException("Model resource contains no mesh", md.mod.get()));
-                    md.real = new Model(mr.m);
+                    md.real = new Model(mr.m, md.id);
             /* This is really ugly, but I can't really think of
-		     * anything less ugly right now. */
+             * anything less ugly right now. */
                     if (md.mod.get().name.equals("gfx/borka/male") || md.mod.get().name.equals("gfx/borka/female"))
                         md.real.z = -1;
                     this.mod.add(md.real);
@@ -429,6 +435,34 @@ public class Composited implements Rendered {
 
     public void changes() {
         changes(false);
+    }
+
+    private static class CompositeClick extends ClickInfo {
+        CompositeClick(ClickInfo prev, Integer id) {
+            super(prev, id);
+        }
+
+        public ClickInfo include(Rendered r) {
+            int id = (this.id == null) ? 0 : this.id;
+            if (r instanceof Model) {
+                Model mod = (Model) r;
+                if (mod.id >= 0)
+                    return (new CompositeClick(this, 0x01000000 | ((mod.id & 0xff) << 8)));
+            } else if (r instanceof Equ) {
+                Equ equ = (Equ) r;
+                if (equ.id >= 0)
+                    return (new CompositeClick(this, 0x02000000 | ((equ.id & 0xff) << 16)));
+            } else if (r instanceof FastMesh.ResourceMesh) {
+                FastMesh.ResourceMesh rm = (FastMesh.ResourceMesh) r;
+                if ((id & 0xff000000) == 2)
+                    return (new CompositeClick(this, id & 0xffff0000 | (rm.id & 0xffff)));
+            }
+            return (this);
+        }
+    }
+
+    public ClickInfo clickinfo(Rendered self, ClickInfo prev) {
+        return (new CompositeClick(prev, null));
     }
 
     public boolean setup(RenderList rl) {

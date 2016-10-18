@@ -1,3 +1,35 @@
+Version 1.39.1
+    Fixed:
+        * Rockcrystal not being recognized for sound alarm
+        * Crash while viewing a barterstand with no buy button.
+
+
+Version 1.39.0
+    New:
+        * Show item quality in barter stand windows.
+        * Simplified opening indicators.
+        * Option to show current keybindings for combat actions.
+        * Grayed out icons for dead animals (except aurochs).
+        * Alarm for localized resources.
+
+    Fixed:
+        * Animal radius not being removed after killing the animal.
+
+
+Version 1.38.1
+    New:
+        * Highlight Travel menu options.
+
+    Fixed:
+        * Combat school not switching without pressing save.
+        * Mussel picker not working with minimap.
+
+    Misc:
+        * Localization support improvements.
+        * Updated Russian localization.
+        * Code cleanup.
+
+
 Version 1.38.0
     New:
         * Alternative combat UI.

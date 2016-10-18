@@ -141,6 +141,8 @@ public class Config {
     public static double alarmonforagablesvol = Utils.getprefd("alarmonforagablesvol", 0.8);
     public static boolean alarmbears = Utils.getprefb("alarmbears", true);
     public static double alarmbearsvol = Utils.getprefd("alarmbearsvol", 0.8);
+    public static boolean alarmlocres = Utils.getprefb("alarmlocres", false);
+    public static double alarmlocresvol = Utils.getprefd("alarmlocresvol", 0.8);
     public static boolean alarmtroll = Utils.getprefb("alarmtroll", false);
     public static double alarmtrollvol = Utils.getprefd("alarmtrollvol", 0.8);
     public static boolean alarmmammoth = Utils.getprefb("alarmmammoth", true);
@@ -167,7 +169,9 @@ public class Config {
     public static boolean logcombatactions =  Utils.getprefb("logcombatactions", false);
     public static boolean autopickmussels =  Utils.getprefb("autopickmussels", false);
     public static boolean confirmmagic =  Utils.getprefb("confirmmagic", true);
-    public static boolean altfightui =  Utils.getprefb("altfightui", true);
+    public static boolean altfightui =  Utils.getprefb("altfightui", false);
+    public static boolean combshowkeys =  Utils.getprefb("combshowkeys", true);
+    public static boolean combaltopenings =  Utils.getprefb("combaltopenings", false);
 
     public static int avgmode = Utils.getprefi("avgmode", 0);
     private final static Map<String, Integer> defFontSzGlobal =  new HashMap<String, Integer>(3) {{
@@ -323,7 +327,7 @@ public class Config {
         put("mussels", new CheckListboxItem("Mussels"));
     }};
 
-    public final static Map<String, Tex> additonalicons = new HashMap<String, Tex>(13) {{
+    public final static Map<String, Tex> additonalicons = new HashMap<String, Tex>(24) {{
         put("gfx/terobjs/vehicle/bram", Resource.loadtex("gfx/icons/bram"));
         put("gfx/kritter/toad/toad", Resource.loadtex("gfx/icons/toad"));
         put("gfx/terobjs/vehicle/rowboat", Resource.loadtex("gfx/icons/rowboat"));
@@ -337,6 +341,18 @@ public class Config {
         put("gfx/terobjs/vehicle/wheelbarrow", Resource.loadtex("gfx/icons/wheelbarrow"));
         put("gfx/terobjs/vehicle/cart", Resource.loadtex("gfx/icons/cart"));
         put("gfx/terobjs/vehicle/wreckingball", Resource.loadtex("gfx/icons/wball"));
+        // grayscale icons for dead animals
+        put("gfx/kritter/badger/badger", Resource.loadtex("gfx/icons/badger"));
+        put("gfx/kritter/bear/bear", Resource.loadtex("gfx/icons/bear"));
+        put("gfx/kritter/boar/boar", Resource.loadtex("gfx/icons/boar"));
+        put("gfx/kritter/fox/fox", Resource.loadtex("gfx/icons/fox"));
+        put("gfx/kritter/horse/horse", Resource.loadtex("gfx/icons/horse"));
+        put("gfx/kritter/lynx/lynx", Resource.loadtex("gfx/icons/lynx"));
+        put("gfx/kritter/mammoth/mammoth", Resource.loadtex("gfx/icons/mammoth"));
+        put("gfx/kritter/moose/moose", Resource.loadtex("gfx/icons/moose"));
+        put("gfx/kritter/reddeer/reddeer", Resource.loadtex("gfx/icons/reddeer"));
+        put("gfx/kritter/sheep/mouflon", Resource.loadtex("gfx/icons/mouflon"));
+        put("gfx/kritter/troll/troll", Resource.loadtex("gfx/icons/troll"));
     }};
 
     public final static Set<String> dangerousgobres = new HashSet<String>(Arrays.asList(
@@ -347,12 +363,24 @@ public class Config {
             "gfx/terobjs/herbs/flotsam", "gfx/terobjs/herbs/chimingbluebell", "gfx/terobjs/herbs/edelweiss",
             "gfx/terobjs/herbs/bloatedbolete", "gfx/terobjs/herbs/glimmermoss"));
 
+    public final static Set<String> locres = new HashSet<String>(Arrays.asList(
+            "gfx/terobjs/saltbasin",
+            "gfx/terobjs/abyssalchasm",
+            "gfx/terobjs/windthrow",
+            "gfx/terobjs/icespire",
+            "gfx/terobjs/woodheart",
+            "gfx/terobjs/jotunmussel",
+            "gfx/terobjs/guanopile",
+            "gfx/terobjs/geyser",
+            "gfx/terobjs/claypit",
+            "gfx/terobjs/caveorgan",
+            "gfx/terobjs/bumlings/rockcrystal"));
+
     public final static ArrayList<Pair<String, String>> disableanim = new ArrayList<Pair<String, String>>() {{
         add(new Pair<String, String>("Beehives", "gfx/terobjs/beehive"));
         add(new Pair<String, String>("Fires", "gfx/terobjs/pow"));
         add(new Pair<String, String>("Full trash stockpiles", "gfx/terobjs/stockpile-trash"));
         add(new Pair<String, String>("Idle animals", "/idle"));
-        add(new Pair<String, String>("Dream catchers", "gfx/terobjs/dreca"));
     }};
     public final static Set<String> disableanimSet = new HashSet<String>(disableanim.size());
 

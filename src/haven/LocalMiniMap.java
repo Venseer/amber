@@ -33,6 +33,7 @@ import java.awt.image.*;
 import java.util.*;
 import java.util.List;
 
+import haven.automation.MusselPicker;
 import haven.resutil.Ridges;
 
 public class LocalMiniMap extends Widget {
@@ -54,6 +55,7 @@ public class LocalMiniMap extends Widget {
     private static final Resource trollsfx = Resource.local().loadwait("sfx/troll");
     private static final Resource mammothsfx = Resource.local().loadwait("sfx/mammoth");
     private static final Resource doomedsfx = Resource.local().loadwait("sfx/doomed");
+    private static final Resource swagsfx = Resource.local().loadwait("sfx/swag");
 	private final HashSet<Long> sgobs = new HashSet<Long>();
     private final HashMap<Coord, Tex> maptiles = new HashMap<Coord, Tex>(28, 0.75f) {
         @Override
@@ -180,7 +182,13 @@ public class LocalMiniMap extends Widget {
                         CheckListboxItem itm = Config.icons.get(res.basename());
                         if (itm == null || !itm.selected) {
                             Coord gc = p2c(gob.rc);
-                            Tex tex = icon != null ? icon.tex() : Config.additonalicons.get(res.name);
+                            Tex tex;
+                            if (icon != null && gob.knocked != Boolean.TRUE) {
+                                tex = icon.tex();
+                            } else {
+                                Tex addtex = Config.additonalicons.get(res.name);
+                                tex = addtex != null ? addtex : icon.tex();
+                            }
                             g.image(tex, gc.sub(tex.sz().div(2)).add(delta));
                         }
                     }
@@ -216,7 +224,13 @@ public class LocalMiniMap extends Widget {
                     GobIcon icon = gob.getattr(GobIcon.class);
                     if (icon != null) {
                         Coord gc = p2c(gob.rc);
-                        Tex tex = icon.tex();
+                        Tex tex;
+                        if (gob.knocked != Boolean.TRUE) {
+                            tex = icon.tex();
+                        } else {
+                            Resource res = gob.getres();
+                            tex = res == null ? icon.tex() : Config.additonalicons.get(res.name);
+                        }
                         g.image(tex, gc.sub(tex.sz().div(2)).add(delta));
                     }
                 } catch (Loading l) {
@@ -273,40 +287,15 @@ public class LocalMiniMap extends Widget {
                     if (Config.alarmonforagables && Config.foragables.contains(res.name)) {
                         sgobs.add(gob.id);
                         Audio.play(foragablesfx, Config.alarmonforagablesvol);
-                    } else if (Config.alarmbears && res.name.equals("gfx/kritter/bear/bear")) {
+                    } else if (Config.alarmlocres && Config.locres.contains(res.name)) {
                         sgobs.add(gob.id);
-                        GAttrib drw = gob.getattr(Drawable.class);
-                        if (drw != null && drw instanceof Composite) {
-                            Composite cpst = (Composite) drw;
-                            if (cpst.nposes != null && cpst.nposes.size() > 0) {
-                                for (ResData resdata : cpst.nposes) {
-                                    Resource posres = resdata.res.get();
-                                    if (posres == null || !posres.name.endsWith("/knock")) {
-                                        Audio.play(bearsfx, Config.alarmbearsvol);
-                                        break;
-                                    }
-                                }
-                            } else {
-                                Audio.play(bearsfx, Config.alarmbearsvol);
-                            }
-                        }
-                    } else if (Config.alarmbears && res.name.equals("gfx/kritter/lynx/lynx")) {
+                        Audio.play(swagsfx, Config.alarmlocresvol);
+                    } else if (Config.alarmbears && res.name.equals("gfx/kritter/bear/bear") && gob.knocked == Boolean.FALSE) {
                         sgobs.add(gob.id);
-                        GAttrib drw = gob.getattr(Drawable.class);
-                        if (drw != null && drw instanceof Composite) {
-                            Composite cpst = (Composite) drw;
-                            if (cpst.nposes != null && cpst.nposes.size() > 0) {
-                                for (ResData resdata : cpst.nposes) {
-                                    Resource posres = resdata.res.get();
-                                    if (posres == null || !posres.name.endsWith("/knock")) {
-                                        Audio.play(lynxfx, Config.alarmbearsvol);
-                                        break;
-                                    }
-                                }
-                            } else {
-                                Audio.play(lynxfx, Config.alarmbearsvol);
-                            }
-                        }
+                        Audio.play(bearsfx, Config.alarmbearsvol);
+                    } else if (Config.alarmbears && res.name.equals("gfx/kritter/lynx/lynx") && gob.knocked == Boolean.FALSE) {
+                        sgobs.add(gob.id);
+                        Audio.play(lynxfx, Config.alarmbearsvol);
                     } else if (res.name.equals("gfx/kritter/troll/troll")) {
                         if (mv.areamine != null)
                             mv.areamine.terminate();
@@ -314,23 +303,9 @@ public class LocalMiniMap extends Widget {
                             sgobs.add(gob.id);
                             Audio.play(trollsfx, Config.alarmtrollvol);
                         }
-                    } else if (Config.alarmmammoth && res.name.equals("gfx/kritter/mammoth/mammoth")) {
+                    } else if (Config.alarmmammoth && res.name.equals("gfx/kritter/mammoth/mammoth") && gob.knocked == Boolean.FALSE) {
                         sgobs.add(gob.id);
-                        GAttrib drw = gob.getattr(Drawable.class);
-                        if (drw != null && drw instanceof Composite) {
-                            Composite cpst = (Composite) drw;
-                            if (cpst.nposes != null && cpst.nposes.size() > 0) {
-                                for (ResData resdata : cpst.nposes) {
-                                    Resource posres = resdata.res.get();
-                                    if (posres == null || !posres.name.endsWith("/knock")) {
-                                        Audio.play(mammothsfx, Config.alarmmammothvol);
-                                        break;
-                                    }
-                                }
-                            } else {
-                                Audio.play(mammothsfx, Config.alarmmammothvol);
-                            }
-                        }
+                        Audio.play(mammothsfx, Config.alarmmammothvol);
                     } else if (Config.alarmbram && (res.name.equals("gfx/terobjs/vehicle/bram") || res.name.equals("gfx/terobjs/vehicle/catapult"))) {
                         sgobs.add(gob.id);
                         Audio.play(doomedsfx, Config.alarmbramvol);
@@ -529,10 +504,13 @@ public class LocalMiniMap extends Widget {
                 if (cc == null)
                     return false;
                 Gob gob = findicongob(c.sub(delta));
-                if (gob == null)
+                if (gob == null) {
                     mv.wdgmsg("click", rootpos().add(c.sub(delta)), c2p(c.sub(delta)), button, ui.modflags());
-                else
+                } else {
                     mv.wdgmsg("click", rootpos().add(c.sub(delta)), c2p(c.sub(delta)), button, ui.modflags(), 0, (int) gob.id, gob.rc, 0, -1);
+                    if (Config.autopickmussels)
+                        mv.startMusselsPicker(gob);
+                }
             } else if (button == 2 && !Config.maplocked) {
                 doff = c;
                 dragging = ui.grabmouse(this);
@@ -542,10 +520,13 @@ public class LocalMiniMap extends Widget {
                 if (cc == null)
                     return false;
                 Gob gob = findicongob(c.sub(delta));
-                if (gob == null)
+                if (gob == null) {
                     mv.wdgmsg("click", rootpos().add(c.sub(delta)), c2p(c.sub(delta)), 1, ui.modflags());
-                else
+                } else {
                     mv.wdgmsg("click", rootpos().add(c.sub(delta)), c2p(c.sub(delta)), button, ui.modflags(), 0, (int) gob.id, gob.rc, 0, -1);
+                    if (Config.autopickmussels)
+                        mv.startMusselsPicker(gob);
+                }
             } else if (button == 1 && !Config.maplocked) {
                 doff = c;
                 dragging = ui.grabmouse(this);

@@ -43,6 +43,7 @@ import java.util.Map;
 import static haven.MCache.tilesz;
 
 public class MapView extends PView implements DTarget, Console.Directory, PFListener {
+    public static boolean clickdb = false;
     public static long plgob = -1;
     public Coord cc;
     public final Glob glob;
@@ -70,6 +71,7 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
     private Coord lasthittestc = Coord.z;
     public AreaMine areamine;
     private GobSelectCallback gobselcb;
+    private AreaSelectCallback areaselcb;
     private Pathfinder pf;
     public Thread pfthread;
     public SteelRefueler steelrefueler;
@@ -1046,16 +1048,16 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
 
         abstract protected T map(Rendered r);
 
-	private Clicklist(GLConfig cfg) {
-	    super(cfg);
-	    this.bk = new GLState.Buffer(cfg);
+        private Clicklist(GLConfig cfg) {
+            super(cfg);
+            this.bk = new GLState.Buffer(cfg);
         }
 
         protected States.ColState getcol(T t) {
             Reference<States.ColState> prevr = idmap.get(t);
-            States.ColState prev = (prevr == null)?null:prevr.get();
-            if(prev != null)
-                return(prev);
+            States.ColState prev = (prevr == null) ? null : prevr.get();
+            if (prev != null)
+                return (prev);
             int cr = ((i & 0x00000f) << 4) | ((i & 0x00f000) >> 12),
                     cg = ((i & 0x0000f0) << 0) | ((i & 0x0f0000) >> 16),
                     cb = ((i & 0x000f00) >> 4) | ((i & 0xf00000) >> 20);
@@ -1064,30 +1066,27 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
             i++;
             rmap.put(cst, t);
             idmap.put(t, new WeakReference<States.ColState>(cst));
-            return(cst);
+            return (cst);
         }
 
         protected void render(GOut g, Rendered r) {
             try {
-                if(r instanceof FRendered)
-                    ((FRendered)r).drawflat(g);
-            } catch(RenderList.RLoad l) {
-                if(ignload) return; else throw(l);
+                if (r instanceof FRendered)
+                    ((FRendered) r).drawflat(g);
+            } catch (RenderList.RLoad l) {
+                if (ignload) return;
+                else throw (l);
             }
         }
 
         public void get(GOut g, Coord c, final Callback<T> cb) {
-            g.getpixel(c, new Callback<Color>() {
-                public void done(Color c) {
-                    cb.done(rmap.get(new States.ColState(c)));
-                }
-            });
+            g.getpixel(c, col -> cb.done(rmap.get(new States.ColState(col))));
         }
 
-	public void setup(Rendered r, GLState.Buffer t) {
-	    this.plain = t;
-	    super.setup(r, t);
-	}
+        public void setup(Rendered r, GLState.Buffer t) {
+            this.plain = t;
+            super.setup(r, t);
+        }
 
         protected void setup(Slot s, Rendered r) {
             T t = map(r);
@@ -1095,12 +1094,12 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
             s.os.copy(bk);
             plain.copy(s.os);
             bk.copy(s.os, GLState.Slot.Type.GEOM);
-            if(t != null)
+            if (t != null)
                 getcol(t).prep(s.os);
         }
 
         public boolean aging() {
-            return(i > (1 << 20));
+            return (i > (1 << 20));
         }
     }
 
@@ -1108,8 +1107,8 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
         private int mode = 0;
         private MapMesh limit = null;
 
-	private Maplist(GLConfig cfg) {
-	    super(cfg);
+        private Maplist(GLConfig cfg) {
+            super(cfg);
         }
 
         protected MapMesh map(Rendered r) {
@@ -1141,26 +1140,26 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
                 rl.fin();
 
                 rl.render(g);
-                rl.get(g, c, new Callback<MapMesh>() {
-                    public void done(MapMesh hit) {cut = hit; ckdone(1);}
-                });
+                if(clickdb)
+                    g.getimage(img -> Debug.dumpimage(img, Debug.somedir("click1.png")));
+                rl.get(g, c, hit -> {cut = hit; ckdone(1);});
                 // rl.limit = hit;
 
                 rl.mode = 1;
                 rl.render(g);
-                g.getpixel(c, new Callback<Color>() {
-                    public void done(Color col) {
-                        tile = new Coord(col.getRed() - 1, col.getGreen() - 1);
-                        pixel = new Coord((col.getBlue() * tilesz.x) / 255, (col.getAlpha() * tilesz.y) / 255);
-                        ckdone(2);
-                    }
+                if(clickdb)
+                    g.getimage(img -> Debug.dumpimage(img, Debug.somedir("click2.png")));
+                g.getpixel(c, col -> {
+                    tile = new Coord(col.getRed() - 1, col.getGreen() - 1);
+                    pixel = new Coord((col.getBlue() * tilesz.x) / 255, (col.getAlpha() * tilesz.y) / 255);
+                    ckdone(2);
                 });
             }
 
             void ckdone(int fl) {
-                synchronized(this) {
-                    if((dfl |= fl) == 3) {
-                        if((cut == null) || !tile.isect(Coord.z, cut.sz))
+                synchronized (this) {
+                    if ((dfl |= fl) == 3) {
+                        if ((cut == null) || !tile.isect(Coord.z, cut.sz))
                             cb.done(null);
                         else
                             cb.done(cut.ul.add(tile).mul(tilesz).add(pixel));
@@ -1170,52 +1169,85 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
         };
     }
 
+    public static interface Clickable {
+        public ClickInfo clickinfo(Rendered self, ClickInfo prev);
+    }
+    public static final GenFun<Clickable> clickinfo = new GenFun<>(Clickable.class);
+    static {
+        clickinfo.register(Object.class, (self, prev) -> prev);
+        clickinfo.register(FastMesh.ResourceMesh.class, (self, prev) -> new ClickInfo(prev, ((FastMesh.ResourceMesh)self).id));
+    }
+
     public static class ClickInfo {
+        public final ClickInfo from;
         public final Gob gob;
         public final Gob.Overlay ol;
-        public final Rendered r;
+        public final Integer id;
 
-        ClickInfo(Gob gob, Gob.Overlay ol, Rendered r) {
-            this.gob = gob; this.ol = ol; this.r = r;
+        private ClickInfo(ClickInfo from, Gob gob, Gob.Overlay ol, Integer id) {
+            this.from = from; this.gob = gob; this.ol = ol; this.id = id;
+        }
+
+        public ClickInfo(ClickInfo prev, Integer id) {
+            this(prev, prev.gob, prev.ol, id);
+        }
+
+        public ClickInfo() {
+            this(null, null, null, null);
+        }
+
+        public ClickInfo include(Rendered r) {
+            if(r instanceof Gob)
+                return(new ClickInfo(this, (Gob)r, null, null));
+            if(r instanceof Gob.Overlay)
+                return(new ClickInfo(this, gob, (Gob.Overlay)r, null));
+            ClickInfo ret = clickinfo.call.clickinfo(r, this);
+            if(ret == null)
+                throw(new NullPointerException(r.toString()));
+            return(ret);
         }
 
         public boolean equals(Object obj) {
             if(!(obj instanceof ClickInfo))
                 return(false);
             ClickInfo o = (ClickInfo)obj;
-            return((gob == o.gob) && (ol == o.ol) && (r == o.r));
+            return((gob == o.gob) && (ol == o.ol) && (id == o.id));
         }
 
         public int hashCode() {
-            return((((System.identityHashCode(gob) * 31) + System.identityHashCode(ol)) * 31) + System.identityHashCode(r));
+            return((((System.identityHashCode(gob) * 31) + System.identityHashCode(ol)) * 31) + System.identityHashCode(id));
+        }
+
+        public String toString() {
+            return(String.format("<%s %s %s %x>", getClass(), gob, ol, (id == null)?-1:id));
+        }
+
+        public int clickid() {
+            return((id == null)?-1:id);
         }
     }
 
     private static class Goblist extends Clicklist<ClickInfo> {
-        Gob curgob;
-        Gob.Overlay curol;
-        ClickInfo curinfo;
+        private final ClickInfo root;
+        private ClickInfo curinfo;
 
-	public Goblist(GLConfig cfg) {super(cfg);}
+        public Goblist(GLConfig cfg) {
+            super(cfg);
+            curinfo = root = new ClickInfo();
+        }
 
         public ClickInfo map(Rendered r) {
-            return(curinfo);
+            if(r instanceof FRendered)
+                return(curinfo);
+            else
+                return(null);
         }
 
         public void add(Rendered r, GLState t) {
-            Gob prevg = curgob;
-            Gob.Overlay prevo = curol;
-            if(r instanceof Gob)
-                curgob = (Gob)r;
-            else if(r instanceof Gob.Overlay)
-                curol = (Gob.Overlay)r;
-            if((curgob == null) || !(r instanceof FRendered))
-                curinfo = null;
-            else
-                curinfo = new ClickInfo(curgob, curol, r);
+            ClickInfo previnfo = curinfo;
+            curinfo = curinfo.include(r);
             super.add(r, t);
-            curgob = prevg;
-            curol = prevo;
+            curinfo = previnfo;
         }
     }
 
@@ -1227,7 +1259,9 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
         rl.setup(gobs, clickbasic(g));
         rl.fin();
         rl.render(g);
-        rl.get(g, c, cb);
+        if(clickdb)
+            g.getimage(img -> Debug.dumpimage(img, Debug.somedir("click3.png")));
+        rl.get(g, c, inf -> cb.done(((inf == null) || (inf.gob == null))?null:inf));
     }
 
     public void delay(Delayed d) {
@@ -1571,20 +1605,17 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
 
         public void run(GOut g) {
             GLState.Buffer bk = g.st.copy();
-            Coord mc;
             try {
                 BGL gl = g.gl;
                 g.st.set(clickbasic(g));
                 g.apply();
                 gl.glClear(GL.GL_DEPTH_BUFFER_BIT | GL.GL_COLOR_BUFFER_BIT);
-                checkmapclick(g, pc, new Callback<Coord>() {
-                    public void done(Coord mc) {
-                        synchronized (ui) {
-                            if (mc != null)
-                                hit(pc, mc);
-                            else
-                                nohit(pc);
-                        }
+                checkmapclick(g, pc, mc -> {
+                    synchronized(ui) {
+                        if(mc != null)
+                            hit(pc, mc);
+                        else
+                            nohit(pc);
                     }
                 });
             } finally {
@@ -1615,22 +1646,12 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
                 g.st.set(clickbasic(g));
                 g.apply();
                 gl.glClear(GL.GL_DEPTH_BUFFER_BIT | GL.GL_COLOR_BUFFER_BIT);
-                checkmapclick(g, clickc, new Callback<Coord>() {
-                    public void done(Coord mc) {
-                        mapcl = mc;
-                        ckdone(1);
-                    }
-                });
+                checkmapclick(g, clickc, mc -> {mapcl = mc; ckdone(1);});
                 g.st.set(bk);
                 g.st.set(clickbasic(g));
                 g.apply();
                 gl.glClear(GL.GL_COLOR_BUFFER_BIT);
-                checkgobclick(g, clickc, new Callback<ClickInfo>() {
-                    public void done(ClickInfo cl) {
-                        gobcl = cl;
-                        ckdone(2);
-                    }
-                });
+                checkgobclick(g, clickc, cl -> {gobcl = cl; ckdone(2);});
             } finally {
                 g.st.set(bk);
             }
@@ -1657,12 +1678,6 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
 
         protected void nohit(Coord pc) {
         }
-    }
-
-    private static int getid(Rendered tgt) {
-        if (tgt instanceof FastMesh.ResourceMesh)
-            return (((FastMesh.ResourceMesh) tgt).id);
-        return (-1);
     }
 
     private class Click extends Hittest {
@@ -1725,22 +1740,14 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
                 }
                 if (inf.ol == null) {
                     if (Config.pf && curs != null && !curs.name.equals("gfx/hud/curs/study")) {
-                        pfRightClick(inf.gob, getid(inf.r), clickb, 0, null);
+                        pfRightClick(inf.gob, inf.clickid(), clickb, 0, null);
                     } else {
-                        wdgmsg("click", pc, mc, clickb, modflags, 0, (int) inf.gob.id, inf.gob.rc, 0, getid(inf.r));
-
-                        if (Config.autopickmussels) {
-                            try {
-                                if (inf.gob.getres().name.equals("gfx/terobjs/herbs/mussels")) {
-                                    musselPicker = new Thread(new MusselPicker(gameui(), inf.gob), "MusselPicker");
-                                    musselPicker.start();
-                                }
-                            } catch (Loading l) {
-                            }
-                        }
+                        wdgmsg("click", pc, mc, clickb, modflags, 0, (int) inf.gob.id, inf.gob.rc, 0, inf.clickid());
+                        if (Config.autopickmussels)
+                            startMusselsPicker(inf.gob);
                     }
                 } else {
-                    wdgmsg("click", pc, mc, clickb, modflags, 1, (int) inf.gob.id, inf.gob.rc, inf.ol.id, getid(inf.r));
+                    wdgmsg("click", pc, mc, clickb, modflags, 1, (int) inf.gob.id, inf.gob.rc, inf.ol.id, inf.clickid());
                 }
             }
         }
@@ -1752,6 +1759,14 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
 
     public void unregisterGobSelect() {
         this.gobselcb = null;
+    }
+
+    public void registerAreaSelect(AreaSelectCallback callback) {
+        this.areaselcb = callback;
+    }
+
+    public void unregisterAreaSelect() {
+        this.areaselcb = null;
     }
 
     public void pfLeftClick(Coord mc, String action) {
@@ -1838,6 +1853,13 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
                 }
                 Resource curs = ui.root.getcurs(c);
                 if (curs != null && curs.name.equals("gfx/hud/curs/mine")) {
+                    if (ui.modshift && selection == null) {
+                        selection = new Selector(this);
+                    } else if (selection != null) {
+                        selection.destroy();
+                        selection = null;
+                    }
+                } else if (areaselcb != null) {
                     if (ui.modshift && selection == null) {
                         selection = new Selector(this);
                     } else if (selection != null) {
@@ -1977,10 +1999,10 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
                         lastintermc = mc;
                         lastintergobid = (int) inf.gob.id;
                         lastintergobrc = inf.gob.rc;
-                        lastintermid = getid(inf.r);
+                        lastintermid = inf.clickid();
                         wdgmsg("itemact", pc, mc, ui.modflags(), 0, lastintergobid, lastintergobrc, 0, lastintermid);
                     } else {
-                        wdgmsg("itemact", pc, mc, ui.modflags(), 1, (int) inf.gob.id, inf.gob.rc, inf.ol.id, getid(inf.r));
+                        wdgmsg("itemact", pc, mc, ui.modflags(), 1, (int) inf.gob.id, inf.gob.rc, inf.ol.id, inf.clickid());
                     }
                 }
             }
@@ -2133,11 +2155,15 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
                     ol.destroy();
                     mgrab.remove();
                     if (mv != null) {
-                        areamine = new AreaMine(ol.getc1(), ol.getc2(), mv);
-                        new Thread(areamine, "Area miner").start();
-                        if (selection != null) {
-                            selection.destroy();
-                            selection = null;
+                        if (areaselcb != null) {
+                            areaselcb.areaselect(ol.getc1(), ol.getc2());
+                        } else { //  TODO: should reimplement miner to use callbacks
+                            areamine = new AreaMine(ol.getc1(), ol.getc2(), mv);
+                            new Thread(areamine, "Area miner").start();
+                            if (selection != null) {
+                                selection.destroy();
+                                selection = null;
+                            }
                         }
                     } else {
                         wdgmsg("sel", sc, ec, modflags);
@@ -2237,6 +2263,11 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
                 if (l == null)
                     throw (new Exception("Not loading"));
                 l.printStackTrace(cons.out);
+            }
+        });
+        Console.setscmd("clickdb", new Console.Command() {
+            public void run(Console cons, String[] args) {
+                clickdb = Utils.parsebool(args[1], false);
             }
         });
     }
@@ -2364,6 +2395,16 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
                 }
 
             }
+        }
+    }
+
+    public void startMusselsPicker(Gob gob) {
+        try {
+            if (gob.getres().name.equals("gfx/terobjs/herbs/mussels")) {
+                musselPicker = new Thread(new MusselPicker(gameui(), gob), "MusselPicker");
+                musselPicker.start();
+            }
+        } catch (Loading l) {
         }
     }
 }

@@ -26,9 +26,9 @@
 
 package haven;
 
+import java.awt.*;
 import java.text.DecimalFormat;
 import java.util.*;
-import java.awt.Color;
 import java.awt.event.KeyEvent;
 import java.awt.event.InputEvent;
 
@@ -50,6 +50,10 @@ public class Fightsess extends Widget {
     public Coord pcc;
     public int pho;
     private final Fightview fv;
+    private final Tex[] keystex = new Tex[10];
+    private final Tex[] keysftex = new Tex[10];
+    private final static Text.Foundry fnd = new Text.Foundry(Text.sans.deriveFont(Font.BOLD, 12));
+
    // private static final Map<Long, Tex> cdvalues = new HashMap<Long, Tex>(7);
 
     /*private static final Map<String, Integer> atkcds = new HashMap<String, Integer>(9){{
@@ -63,6 +67,14 @@ public class Fightsess extends Widget {
         put("Punch", 30);
         put("Sting", 35);
     }};*/
+
+    private static final Map<String, Color> openings = new HashMap<String, Color>(4) {{
+        put("paginae/atk/dizzy",new Color(8, 103, 136));
+        put("paginae/atk/offbalance", new Color(8, 103, 1));
+        put("paginae/atk/cornered", new Color(221, 28, 26));
+        put("paginae/atk/reeling", new Color(203, 168, 6));
+    }};
+    private Coord simpleOpeningSz = new Coord(32, 32);
 
     @RName("fsess")
     public static class $_ implements Factory {
@@ -78,6 +90,14 @@ public class Fightsess extends Widget {
         pho = -40;
         this.actions = (Indir<Resource>[]) new Indir[nact];
         this.dyn = new boolean[nact];
+
+        for(int i = 0; i < 10; i++) {
+            keystex[i] = Text.renderstroked(FightWnd.keys[i], Color.WHITE, Color.BLACK, fnd).tex();
+            if (i < 5)
+                keysftex[i] = keystex[i];
+            else
+                keysftex[i] = Text.renderstroked(FightWnd.keysf[i - 5], Color.WHITE, Color.BLACK, fnd).tex();
+        }
     }
 
     public void presize() {
@@ -143,7 +163,12 @@ public class Fightsess extends Widget {
 
     private static Coord actc(int i) {
         int rl = 5;
-        return(new Coord((actpitch * (i % rl)) - (((rl - 1) * actpitch) / 2), 125 + ((i / rl) * actpitch)));
+
+        int row = i / rl;
+        if (Config.combatkeys == 1)
+            row ^= 1;
+
+        return(new Coord((actpitch * (i % rl)) - (((rl - 1) * actpitch) / 2), 125 + (row * actpitch)));
     }
 
     private static final Coord cmc = new Coord(0, 67);
@@ -159,12 +184,16 @@ public class Fightsess extends Widget {
         GameUI gui = gameui();
         int gcx = gui.sz.x / 2;
 
-        for (Buff buff : fv.buffs.children(Buff.class))
-            buff.draw(g.reclip(Config.altfightui ? new Coord(gcx - buff.c.x - Buff.cframe.sz().x - 80, 180) : pcc.add(-buff.c.x - Buff.cframe.sz().x - 20, buff.c.y + pho - Buff.cframe.sz().y), buff.sz));
+        for (Buff buff : fv.buffs.children(Buff.class)) {
+            Coord bc = Config.altfightui ? new Coord(gcx - buff.c.x - Buff.cframe.sz().x - 80, 180) : pcc.add(-buff.c.x - Buff.cframe.sz().x - 20, buff.c.y + pho - Buff.cframe.sz().y);
+            drawOpening( g, buff, bc);
+        }
 
         if (fv.current != null) {
-            for (Buff buff : fv.current.buffs.children(Buff.class))
-                buff.draw(g.reclip(Config.altfightui ? new Coord(gcx + buff.c.x + 80, 180) : pcc.add(buff.c.x + 20, buff.c.y + pho - Buff.cframe.sz().y), buff.sz));
+            for (Buff buff : fv.current.buffs.children(Buff.class)) {
+                Coord bc = Config.altfightui ? new Coord(gcx + buff.c.x + 80, 180) : pcc.add(buff.c.x + 20, buff.c.y + pho - Buff.cframe.sz().y);
+                drawOpening( g, buff, bc);
+            }
 
             g.aimage(ip.get().tex(), Config.altfightui ? new Coord(gcx - 45, 200) : pcc.add(-75, 0), 1, 0.5);
             g.aimage(oip.get().tex(), Config.altfightui ? new Coord(gcx + 45, 200) : pcc.add(75, 0), 0, 0.5);
@@ -192,6 +221,7 @@ public class Fightsess extends Widget {
             }
             g.image(cdframe, Config.altfightui ? new Coord(gameui().sz.x / 2, 200).sub(cdframe.sz().div(2)) : cdc.sub(cdframe.sz().div(2)));
         }
+
         try {
             Indir<Resource> lastact = fv.lastact;
             if (lastact != this.lastact1) {
@@ -253,10 +283,58 @@ public class Fightsess extends Widget {
                     } else {
                         g.image(actframe, ca.sub(actframeo));
                     }
+
+                    if (Config.combshowkeys) {
+                        Tex key = Config.combatkeys == 0 ? keystex[i] : keysftex[i];
+                        g.image(key, ca.sub(indframeo).add(indframe.sz().x / 2 - key.sz().x / 2, indframe.sz().y - 6));
+                    }
                 }
             } catch (Loading l) {
             }
             ca.x += actpitch;
+        }
+    }
+
+    private void drawOpening(GOut g, Buff buff, Coord bc) {
+        if (Config.combaltopenings) {
+            try {
+                Resource res = buff.res.get();
+                if (res != null && !openings.containsKey(res.name))
+                    buff.draw(g.reclip(bc, buff.sz));
+
+                if (res != null) {
+                    Color clr = openings.get(res.name);
+                    if (clr != null) {
+                        if (buff.ameter >= 0) {
+                            g.chcolor(Color.WHITE);
+                            g.image(buff.cframe, bc);
+                            g.chcolor(Color.BLACK);
+                            g.frect(bc.add(buff.ameteroff), buff.ametersz);
+                            g.chcolor(Color.WHITE);
+                            g.frect(bc.add(buff.ameteroff), new Coord((buff.ameter * buff.ametersz.x) / 100, buff.ametersz.y));
+                        } else {
+                            g.image(buff.frame, bc);
+                        }
+
+                        bc.x += 3;
+                        bc.y += 3;
+
+                        g.chcolor(clr);
+                        g.frect(bc, simpleOpeningSz);
+                        g.chcolor(Color.WHITE);
+                        Text t = Text.renderstroked(buff.ameter + "", Color.WHITE, Color.BLACK, fnd);
+                        Tex T = t.tex();
+                        bc.x = bc.x + simpleOpeningSz.x / 2 - T.sz().x / 2;
+                        bc.y = bc.y + simpleOpeningSz.y / 2 - T.sz().y / 2;
+                        g.image(T, bc);
+                        T.dispose();
+                        g.chcolor();
+                    }
+                }
+            } catch (Loading l) {
+            }
+        } else {
+            buff.draw(g.reclip(bc, buff.sz));
         }
     }
 

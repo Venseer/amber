@@ -63,6 +63,8 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
     private static final Gob.Overlay animalradius = new Gob.Overlay(new BPRadSprite(100.0F, -10.0F, BPRadSprite.smatDanger));
     private static final Set<String> dangerousanimalrad = new HashSet<String>(Arrays.asList(
             "gfx/kritter/bear/bear", "gfx/kritter/boar/boar", "gfx/kritter/lynx/lynx", "gfx/kritter/badger/badger"));
+    // knocked will be null if pose update request hasn't been received yet
+    public Boolean knocked = null;
 
     public static class Overlay implements Rendered {
         public Indir<Resource> res;
@@ -469,29 +471,21 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
 
         Drawable d = getattr(Drawable.class);
         if (d != null) {
-            boolean hide = false;
-            if (Config.hidegobs) {
-                try {
-                    if (res != null && res.name.startsWith("gfx/terobjs/trees")
-                            && !res.name.endsWith("log") && !res.name.endsWith("oldtrunk")) {
-                        hide = true;
-                        GobHitbox.BBox bbox = GobHitbox.getBBox(this, true);
-                        if (bbox != null) {
-                            rl.add(new Overlay(new GobHitbox(this, bbox.a, bbox.b, true)), null);
-                        }
-                    }
-                } catch (Loading le) {
+            if (Config.hidegobs && res != null && res.name.startsWith("gfx/terobjs/trees") &&
+                    !res.name.endsWith("log") && !res.name.endsWith("oldtrunk")) {
+                    GobHitbox.BBox bbox = GobHitbox.getBBox(this, true);
+                    if (bbox != null) {
+                        rl.add(new Overlay(new GobHitbox(this, bbox.a, bbox.b, true)), null);
                 }
+            } else {
+                d.setup(rl);
             }
 
-            if (Config.showboundingboxes && !hide) {
+            if (Config.showboundingboxes) {
                 GobHitbox.BBox bbox = GobHitbox.getBBox(this, true);
                 if (bbox != null)
                     rl.add(new Overlay(new GobHitbox(this, bbox.a, bbox.b, false)), null);
             }
-
-            if (!hide)
-                d.setup(rl);
 
             if (Config.showplantgrowstage) {
                 if (res != null && res.name.startsWith("gfx/terobjs/plants") && !res.name.endsWith("trellis")) {
@@ -532,28 +526,12 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
                 }
             }
 
-            if (res != null && dangerousanimalrad.contains(res.name)) {
-                if (Config.showanimalrad) {
-                    if (!ols.contains(animalradius)) {
-                        GAttrib drw = getattr(Drawable.class);
-                        if (drw != null && drw instanceof Composite) {
-                            Composite cpst = (Composite) drw;
-                            if (cpst.nposes != null && cpst.nposes.size() > 0) {
-                                for (ResData resdata : cpst.nposes) {
-                                    Resource posres = resdata.res.get();
-                                    if (posres != null && !posres.name.endsWith("/knock") || posres == null) {
-                                        ols.add(animalradius);
-                                        break;
-                                    }
-                                }
-                            } else if (!cpst.nposesold){
-                                ols.add(animalradius);
-                            }
-                        }
-                    }
-                } else {
+            if (Config.showanimalrad && res != null && dangerousanimalrad.contains(res.name)) {
+                boolean hasradius = ols.contains(animalradius);
+                if ((knocked == null || knocked == Boolean.FALSE) && !hasradius)
+                    ols.add(animalradius);
+                else if (knocked == Boolean.TRUE && hasradius)
                     ols.remove(animalradius);
-                }
             }
 
             if (Config.showarchvector && res != null && res.name.equals("gfx/borka/body") && d instanceof Composite) {

@@ -26,35 +26,27 @@
 
 package haven;
 
-public abstract class ListWidget<T> extends Widget {
-    public final int itemh;
-    public T sel;
+public interface Hash<T> {
+    public int hash(T ob);
 
-    public ListWidget(Coord sz, int itemh) {
-        super(sz);
-        this.itemh = itemh;
-    }
+    public boolean equal(T x, T y);
 
-    protected abstract T listitem(int i);
-
-    protected abstract int listitems();
-
-    protected abstract void drawitem(GOut g, T item, int i);
-
-    public int find(T item) {
-        for (int i = 0; i < listitems(); i++) {
-            if (listitem(i) == item)
-                return (i);
+    public static final Hash<Object> eq = new Hash<Object>() {
+        public int hash(Object ob) {
+            return ((ob == null) ? 0 : ob.hashCode());
         }
-        return (-1);
-    }
 
-    public void change(T item) {
-        this.sel = item;
-    }
+        public boolean equal(Object x, Object y) {
+            return ((x == null) ? (y == null) : x.equals(y));
+        }
+    };
+    public static final Hash<Object> id = new Hash<Object>() {
+        public int hash(Object ob) {
+            return (System.identityHashCode(ob));
+        }
 
-    public void change2(T item) {
-        this.sel = item;
-    }
-
+        public boolean equal(Object x, Object y) {
+            return (x == y);
+        }
+    };
 }
