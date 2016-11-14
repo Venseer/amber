@@ -683,6 +683,12 @@ public class CharWnd extends Window {
             add(new Label("Experience cost:"), 2, 32);
             add(new Label("LP/hour"), 2, sz.y - 64);
             add(new Label("Learning points:"), 2, sz.y - 32);
+
+            if (Config.studybuff && ((Inventory)study).getFreeSpace() > 0) {
+                BuffToggle tgl = study.gameui().buffs.gettoggle("brain");
+                if (tgl == null)
+                    study.gameui().buffs.addchild(new BuffToggle("brain", Bufflist.buffbrain));
+            }
         }
 
         private void upd() {
@@ -1684,7 +1690,7 @@ public class CharWnd extends Window {
         {
             int x = 0, y = 0;
 
-            sattr = tabs.addStudy();
+            sattr = tabs.add();
             sattr.add(new Img(catf.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Abilities")).tex()), new Coord(x - 2, y));
             y += 35;
             skill = new ArrayList<SAttr>();

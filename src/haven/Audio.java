@@ -611,27 +611,16 @@ public class Audio {
     }
 
     static {
-        Console.setscmd("sfx", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                play(Resource.remote().load(args[1]));
-            }
-        });
-        Console.setscmd("sfxvol", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                setvolume(Double.parseDouble(args[1]));
-            }
-        });
-        Console.setscmd("audiobuf", new Console.Command() {
-            public void run(Console cons, String[] args) throws Exception {
-                int nsz = Integer.parseInt(args[1]);
-                if (nsz > 44100)
-                    throw (new Exception("Rejecting buffer longer than 1 second"));
-                bufsize = nsz * 4;
-                Utils.setprefi("audiobufsize", bufsize);
-                Player pl = ckpl(false);
-                if (pl != null)
-                    pl.reopen();
-            }
+        Console.setscmd("sfx", (cons, args) -> play(Resource.remote().load(args[1])));
+        Console.setscmd("audiobuf", (cons, args) -> {
+            int nsz = Integer.parseInt(args[1]);
+            if (nsz > 44100)
+                throw (new Exception("Rejecting buffer longer than 1 second"));
+            bufsize = nsz * 4;
+            Utils.setprefi("audiobufsize", bufsize);
+            Player pl = ckpl(false);
+            if (pl != null)
+                pl.reopen();
         });
     }
 }

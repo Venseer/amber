@@ -952,10 +952,6 @@ public abstract class GLState {
     };
 
     static {
-        Console.setscmd("applydb", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                Applier.debug = Utils.parsebool(args[1], false);
-            }
-        });
+        Console.setscmd("applydb", (cons, args) -> Applier.debug = Utils.parsebool(args[1], false));
     }
 }

@@ -456,10 +456,6 @@ public abstract class TexGL extends Tex {
     }
 
     static {
-        Console.setscmd("texdis", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                disableall = (Integer.parseInt(args[1]) != 0);
-            }
-        });
+        Console.setscmd("texdis", (cons, args) -> disableall = (Integer.parseInt(args[1]) != 0));
     }
 }

@@ -70,16 +70,8 @@ public class UI {
 
     private class WidgetConsole extends Console {
         {
-            setcmd("q", new Command() {
-                public void run(Console cons, String[] args) {
-                    HackThread.tg().interrupt();
-                }
-            });
-            setcmd("lo", new Command() {
-                public void run(Console cons, String[] args) {
-                    sess.close();
-                }
-            });
+            setcmd("q", (cons1, args) -> HackThread.tg().interrupt());
+            setcmd("lo", (cons1, args) -> sess.close());
         }
 
         private void findcmds(Map<String, Command> map, Widget wdg) {
@@ -179,10 +171,12 @@ public class UI {
             if (wdg instanceof ISBox && pwdg instanceof Window && ((Window) pwdg).origcap.equals("Stockpile")) {
                 TextEntry entry = new TextEntry(40, "") {
                     @Override
-                    public boolean type(char c, KeyEvent ev) {
-                        if (Config.userazerty)
-                            c = Utils.azerty2qwerty(c);
+                    public boolean keydown(KeyEvent e) {
+                        return !(e.getKeyCode() >= KeyEvent.VK_F1 && e.getKeyCode() <= KeyEvent.VK_F12);
+                    }
 
+                    @Override
+                    public boolean type(char c, KeyEvent ev) {
                         if (c >= KeyEvent.VK_0 && c <= KeyEvent.VK_9 && buf.line.length() < 2 || c == '\b') {
                             return buf.key(ev);
                         } else if (c == '\n') {
@@ -201,7 +195,8 @@ public class UI {
                     @Override
                     public void click() {
                         try {
-                            int count = Integer.parseInt(entry.dtext());
+                            String cs = entry.dtext();
+                            int count = cs.isEmpty() ? 1 : Integer.parseInt(cs);
                             for (int i = 0; i < count; i++)
                                 wdg.wdgmsg("xfer");
                         } catch (NumberFormatException e) {

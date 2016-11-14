@@ -28,17 +28,18 @@ package haven;
 
 import haven.GLProgram.VarID;
 import haven.automation.*;
-import haven.pathfinder.*;
+import haven.pathfinder.PFListener;
+import haven.pathfinder.Pathfinder;
 import haven.resutil.BPRadSprite;
 
 import javax.media.opengl.GL;
 import java.awt.*;
 import java.awt.event.KeyEvent;
-import java.lang.ref.*;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
-import java.util.Map;
 
 import static haven.MCache.tilesz;
 
@@ -773,17 +774,18 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
         }
 
         final GobSet oldfags = new GobSet("old");
+        final GobSet semistat = new GobSet("semistat");
         final GobSet semifags = new Transitory("semi") {
             int cycle = 0;
 
             void update() {
-                if(++cycle >= 300) {
+                if (++cycle >= 300) {
                     Collection<Gob> cache = new ArrayList<Gob>();
-                    for(Map.Entry<Gob, Integer> ob : age.entrySet()) {
-                        if(ticks - ob.getValue() > 450)
+                    for (Map.Entry<Gob, Integer> ob : age.entrySet()) {
+                        if (ticks - ob.getValue() > 450)
                             cache.add(ob.getKey());
                     }
-                    for(Gob ob : cache)
+                    for (Gob ob : cache)
                         put(oldfags, ob);
                     cycle = 0;
                 }
@@ -795,12 +797,20 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
             void update() {
                 if(++cycle >= 20) {
                     Collection<Gob> cache = new ArrayList<Gob>();
+                    Collection<Gob> scache = new ArrayList<Gob>();
                     for(Map.Entry<Gob, Integer> ob : age.entrySet()) {
-                        if(ticks - ob.getValue() > 30)
-                            cache.add(ob.getKey());
+                        if(ticks - ob.getValue() > 30) {
+                            Gob gob = ob.getKey();
+                            if(gob.staticp() instanceof Gob.SemiStatic)
+                                scache.add(gob);
+                            else
+                                cache.add(gob);
+                        }
                     }
                     for(Gob ob : cache)
                         put(semifags, ob);
+                    for(Gob ob : scache)
+                        put(semistat, ob);
                     cycle = 0;
                 }
             }
@@ -812,7 +822,8 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
                 if(++cycle >= 5) {
                     Collection<Gob> cache = new ArrayList<Gob>();
                     for(Gob ob : obs) {
-                        if(ob.staticp() instanceof Gob.Static)
+                        Object seq = ob.staticp();
+                        if((seq instanceof Gob.Static) || (seq instanceof Gob.SemiStatic))
                             cache.add(ob);
                     }
                     for(Gob ob : cache)
@@ -823,7 +834,7 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
 
             public Object staticp() {return(null);}
         };
-        final GobSet[] all = {oldfags, semifags, newfags, dynamic};
+        final GobSet[] all = {oldfags, semifags, semistat, newfags, dynamic};
 
         void put(GobSet set, Gob ob) {
             GobSet p = parts.get(ob);
@@ -880,7 +891,7 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
         }
 
         public String toString() {
-            return(String.format("%,dd %,dn %,ds %,do", dynamic.size(), newfags.size(), semifags.size(), oldfags.size()));
+            return(String.format("%,dd %,dn %,dS %,ds %,do", dynamic.size(), newfags.size(), semistat.size(), semifags.size(), oldfags.size()));
         }
     }
     private final Rendered gobs;
@@ -1712,8 +1723,8 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
 
             if (inf == null) {
                 if (Config.tilecenter && clickb == 3) {
-                    mc.x = mc.x / 11 * 11 + 5;
-                    mc.y = mc.y / 11 * 11 + 5;
+                    mc.x = mc.x / 11 * 11 + Integer.signum(mc.x) * 5;
+                    mc.y = mc.y / 11 * 11 + Integer.signum(mc.y) * 5;
                 }
 
                 if (Config.pf && clickb == 1 && curs != null && !curs.name.equals("gfx/hud/curs/study")) {
@@ -1989,8 +2000,8 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
             public void hit(Coord pc, Coord mc, ClickInfo inf) {
                 if (inf == null) {
                     if (Config.tilecenter) {
-                        mc.x = mc.x / 11 * 11 + 5;
-                        mc.y = mc.y / 11 * 11 + 5;
+                        mc.x = mc.x / 11 * 11 + Integer.signum(mc.x) * 5;
+                        mc.y = mc.y / 11 * 11 + Integer.signum(mc.y) * 5;
                     }
                     wdgmsg("itemact", pc, mc, ui.modflags());
                 } else {
@@ -2242,34 +2253,26 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
     private Map<String, Console.Command> cmdmap = new TreeMap<String, Console.Command>();
 
     {
-        cmdmap.put("cam", new Console.Command() {
-            public void run(Console cons, String[] args) throws Exception {
-                if (args.length >= 2) {
-                    Class<? extends Camera> ct = camtypes.get(args[1]);
-                    String[] cargs = Utils.splice(args, 2);
-                    if (ct != null) {
-                        camera = makecam(ct, cargs);
-                        Utils.setpref("defcam", args[1]);
-                        Utils.setprefb("camargs", Utils.serialize(cargs));
-                    } else {
-                        throw (new Exception("no such camera: " + args[1]));
-                    }
+        cmdmap.put("cam", (cons, args) -> {
+            if (args.length >= 2) {
+                Class<? extends Camera> ct = camtypes.get(args[1]);
+                String[] cargs = Utils.splice(args, 2);
+                if (ct != null) {
+                    camera = makecam(ct, cargs);
+                    Utils.setpref("defcam", args[1]);
+                    Utils.setprefb("camargs", Utils.serialize(cargs));
+                } else {
+                    throw (new Exception("no such camera: " + args[1]));
                 }
             }
         });
-        cmdmap.put("whyload", new Console.Command() {
-            public void run(Console cons, String[] args) throws Exception {
-                Loading l = lastload;
-                if (l == null)
-                    throw (new Exception("Not loading"));
-                l.printStackTrace(cons.out);
-            }
+        cmdmap.put("whyload", (cons, args) -> {
+            Loading l = lastload;
+            if (l == null)
+                throw (new Exception("Not loading"));
+            l.printStackTrace(cons.out);
         });
-        Console.setscmd("clickdb", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                clickdb = Utils.parsebool(args[1], false);
-            }
-        });
+        Console.setscmd("clickdb", (cons, args) -> clickdb = Utils.parsebool(args[1], false));
     }
 
     public Map<String, Console.Command> findcmds() {

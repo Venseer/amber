@@ -26,19 +26,47 @@
 
 package haven;
 
-import java.net.URL;
+import java.util.*;
+import java.util.function.*;
 
-public abstract class WebBrowser {
-    public static WebBrowser self;
+public class CachedFunction<P, R> implements Function<P, R> {
+    public final Function<P, R> back;
+    public final Consumer<? super R> dispose;
+    private final Map<P, R> cache;
 
-    public WebBrowser() {
+    public CachedFunction(int size, Function<P, R> back, Consumer<? super R> dispose) {
+	this.back = back;
+	this.dispose = dispose;
+	this.cache = new Cache(size);
     }
 
-    public abstract void show(URL url);
+    public CachedFunction(int size, Function<P, R> back) {
+	this(size, back, null);
+    }
 
-    public static class BrowserException extends RuntimeException {
-        public BrowserException(Throwable cause) {
-            super(cause);
-        }
+    private class Cache extends LinkedHashMap<P, R> {
+	private final int size;
+
+	public Cache(int size) {
+	    super(size, 0.75f, true);
+	    this.size = size;
+	}
+
+	protected boolean removeEldestEntry(Map.Entry<P, R> eldest) {
+	    if(size() > size) {
+		if(dispose != null)
+		    dispose.accept(eldest.getValue());
+		return(true);
+	    }
+	    return(false);
+	}
+    }
+
+    public R apply(P param) {
+	if(cache.containsKey(param))
+	    return(cache.get(param));
+	R ret = back.apply(param);
+	cache.put(param, ret);
+	return(ret);
     }
 }

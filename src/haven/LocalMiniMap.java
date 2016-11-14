@@ -43,6 +43,7 @@ public class LocalMiniMap extends Widget {
     public static final Text.Foundry bushf = new Text.Foundry(Text.sans.deriveFont(Font.BOLD), 12);
     private static final Text.Foundry partyf = bushf;
     public final MapView mv;
+    public final MapFile save;
     private Coord cc = null;
     private MapTile cur = null;
     private UI.Grab dragging;
@@ -152,6 +153,11 @@ public class LocalMiniMap extends Widget {
     public LocalMiniMap(Coord sz, MapView mv) {
         super(sz);
         this.mv = mv;
+        if(ResCache.global != null) {
+            save = MapFile.load(ResCache.global);
+        } else {
+            save = null;
+        }
     }
 
     public Coord p2c(Coord pc) {
@@ -408,8 +414,11 @@ public class LocalMiniMap extends Widget {
                         cache.put(new Pair<MCache.Grid, Integer>(plg, seq), f);
                     }
                 }
-                if (f.done())
+                if (f.done()) {
                     cur = f.get();
+                    if(save != null)
+                        save.update(ui.sess.glob.map, cur.grid.gc);
+                }
             }
         }
         if (cur != null) {

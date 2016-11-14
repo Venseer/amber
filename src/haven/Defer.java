@@ -105,7 +105,7 @@ public class Defer extends ThreadGroup {
         private volatile String state = "";
         private Throwable exc = null;
         private Loading lastload = null;
-        private Thread running = null;
+	private volatile Thread running = null;
 
         private Future(Callable<T> task) {
             this.task = task;
@@ -162,6 +162,13 @@ public class Defer extends ThreadGroup {
                 if (state != "done")
                     chstate("resched");
                 running = null;
+		/* XXX: This is a race; a cancelling thread could have
+		 * gotten the thread reference via running and then
+		 * interrupt this thread after interrupted()
+		 * returns. There is no obvious elegant solution,
+		 * though, and the risk should be quite low. Fix if
+		 * possible. */
+		Thread.interrupted();
             }
         }
 

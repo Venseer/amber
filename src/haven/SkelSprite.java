@@ -187,11 +187,16 @@ public class SkelSprite extends Sprite implements Gob.Overlay.CUpd, Skeleton.Has
 
     public boolean tick(int idt) {
         float dt = idt / 1000.0f;
-        if (!stat || (ipold > 0)) {
-            for (PoseMod m : mods)
+        if(!stat || (ipold > 0)) {
+            boolean done = true;
+            for(PoseMod m : mods) {
                 m.tick(dt);
-            if (ipold > 0) {
-                if ((ipold -= (dt / ipollen)) < 0) {
+                done = done && m.done();
+            }
+            if(done)
+                stat = true;
+            if(ipold > 0) {
+                if((ipold -= (dt / ipollen)) < 0) {
                     ipold = 0;
                     oldpose = null;
                 }
@@ -203,15 +208,17 @@ public class SkelSprite extends Sprite implements Gob.Overlay.CUpd, Skeleton.Has
         return (false);
     }
 
+    public Object staticp() {
+        if(!stat || (manims.length > 0) || (ipold > 0))
+            return(null);
+        return(Gob.SemiStatic.class);
+    }
+
     public Pose getpose() {
-	return(pose);
+	    return(pose);
     }
 
     static {
-        Console.setscmd("bonedb", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                bonedb = Utils.parsebool(args[1], false);
-            }
-        });
+        Console.setscmd("bonedb", (cons, args) -> bonedb = Utils.parsebool(args[1], false));
     }
 }

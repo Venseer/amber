@@ -228,7 +228,7 @@ public class Utils {
         try {
             String jsonstr = Utils.getpref(prefname, null);
             if (jsonstr == null)
-                return null;
+                return def;
             JSONArray ja = new JSONArray(jsonstr);
             String[] ra = new String[ja.length()];
             for (int i = 0; i < ja.length(); i++)
@@ -1264,12 +1264,32 @@ public class Utils {
         return (i.next());
     }
 
+    public static <T> T take(Iterable<T> c) {
+	Iterator<T> i = c.iterator();
+	if(!i.hasNext()) return(null);
+	T ret = i.next();
+	i.remove();
+	return(ret);
+    }
+
+    public static <T> int index(T[] arr, T el) {
+	for(int i = 0; i < arr.length; i++) {
+	    if(Objects.equals(arr[i], el))
+		return(i);
+	}
+	return(-1);
+    }
+
     public static boolean strcheck(String str, IntPredicate p) {
         for (int i = 0; i < str.length(); i++) {
             if (!p.test(str.charAt(i)))
                 return (false);
         }
         return (true);
+    }
+
+    public static <T> T or(T val, Supplier<T> els) {
+	return((val != null)?val:els.get());
     }
 
     public static <T> T construct(Constructor<T> cons, Object... args) {
@@ -1459,21 +1479,8 @@ public class Utils {
     };
 
     static {
-        Console.setscmd("die", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                throw (new Error("Triggered death"));
-            }
-        });
-        Console.setscmd("threads", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                Utils.dumptg(null, cons.out);
-            }
-        });
-        Console.setscmd("gc", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                System.gc();
-            }
-        });
+        Console.setscmd("threads", (cons, args) -> Utils.dumptg(null, cons.out));
+        Console.setscmd("gc", (cons, args) -> System.gc());
     }
 
     // NOTE: following fmt*DecPlace methods will not work with values having large integer part

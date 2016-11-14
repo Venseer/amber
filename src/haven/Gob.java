@@ -188,6 +188,7 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
     }
 
     public static class Static {}
+    public static class SemiStatic {}
 
     public Gob(Glob glob, Coord c, long id, int frame) {
         this.glob = glob;
@@ -514,7 +515,7 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
                     ResDrawable rd = getattr(ResDrawable.class);
                     if (rd != null && !rd.sdt.eom()) {
                         final int stage = rd.sdt.peekrbuf(0);
-                        if (stage < 100) {
+                        if (stage >= 0 && stage < 100) {
                             Overlay ol = findol(Sprite.GROWTH_STAGE_ID);
                             if (ol == null) {
                                 addol(new Gob.Overlay(Sprite.GROWTH_STAGE_ID, new TreeStageSprite(stage)));
@@ -576,13 +577,15 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
     private Object seq = null;
     public Object staticp() {
         if(seq == null) {
-            Object fs = new Static();
-            for(GAttrib ar : attr.values()) {
-                Object as = ar.staticp();
+            int rs = 0;
+            for(GAttrib attr : attr.values()) {
+                Object as = attr.staticp();
                 if(as == Rendered.CONSTANS) {
                 } else if(as instanceof Static) {
+                } else if(as == SemiStatic.class) {
+                    rs = Math.max(rs, 1);
                 } else {
-                    fs = null;
+                    rs = 2;
                     break;
                 }
             }
@@ -590,12 +593,18 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
                 Object os = ol.staticp();
                 if(os == Rendered.CONSTANS) {
                 } else if(os instanceof Static) {
+                } else if(os == SemiStatic.class) {
+                    rs = Math.max(rs, 1);
                 } else {
-                    fs = null;
+                    rs = 2;
                     break;
                 }
             }
-            seq = fs;
+            switch(rs) {
+                case 0: seq = new Static(); break;
+                case 1: seq = new SemiStatic(); break;
+                default: seq = null; break;
+            }
         }
         return((seq == DYNAMIC)?null:seq);
     }

@@ -344,8 +344,8 @@ public class MainFrame extends java.awt.Frame implements Runnable, Console.Direc
             f.g.interrupt();
             return;
         }
-        dumplist(Resource.remote().loadwaited(), Config.loadwaited);
-        dumplist(Resource.remote().cached(), Config.allused);
+        dumplist(Resource.remote().loadwaited(), null);
+        dumplist(Resource.remote().cached(), null);
         if (ResCache.global != null) {
             try {
                 Writer w = new OutputStreamWriter(ResCache.global.store("tmp/allused"), "UTF-8");

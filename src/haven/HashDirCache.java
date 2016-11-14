@@ -150,7 +150,7 @@ public class HashDirCache implements ResCache {
                             writehead(fp, name);
                             return (path);
                         }
-                        if (head.cid.equals(id.toString()) && head.name.equals(name))
+                        if (head != null && head.cid.equals(id.toString()) && head.name.equals(name))
                             return (path);
                     } finally {
                         if (idx != 0)

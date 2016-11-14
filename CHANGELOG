@@ -1,3 +1,59 @@
+Version 1.42.1
+    New:
+        * Switch between currently selected quality mode and 'all' mode with alt+q.
+
+    Fixed:
+        * Belt hotkeys being invoked when typing into stockpile window.
+        * Hitbox not shown for domestic horses.
+
+    Misc:
+        * Take one item from stockpile when clicking take without entering an amount.
+        * Changed extensions menu icon.
+        * Updated Russian localization.
+        * Upstream merge.
+
+
+Version 1.42.0
+    New:
+        * Option to show previously studied curiosities in study window.
+        * Option to show buff icon if study window is not fully occupied.
+        * Added minimap icons for dead hedgehogs and squirrels.
+
+    Fixed:
+        * Automatic ground leveler not taking dirt from stockpiles.
+        * F-hotkeys not working when stockpile window is open.
+        * Various small fixes.
+
+    Misc:
+        * Option to aggro closest player on Tab key has been replaced by shift+tab.
+        * Localization improvements.
+
+
+Version 1.41.1
+    Misc:
+        * Upstream code merge.
+
+
+Version 1.41.0
+    Misc:
+        * Reverted back to AWT.
+
+
+Version 1.40.0
+    New:
+        * Full-screen mode with support for resolution changing.
+        * Support for hardware mouse cursors on Linux and Mac OS X.
+
+    Fixed:
+        * Tile centering bug.
+        * Localized resource alarm not firing on rock crystals.
+
+    Misc:
+        * Updated Chinese translation.
+        * Updated curio study times.
+        * Changed screenshot file type to PNG.
+
+
 Version 1.39.1
     Fixed:
         * Rockcrystal not being recognized for sound alarm

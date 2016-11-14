@@ -120,14 +120,12 @@ public class MenuGrid extends Widget {
         Glob glob = ui.sess.glob;
         synchronized (glob.paginae) {
             Collection<Pagina> p = glob.paginae;
-            if (!Config.hidexmenu) {
-                p.add(glob.paginafor(Resource.local().load("paginae/amber/coal11")));
-                p.add(glob.paginafor(Resource.local().load("paginae/amber/coal12")));
-                p.add(glob.paginafor(Resource.local().load("paginae/amber/branchoven")));
-                p.add(glob.paginafor(Resource.local().load("paginae/amber/steel")));
-                p.add(glob.paginafor(Resource.local().load("paginae/amber/autosurvey")));
-                p.add(glob.paginafor(Resource.local().load("paginae/amber/torch")));
-            }
+            p.add(glob.paginafor(Resource.local().load("paginae/amber/coal11")));
+            p.add(glob.paginafor(Resource.local().load("paginae/amber/coal12")));
+            p.add(glob.paginafor(Resource.local().load("paginae/amber/branchoven")));
+           // p.add(glob.paginafor(Resource.local().load("paginae/amber/steel")));
+            p.add(glob.paginafor(Resource.local().load("paginae/amber/autosurvey")));
+            p.add(glob.paginafor(Resource.local().load("paginae/amber/torch")));
         }
     }
 

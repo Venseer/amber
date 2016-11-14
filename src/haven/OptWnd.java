@@ -664,6 +664,28 @@ public class OptWnd extends Window {
                 a = val;
             }
         });
+        appender.add(new CheckBox("Show last used curios in study window") {
+            {
+                a = Config.studyhist;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("studyhist", val);
+                Config.studyhist = val;
+                a = val;
+            }
+        });
+        appender.add(new CheckBox("Display buff icon when study has free slots") {
+            {
+                a = Config.studybuff;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("studybuff", val);
+                Config.studybuff = val;
+                a = val;
+            }
+        });
     }
 
     private void initMap() {
@@ -862,17 +884,6 @@ public class OptWnd extends Window {
             public void set(boolean val) {
                 Utils.setprefb("hlightcuropp", val);
                 Config.hlightcuropp = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Aggro closest unknown/red player on Tab key") {
-            {
-                a = Config.agroclosest;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("agroclosest", val);
-                Config.agroclosest = val;
                 a = val;
             }
         });
@@ -1130,17 +1141,6 @@ public class OptWnd extends Window {
                             fbelt.hide();
                     }
                 }
-            }
-        });
-        appender.add(new CheckBox("Hide extensions menu (req. restart)") {
-            {
-                a = Config.hidexmenu;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("hidexmenu", val);
-                Config.hidexmenu = val;
-                a = val;
             }
         });
         appender.add(new CheckBox("Show inventory on login") {

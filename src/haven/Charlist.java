@@ -50,15 +50,25 @@ public class Charlist extends Widget {
     @RName("charlist")
     public static class $_ implements Factory {
         public Widget create(Widget parent, Object[] args) {
-            return (new Charlist((Integer) args[0]));
+            return (new Charlist(parent, (Integer) args[0]));
         }
     }
 
-    public Charlist(int height) {
+    public Charlist(Widget parent, int height) {
         super(new Coord(bg.sz().x, 40 + (bg.sz().y * height) + (margin * (height - 1))));
         this.height = height;
         y = 0;
         setcanfocus(true);
+        Button btn = new Button(90, "Log out") {
+            @Override
+            public void click() {
+                Session sess = ((RemoteUI) ui.rcvr).sess;
+                synchronized (sess) {
+                    sess.close();
+                }
+            }
+        };
+        parent.add(btn, 120, 553);
     }
 
     protected void added() {

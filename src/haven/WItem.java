@@ -39,10 +39,7 @@ import static haven.Inventory.sqsz;
 
 public class WItem extends Widget implements DTarget {
     public static final Resource missing = Resource.local().loadwait("gfx/invobjs/missing");
-    private static final Resource studyalarmsfx = Resource.local().loadwait("sfx/study");
     public final GItem item;
-    private Resource cspr = null;
-    private Message csdt = Message.nil;
     public static final Color famountclr = new Color(24, 116, 205);
     private static final Color qualitybg = new Color(20, 20, 20, 255 - Config.qualitybgtransparency);
     public static final Color[] wearclr = new Color[]{
@@ -407,59 +404,5 @@ public class WItem extends Widget implements DTarget {
     public boolean iteminteract(Coord cc, Coord ul) {
         item.wdgmsg("itemact", ui.modflags());
         return (true);
-    }
-
-    public void destroy() {
-        super.destroy();
-        Curiosity ci = null;
-
-        if (parent instanceof Inventory && parent.parent instanceof Tabs.Tab) {
-            try {
-                ci = ItemInfo.find(Curiosity.class, item.info());
-                if (ci != null && item.meter >= 99) {
-                    Resource.Tooltip tt = item.resource().layer(Resource.Tooltip.class);
-                    if (tt != null)
-                        gameui().syslog.append(tt.t + " LP: " + ci.exp, Color.LIGHT_GRAY);
-
-                    if (Config.autostudy) {
-                        Window invwnd = gameui().getwnd("Inventory");
-                        Window cupboard = gameui().getwnd("Cupboard");
-                        Resource res = item.resource();
-                        if (res != null) {
-                            if (!replacecurio(invwnd, res) && cupboard != null)
-                                replacecurio(cupboard, res);
-                        }
-                    }
-                }
-            } catch (Loading l) {
-            }
-
-            if (Config.studyalarm && ci != null && item.meter >= 99)
-                Audio.play(studyalarmsfx, Config.studyalarmvol);
-        }
-    }
-
-    private boolean replacecurio(Window wnd, Resource res) {
-        try {
-            for (Widget invwdg = wnd.lchild; invwdg != null; invwdg = invwdg.prev) {
-                if (invwdg instanceof Inventory) {
-                    Inventory inv = (Inventory) invwdg;
-                    for (Widget witm = inv.lchild; witm != null; witm = witm.prev) {
-                        if (witm instanceof WItem) {
-                            GItem ngitm = ((WItem) witm).item;
-                            Resource nres = ngitm.resource();
-                            if (nres != null && nres.name.equals(res.name)) {
-                                ngitm.wdgmsg("take", witm.c);
-                                ((Inventory) parent).drop(Coord.z, c);
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
-                }
-            }
-        } catch (Exception e) { // ignored
-        }
-        return false;
     }
 }

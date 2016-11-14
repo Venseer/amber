@@ -38,22 +38,17 @@ import static haven.Utils.getprop;
 
 public class Config {
     public static final boolean iswindows = System.getProperty("os.name").startsWith("Windows");
-    public static String authuser = getprop("haven.authuser", null);
-    public static String authserv = getprop("haven.authserv", null);
-    public static String defserv = getprop("haven.defserv", "127.0.0.1");
-    public static URL resurl = geturl("haven.resurl", "");
-    public static URL mapurl = geturl("haven.mapurl", "");
-    public static boolean dbtext = getprop("haven.dbtext", "off").equals("on");
-    public static boolean profile = getprop("haven.profile", "off").equals("on");
-    public static boolean profilegpu = getprop("haven.profilegpu", "off").equals("on");
-    public static boolean fscache = getprop("haven.fscache", "on").equals("on");
-    public static String resdir = getprop("haven.resdir", null);
-    public static boolean nopreload = getprop("haven.nopreload", "no").equals("yes");
-    public static String loadwaited = getprop("haven.loadwaited", null);
-    public static String allused = getprop("haven.allused", null);
-    public static int mainport = getint("haven.mainport", 1870);
-    public static int authport = getint("haven.authport", 1871);
-
+    public static String authuser = null;
+    public static String authserv = null;
+    public static String defserv = null;
+    public static URL resurl = null;
+    public static boolean dbtext = false;
+    public static boolean profile = false;
+    public static boolean profilegpu = false;
+    public static String resdir = null;
+    public static boolean nopreload = false;
+    public static int mainport = 1870;
+    public static int authport = 1871;
     public static boolean hideflocomplete = Utils.getprefb("hideflocomplete", false);
     public static boolean hideflovisual = Utils.getprefb("hideflovisual", false);
     public static boolean daylight = Utils.getprefb("daylight", false);
@@ -127,7 +122,6 @@ public class Config {
     public static boolean tilecenter = Utils.getprefb("tilecenter", false);
     public static boolean userazerty = Utils.getprefb("userazerty", false);
     public static boolean hlightcuropp = Utils.getprefb("hlightcuropp", false);
-    public static boolean agroclosest = Utils.getprefb("agroclosest", false);
     public static boolean reversebadcamx = Utils.getprefb("reversebadcamx", false);
     public static boolean reversebadcamy = Utils.getprefb("reversebadcamy", false);
     public static boolean showservertime = Utils.getprefb("showservertime", false);
@@ -154,7 +148,6 @@ public class Config {
     public static boolean dropore = Utils.getprefb("dropore", true);
     public static boolean showdframestatus = Utils.getprefb("showdframestatus", false);
     public static boolean enableorthofullzoom = Utils.getprefb("enableorthofullzoom", false);
-    public static boolean hidexmenu = Utils.getprefb("hidexmenu", true);
     public static boolean partycircles =  Utils.getprefb("partycircles", false);
     public static boolean noquests =  Utils.getprefb("noquests", false);
     public static boolean alarmbram =  Utils.getprefb("alarmbram", false);
@@ -172,6 +165,8 @@ public class Config {
     public static boolean altfightui =  Utils.getprefb("altfightui", false);
     public static boolean combshowkeys =  Utils.getprefb("combshowkeys", true);
     public static boolean combaltopenings =  Utils.getprefb("combaltopenings", false);
+    public static boolean studyhist =  Utils.getprefb("studyhist", false);
+    public static boolean studybuff =  Utils.getprefb("studybuff", false);
 
     public static int avgmode = Utils.getprefi("avgmode", 0);
     private final static Map<String, Integer> defFontSzGlobal =  new HashMap<String, Integer>(3) {{
@@ -327,13 +322,15 @@ public class Config {
         put("mussels", new CheckListboxItem("Mussels"));
     }};
 
-    public final static Map<String, Tex> additonalicons = new HashMap<String, Tex>(24) {{
+    public final static Map<String, Tex> additonalicons = new HashMap<String, Tex>(25) {{
         put("gfx/terobjs/vehicle/bram", Resource.loadtex("gfx/icons/bram"));
         put("gfx/kritter/toad/toad", Resource.loadtex("gfx/icons/toad"));
         put("gfx/terobjs/vehicle/rowboat", Resource.loadtex("gfx/icons/rowboat"));
         put("gfx/kritter/chicken/chicken", Resource.loadtex("gfx/icons/deadhen"));
         put("gfx/kritter/chicken/rooster", Resource.loadtex("gfx/icons/deadrooster"));
         put("gfx/kritter/rabbit/rabbit", Resource.loadtex("gfx/icons/deadrabbit"));
+        put("gfx/kritter/hedgehog/hedgehog", Resource.loadtex("gfx/icons/deadhedgehog"));
+        put("gfx/kritter/squirrel/squirrel", Resource.loadtex("gfx/icons/deadsquirrel"));
         put("gfx/terobjs/items/arrow", Resource.loadtex("gfx/icons/arrow"));
         put("gfx/terobjs/items/boarspear", Resource.loadtex("gfx/icons/arrow"));
         put("gfx/kritter/frog/frog", Resource.loadtex("gfx/icons/frog"));
@@ -351,7 +348,6 @@ public class Config {
         put("gfx/kritter/mammoth/mammoth", Resource.loadtex("gfx/icons/mammoth"));
         put("gfx/kritter/moose/moose", Resource.loadtex("gfx/icons/moose"));
         put("gfx/kritter/reddeer/reddeer", Resource.loadtex("gfx/icons/reddeer"));
-        put("gfx/kritter/sheep/mouflon", Resource.loadtex("gfx/icons/mouflon"));
         put("gfx/kritter/troll/troll", Resource.loadtex("gfx/icons/troll"));
     }};
 
@@ -374,7 +370,7 @@ public class Config {
             "gfx/terobjs/geyser",
             "gfx/terobjs/claypit",
             "gfx/terobjs/caveorgan",
-            "gfx/terobjs/bumlings/rockcrystal"));
+            "gfx/terobjs/crystalpatch"));
 
     public final static ArrayList<Pair<String, String>> disableanim = new ArrayList<Pair<String, String>>() {{
         add(new Pair<String, String>("Beehives", "gfx/terobjs/beehive"));
@@ -451,24 +447,6 @@ public class Config {
             Utils.setpref("logins", "[" + jsonobjs + "]");
         } catch (Exception e) {
             e.printStackTrace();
-        }
-    }
-
-    private static int getint(String name, int def) {
-        String val = getprop(name, null);
-        if (val == null)
-            return (def);
-        return (Integer.parseInt(val));
-    }
-
-    private static URL geturl(String name, String def) {
-        String val = getprop(name, def);
-        if (val.equals(""))
-            return (null);
-        try {
-            return (new URL(val));
-        } catch (java.net.MalformedURLException e) {
-            throw (new RuntimeException(e));
         }
     }
 
@@ -551,22 +529,16 @@ public class Config {
     }
 
     static {
-        Console.setscmd("stats", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                dbtext = Utils.parsebool(args[1]);
-            }
-        });
-        Console.setscmd("profile", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                if (args[1].equals("none") || args[1].equals("off")) {
-                    profile = profilegpu = false;
-                } else if (args[1].equals("cpu")) {
-                    profile = true;
-                } else if (args[1].equals("gpu")) {
-                    profilegpu = true;
-                } else if (args[1].equals("all")) {
-                    profile = profilegpu = true;
-                }
+        Console.setscmd("stats", (cons, args) -> dbtext = Utils.parsebool(args[1]));
+        Console.setscmd("profile", (cons, args) -> {
+            if (args[1].equals("none") || args[1].equals("off")) {
+                profile = profilegpu = false;
+            } else if (args[1].equals("cpu")) {
+                profile = true;
+            } else if (args[1].equals("gpu")) {
+                profilegpu = true;
+            } else if (args[1].equals("all")) {
+                profile = profilegpu = true;
             }
         });
     }

@@ -759,7 +759,7 @@ public class Widget {
                 if (focused.type(key, ev))
                     return (true);
                 if (focustab) {
-                    if (key == '\t' && !Config.agroclosest) {
+                    if (key == '\t' && !ev.isShiftDown()) {
                         Widget f = focused;
                         while (true) {
                             if ((ev.getModifiers() & InputEvent.SHIFT_MASK) == 0) {
@@ -767,7 +767,7 @@ public class Widget {
                                 f = ((n == null) || !n.hasparent(this)) ? child : n;
                             } else {
                                 Widget p = f.rprev();
-                                f = ((p == null) || !p.hasparent(this)) ? lchild : p;
+				                f = ((p == null) || (p == this) || !p.hasparent(this))?lchild:p;
                             }
                             if (f.canfocus)
                                 break;
@@ -864,12 +864,21 @@ public class Widget {
         resize(contentsz());
     }
 
+    public void move(Coord c) {
+	this.c = c;
+    }
+
     public void resize(Coord sz) {
         this.sz = sz;
         for (Widget ch = child; ch != null; ch = ch.next)
             ch.presize();
         if (parent != null)
             parent.cresize(this);
+    }
+
+    public void move(Area a) {
+	move(a.ul);
+	resize(a.sz());
     }
 
     public void resize(int x, int y) {

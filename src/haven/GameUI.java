@@ -57,6 +57,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
     public Window invwnd, equwnd, makewnd;
     public Inventory maininv;
     public CharWnd chrwdg;
+    public MapWnd mapfile;
     private Widget qqview;
     public BuddyWnd buddies;
     private final Zergwnd zerg;
@@ -75,6 +76,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
     public final Map<Integer, String> polowners = new HashMap<Integer, String>();
     public Bufflist buffs;
     public MinimapWnd minimapWnd;
+    public LocalMiniMap mmap;
     public TimersWnd timerswnd;
     public QuickSlotsWdg quickslots;
     public StatusWdg statuswindow;
@@ -125,6 +127,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         }
     }
 
+    private final Coord minimapc;
     public GameUI(String chrid, long plid) {
         this.chrid = chrid;
         this.plid = plid;
@@ -158,6 +161,10 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             }
         }, new Coord(1, 0)));
         menu = brpanel.add(new MenuGrid(), 20, 34);
+
+        Tex lbtnbg = Resource.loadtex("gfx/hud/lbtn-bg");// FIXME
+        minimapc = new Coord(4, 34 + (lbtnbg.sz().y - 33));
+
         brpanel.add(new Img(Resource.loadtex("gfx/hud/brframe")), 0, 0);
         menupanel.add(new MainMenu(), 0, 0);
         foldbuttons();
@@ -306,12 +313,17 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             StringBuilder buf = new StringBuilder();
 
             public void write(char[] src, int off, int len) {
-                buf.append(src, off, len);
-                int p;
-                while ((p = buf.indexOf("\n")) >= 0) {
-                    syslog.append(buf.substring(0, p), Color.WHITE);
-                    buf.delete(0, p + 1);
+                List<String> lines = new ArrayList<String>();
+                synchronized(this) {
+                    buf.append(src, off, len);
+                    int p;
+                    while((p = buf.indexOf("\n")) >= 0) {
+                        lines.add(buf.substring(0, p));
+                        buf.delete(0, p + 1);
+                    }
                 }
+                for(String ln : lines)
+                    syslog.append(ln, Color.WHITE);
             }
 
             public void close() {
@@ -535,7 +547,20 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             map.glob.gui = this;
             if (minimapWnd != null)
                 ui.destroy(minimapWnd);
+            if(mapfile != null) {
+                ui.destroy(mapfile);
+                mapfile = null;
+            }
             minimapWnd = minimap();
+            mmap = minimapWnd.mmap;
+            if(mmap.save != null) {
+                mapfile = new MapWnd(mmap.save, map, new Coord(700, 500), "Map");
+                mapfile.hide();
+                add(mapfile, 50, 50);
+                minimapWnd.mapfile = mapfile;
+            }
+
+
             if (Config.enabletracking && menu != null && !trackon) {
                 menu.wdgmsg("act", new Object[]{"tracking"});
                 trackautotgld = true;
@@ -660,6 +685,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         Coord mwsz = Utils.getprefc("mmapwndsz", new Coord(290, 310));
         minimapWnd = new MinimapWnd(mwsz, map);
         add(minimapWnd, Utils.getprefc("mmapc", new Coord(10, 100)));
+        mmap = (LocalMiniMap)minimapWnd.mmap;
         return minimapWnd;
     }
 
@@ -820,6 +846,13 @@ public class GameUI extends ConsoleHost implements Console.Directory {
                 help = adda(new HelpWnd(res), 0.5, 0.5);
             else
                 help.res = res;
+        } else if(msg == "map-mark") {
+            long gobid = ((Integer)args[0]) & 0xffffffff;
+            long oid = (Long)args[1];
+            Indir<Resource> res = ui.sess.getres((Integer)args[2]);
+            String nm = (String)args[3];
+            if(mapfile != null)
+                mapfile.markobj(gobid, oid, res, nm);
         } else {
             super.uimsg(msg, args);
         }
@@ -841,7 +874,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         super.wdgmsg(sender, msg, args);
     }
 
-    private void fitwdg(Widget wdg) {
+    public void fitwdg(Widget wdg) {
         if (wdg.c.x < 0)
             wdg.c.x = 0;
         if (wdg.c.y < 0)
@@ -865,7 +898,8 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         }
 
         public boolean globtype(char key, KeyEvent ev) {
-            if (Config.agroclosest && key == 9)
+            // shift + tab used to aggro closest
+            if (key == 9 && ev.isShiftDown())
                 return super.globtype(key, ev);
 
             // ctrl + tab is used to rotate opponents
@@ -935,6 +969,8 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         }
     }
 
+    private int prevQualityMode = Config.showqualitymode;
+
     public boolean globtype(char key, KeyEvent ev) {
         if (key == ':') {
             entercmd();
@@ -995,7 +1031,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             if (map != null)
                 map.refreshGobsHidable();
             return true;
-        } else if (ev.getKeyCode() == KeyEvent.VK_TAB && Config.agroclosest) {
+        } else if (ev.isShiftDown() && ev.getKeyCode() == KeyEvent.VK_TAB) {
             if (map != null)
                 map.aggroclosest();
             return true;
@@ -1042,6 +1078,14 @@ public class GameUI extends ConsoleHost implements Console.Directory {
                 ui.fmAutoTime = System.currentTimeMillis();
             }
             maininv.drink(100);
+            return true;
+        } else if (ev.isAltDown() && ev.getKeyCode() == KeyEvent.VK_Q) {
+            if (Config.showqualitymode == 2)  { // all
+                Config.showqualitymode = prevQualityMode;
+            } else {
+                prevQualityMode = Config.showqualitymode;
+                Config.showqualitymode = 2;
+            }
             return true;
         }
 
@@ -1108,11 +1152,16 @@ public class GameUI extends ConsoleHost implements Console.Directory {
     private static final Resource errsfx = Resource.local().loadwait("sfx/error");
     private static final Resource msgsfx = Resource.local().loadwait("sfx/msg");
 
+    private long lasterrsfx = 0;
     public void error(String msg) {
         msg(msg, new Color(192, 0, 0), new Color(255, 0, 0));
-        Audio.play(errsfx);
         if (errmsgcb != null)
             errmsgcb.notifyErrMsg(msg);
+        long now = System.currentTimeMillis();
+        if(now - lasterrsfx > 100) {
+            Audio.play(errsfx);
+            lasterrsfx = now;
+        }
     }
 
     public void errornosfx(String msg) {
@@ -1352,23 +1401,21 @@ public class GameUI extends ConsoleHost implements Console.Directory {
 
     private Map<String, Console.Command> cmdmap = new TreeMap<String, Console.Command>();
     {
-        cmdmap.put("afk", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                afk = true;
-                wdgmsg("afk");
-            }
+        cmdmap.put("afk", (cons, args) -> {
+            afk = true;
+            wdgmsg("afk");
         });
-        cmdmap.put("act", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                Object[] ad = new Object[args.length - 1];
-                System.arraycopy(args, 1, ad, 0, ad.length);
-                wdgmsg("act", ad);
-            }
+        cmdmap.put("act", (cons, args) -> {
+            Object[] ad = new Object[args.length - 1];
+            System.arraycopy(args, 1, ad, 0, ad.length);
+            wdgmsg("act", ad);
         });
-        cmdmap.put("tool", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                add(gettype(args[1]).create(GameUI.this, new Object[0]), 200, 200);
-            }
+        cmdmap.put("tool", (cons, args) -> add(gettype(args[1]).create(GameUI.this, new Object[0]), 200, 200));
+        cmdmap.put("help", (cons, args) -> {
+            cons.out.println("Available console commands:");
+
+          //  cons.out.println();
+            cons.findcmds().forEach((s, cmd) -> cons.out.println(s));
         });
     }
 
