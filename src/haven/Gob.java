@@ -32,7 +32,8 @@ import java.awt.*;
 import java.util.*;
 
 public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
-    public Coord rc, sc;
+    public Coord2d rc;
+    public Coord sc;
     public Coord3f sczu;
     public double a;
     public boolean virtual = false;
@@ -58,8 +59,8 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
     private int cropstgmaxval = 0;
     private Overlay gobpath = null;
     private Overlay bowvector = null;
-    private static final Material.Colors dframeEmpty = new Material.Colors(new Color(0, 255, 0, 255));
-    private static final Material.Colors dframeDone = new Material.Colors(new Color(255, 0, 0, 255));
+    private static final Material.Colors dframeEmpty = new Material.Colors(new Color(87, 204, 73, 255));
+    private static final Material.Colors dframeDone = new Material.Colors(new Color(209, 42, 42, 255));
     private static final Gob.Overlay animalradius = new Gob.Overlay(new BPRadSprite(100.0F, -10.0F, BPRadSprite.smatDanger));
     private static final Set<String> dangerousanimalrad = new HashSet<String>(Arrays.asList(
             "gfx/kritter/bear/bear", "gfx/kritter/boar/boar", "gfx/kritter/lynx/lynx", "gfx/kritter/badger/badger"));
@@ -190,7 +191,7 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
     public static class Static {}
     public static class SemiStatic {}
 
-    public Gob(Glob glob, Coord c, long id, int frame) {
+    public Gob(Glob glob, Coord2d c, long id, int frame) {
         this.glob = glob;
         this.rc = c;
         this.id = id;
@@ -198,7 +199,7 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
         loc.tick();
     }
 
-    public Gob(Glob glob, Coord c) {
+    public Gob(Glob glob, Coord2d c) {
         this(glob, c, -1, 0);
     }
 
@@ -257,7 +258,7 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
         }
     }
 
-    public void move(Coord c, double a) {
+    public void move(Coord2d c, double a) {
         Moving m = getattr(Moving.class);
         if (m != null)
             m.move(c);
@@ -275,7 +276,7 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
     }
 
     public Coord3f getrc() {
-        return (new Coord3f(rc.x, rc.y, glob.map.getcz(rc)));
+        return(glob.map.getzp(rc));
     }
 
     public double geta() {
@@ -295,21 +296,15 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
         Class<? extends GAttrib> ac = attrclass(a.getClass());
         attr.put(ac, a);
 
-        if (Config.showplayerpaths || Config.showanimalpaths) {
-            try {
-                Resource res = getres();
-                if (res != null && a.getClass() == LinMove.class) {
-                    boolean isplayer = "body".equals(res.basename());
-                    if (isplayer && Config.showplayerpaths || !isplayer && Config.showanimalpaths) {
-                        if (gobpath == null) {
-                            gobpath = new Overlay(new GobPath(this));
-                            ols.add(gobpath);
-                        }
-                        ((GobPath) gobpath.spr).lm = (LinMove) a;
-                    }
+        if (Config.showplayerpaths && gobpath == null && a instanceof LinMove) {
+            Gob pl = glob.oc.getgob(MapView.plgob);
+            if (pl != null) {
+                Following follow = pl.getattr(Following.class);
+                if (pl == this ||
+                        (follow != null && follow.tgt() == this)) {
+                    gobpath = new Overlay(new GobPath(this));
+                    ols.add(gobpath);
                 }
-
-            } catch (Exception e) { // fail silently
             }
         }
     }
@@ -323,9 +318,10 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
 
     public void delattr(Class<? extends GAttrib> c) {
         attr.remove(attrclass(c));
-        if (attrclass(c) == Moving.class) {
+        if (attrclass(c) == Moving.class && gobpath != null) {
             ols.remove(gobpath);
             gobpath = null;
+            MapView.pllastcc = null;
         }
     }
 
@@ -430,6 +426,9 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
         final GobHealth hlt = getattr(GobHealth.class);
         if (hlt != null)
             rl.prepc(hlt.getfx());
+
+        if (MapView.markedGobs.contains(id))
+            rl.prepc(MapView.markedFx);
 
         Resource res = null;
         try {
@@ -699,6 +698,29 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
 
     public boolean isplayer() {
         return MapView.plgob == id;
+    }
+
+    public boolean isMoving() {
+        if (getattr(LinMove.class) != null)
+            return true;
+
+        Following follow = getattr(Following.class);
+        if (follow != null && follow.tgt().getattr(LinMove.class) != null)
+            return true;
+
+        return false;
+    }
+
+    public LinMove getLinMove() {
+        LinMove lm = getattr(LinMove.class);
+        if (lm != null)
+            return lm;
+
+        Following follow = getattr(Following.class);
+        if (follow != null)
+            return follow.tgt().getattr(LinMove.class);
+
+        return null;
     }
 
     public boolean isFriend() {

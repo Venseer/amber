@@ -236,62 +236,20 @@ public class WItem extends Widget implements DTarget {
 
             GItem.Quality quality = item.quality();
             if (Config.showquality) {
-                if (quality != null && quality.max != 0) {
+                if (quality != null && quality.qtex != null) {
                     Coord btm = new Coord(0, sz.y - 12);
-                    if (Config.showqualitymode == 2) {
-                        if (Config.qualitybg) {
-                            g.chcolor(qualitybg);
-                            g.frect(new Coord(0, sz.y - 32), quality.etex.sz().add(1, -1));
-                            g.frect(new Coord(0, sz.y - 22), quality.stex.sz().add(1, -1));
-                            g.frect(btm, quality.vtex.sz().add(1, -1));
-                            g.chcolor();
-                        }
-                        g.image(quality.etex, new Coord(0, sz.y - 32));
-                        g.image(quality.stex, new Coord(0, sz.y - 22));
-                        g.image(quality.vtex, btm);
-                    } else if (quality.curio && Config.showlpgainmult) {
-                        if (Config.qualitybg) {
-                            g.chcolor(qualitybg);
-                            g.frect(new Coord(0, sz.y - 12), quality.lpgaintex.sz().add(1, -1));
-                            g.chcolor();
-                        }
-                        g.image(quality.lpgaintex, btm);
-                    } else if (Config.showqualitymode == 0) {
-                        if (Config.qualitybg) {
-                            g.chcolor(qualitybg);
-                            g.frect(new Coord(0, sz.y - 12), quality.maxtex.sz().add(1, -1));
-                            g.chcolor();
-                        }
-                        g.image(quality.maxtex, btm);
-                    } else if (Config.showqualitymode == 1) {
-                        Tex t = Config.qualitywhole ? quality.avgwholetex : quality.avgtex;
-                        if (Config.qualitybg) {
-                            g.chcolor(qualitybg);
-                            g.frect(btm, t.sz().add(1, -1));
-                            g.chcolor();
-                        }
-                        g.image(t, btm);
-                    } else if (Config.showqualitymode == 3) {
-                        Tex t = Config.qualitywhole ? quality.avgsvwholetex : quality.avgsvtex;
-                        if (Config.qualitybg) {
-                            g.chcolor(qualitybg);
-                            g.frect(btm, t.sz().add(1, -1));
-                            g.chcolor();
-                        }
-                        g.image(t, btm);
-                    } else {
-                        if (Config.qualitybg) {
-                            g.chcolor(qualitybg);
-                            g.frect(btm, quality.mintex.sz().add(1, -1));
-                            g.chcolor();
-                        }
-                        g.image(quality.mintex, btm);
+                    Tex t = Config.qualitywhole ? quality.qwtex : quality.qtex;
+                    if (Config.qualitybg) {
+                        g.chcolor(qualitybg);
+                        g.frect(btm, t.sz().add(1, -1));
+                        g.chcolor();
                     }
+                    g.image(t, btm);
                 }
             }
 
             boolean studylefttimedisplayed = false;
-            if (Config.showstudylefttime && quality != null && quality.curio && item.meter > 0) {
+            if (Config.showstudylefttime && quality != null && quality.curio && item.meter > 0 && parent instanceof InventoryStudy) {
                 if (item.timelefttex == null) {
                     item.updatetimelefttex();
                 }

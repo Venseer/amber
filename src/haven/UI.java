@@ -48,10 +48,6 @@ public class UI {
     private Collection<AfterDraw> afterdraws = new LinkedList<AfterDraw>();
     public final ActAudio audio = new ActAudio();
 
-    public static String fmAutoSelName = "";
-    public static long fmAutoTime;
-    private static final int FM_AUTO_TIMEOUT = 2000;
-
     {
         lastevent = lasttick = System.currentTimeMillis();
     }
@@ -72,6 +68,11 @@ public class UI {
         {
             setcmd("q", (cons1, args) -> HackThread.tg().interrupt());
             setcmd("lo", (cons1, args) -> sess.close());
+            setcmd("kbd", (cons1, args) -> {
+                Config.zkey = args[1].toString().equals("z") ? KeyEvent.VK_Y : KeyEvent.VK_Z;
+                Utils.setprefi("zkey", Config.zkey);
+            });
+            setcmd("charter", (cons1, args) -> CharterList.addCharter(args[1]));
         }
 
         private void findcmds(Map<String, Command> map, Widget wdg) {
@@ -148,24 +149,6 @@ public class UI {
             if (pwdg == null)
                 throw (new UIException("Null parent widget " + parent + " for " + id, type, cargs));
 
-            if (type.equals("sm")) {
-                synchronized (fmAutoSelName) {
-                    if (System.currentTimeMillis() - fmAutoTime < FM_AUTO_TIMEOUT) {
-                        Widget w = new WidgetDummy();
-                        pwdg.addchild(w, pargs);
-                        bind(w, id);
-                        for (int i = 0; i < cargs.length; i++) {
-                            if (cargs[i].equals(fmAutoSelName)) {
-                                rcvr.rcvmsg(id, "cl", new Object[]{i, 0});
-                                fmAutoSelName = "";
-                                return;
-                            }
-                        }
-                        fmAutoSelName = "";
-                    }
-                }
-            }
-
             Widget wdg = pwdg.makechild(f, pargs, cargs);
 
             if (wdg instanceof ISBox && pwdg instanceof Window && ((Window) pwdg).origcap.equals("Stockpile")) {
@@ -205,6 +188,9 @@ public class UI {
                 };
                 pwdg.add(btn, new Coord(0, wdg.sz.y + 5));
                 pwdg.add(entry, new Coord(btn.sz.x + 5, wdg.sz.y + 5 + 2));
+            } else if (wdg instanceof Window && (((Window) wdg).origcap.equals("Charter Stone") || ((Window) wdg).origcap.equals("Sublime Portico"))) {
+                wdg.add(new CharterList(150, 5), new Coord(0, 50));
+                wdg.presize();
             }
             bind(wdg, id);
 

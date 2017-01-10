@@ -119,9 +119,9 @@ public class Inventory extends Widget implements DTarget {
                         GItem.Quality bq = b.item.quality();
                         if (aq == null || bq == null)
                             return 0;
-                        else if (aq.avg == bq.avg)
+                        else if (aq.q == bq.q)
                             return 0;
-                        else if (aq.avg > bq.avg)
+                        else if (aq.q > bq.q)
                             return msg.endsWith("asc") ? 1 : -1;
                         else
                             return msg.endsWith("asc") ? -1 : 1;
@@ -227,6 +227,8 @@ public class Inventory extends Widget implements DTarget {
         for (WItem wi : containers) {
             ItemInfo.Contents cont = wi.item.getcontents();
             if (cont != null) {
+                FlowerMenu.setNextSelection("Drink");
+                ui.lcc = wi.rootpos();
                 wi.item.wdgmsg("iact", wi.c, 0);
                 return true;
             }

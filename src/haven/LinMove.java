@@ -27,50 +27,46 @@
 package haven;
 
 public class LinMove extends Moving {
-    public Coord s, t;
-    public int c;
-    public double a;
+    public static final double MAXOVER = 0.5;
+    public Coord2d s, v;
+    public double t, lt, e;
+    public boolean ts = false;
+    public long lastupd = System.currentTimeMillis();
 
-    public LinMove(Gob gob, Coord s, Coord t, int c) {
+    public LinMove(Gob gob, Coord2d s, Coord2d v) {
         super(gob);
         this.s = s;
-        this.t = t;
-        this.c = c;
-        this.a = 0;
+        this.v = v;
+        this.t = 0;
+        this.e = Double.NaN;
     }
 
     public Coord3f getc() {
-        float cx, cy;
-        cx = (float) (t.x - s.x) * (float) a;
-        cy = (float) (t.y - s.y) * (float) a;
-        cx += s.x;
-        cy += s.y;
-        return (new Coord3f(cx, cy, gob.glob.map.getcz(cx, cy)));
+        return(gob.glob.map.getzp(s.add(v.mul(t))));
     }
 
     public double getv() {
-        if (c == 0)
-            return (0.0);
-        return ((double) s.dist(t) / (((double) c) * 0.06));
+        return(v.abs());
     }
-    
-    /*
-    public void tick() {
-	if(l < c)
-	    l++;
-    }
-    */
 
     public void ctick(int dt) {
-        double da = ((double) dt / 1000) / (((double) c) * 0.06);
-        a += da * 0.9;
-        if (a > 1)
-            a = 1;
+        if(!ts) {
+            t += (dt / 1000.0) * 0.9;
+            if(!Double.isNaN(e) && (t > e)) {
+                t = e;
+            } else if(t > lt + MAXOVER) {
+                t = lt + MAXOVER;
+                ts = true;
+            }
+        }
     }
 
-    public void setl(int l) {
-        double a = ((double) l) / ((double) c);
-        if (a > this.a)
-            this.a = a;
+    public void sett(double t) {
+        lastupd = System.currentTimeMillis();
+        lt = t;
+        if(t > this.t) {
+            this.t = t;
+            ts = false;
+        }
     }
 }

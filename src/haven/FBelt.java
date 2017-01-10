@@ -32,7 +32,7 @@ public class FBelt extends Widget implements DTarget, DropTarget {
                     if (!resname.equals("null")) {
                         try {
                             belt[i] = Resource.remote().loadwait(resnames[i]);
-                        } catch (Resource.LoadException le) {   // possibly a resource from another client
+                        } catch (Exception e) {   // possibly a resource from another client
                         }
                     }
                 }

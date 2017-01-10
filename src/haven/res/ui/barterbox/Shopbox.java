@@ -39,7 +39,7 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
     private Text pqst, pqet, pqvt;
     private GSprite spr;
     private Object[] info = new Object[0];
-    private Text sqse, sqee, sqve, sqavg;
+    private Text quality;
     private Button spipe;
     private Button bpipe;
     private Button bbtn;
@@ -113,27 +113,10 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
                     g.aimage(this.num.tex(), itemc.add(Inventory.invsq.sz()).add(5, 0), 0.0D, 1.0D);
                 }
 
-                Coord qc = new Coord(selqualc);
-                if (this.sqee != null) {
-                    g.image(essnc, qc);
-                    g.image(sqee.tex(), qc.add(17, 0));
-                    qc.x += 60;
-                }
-                if (this.sqse != null) {
+                if (quality != null) {
+                    Coord qc = new Coord(selqualc);
                     g.image(subst, qc);
-                    g.image(sqse.tex(), qc.add(17, 0));
-                    qc.x += 60;
-                }
-                if (this.sqve != null) {
-                    g.image(vital, qc);
-                    g.image(sqve.tex(), qc.add(17, 0));
-                }
-                if (!admin && sqavg != null && bbtn != null) {
-                    Tex t = sqavg.tex();
-                    try {
-                        g.image(t, new Coord(bbtn.c.x + bbtn.sz.x + 10, bbtn.c.y + bbtn.sz.y / 2 - t.sz().y / 2));
-                    } catch (NullPointerException npe) {
-                    }
+                    g.image(quality.tex(), qc.add(17, 0));
                 }
             }
         }
@@ -179,35 +162,12 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
         if (this.cinfo == null) {
             this.cinfo = ItemInfo.buildinfo(this, this.info);
 
-            double e = 0, s = 0, v = 0;
             for (ItemInfo info : cinfo) {
                 if (info instanceof QBuff) {
                     QBuff qb = (QBuff)info;
-                    String name = qb.origName;
-                    double val = qb.q;
-                    if ("Essence".equals(name))
-                        e = val;
-                    else if ("Substance".equals(name))
-                        s = val;
-                    else if ("Vitality".equals(name))
-                        v = val;
+                    quality = Text.render((int) qb.q + "");
+                    break;
                 }
-            }
-
-            if (e != 0) {
-                sqee = Text.render((int) e + "");
-                sqse = Text.render((int) s + "");
-                sqve = Text.render((int) v + "");
-
-                double avg;
-                if (Config.avgmode == GItem.Quality.AVG_MODE_QUADRATIC)
-                    avg = Math.sqrt((e * e + s * s + v * v) / 3.0);
-                else if (Config.avgmode == GItem.Quality.AVG_MODE_GEOMETRIC)
-                    avg = Math.pow(e * s * v, 1.0 / 3.0);
-                else // AVG_MODE_ARITHMETIC
-                    avg = (e + s + v) / 3.0;
-
-                sqavg = Text.render("Avg: " + Utils.fmt1DecPlace(avg));
             }
         }
         return this.cinfo;

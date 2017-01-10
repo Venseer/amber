@@ -6,7 +6,11 @@ import java.net.URL;
 import org.json.JSONObject;
 
 public class UpdateChecker extends Thread {
-    private final String url = "https://api.github.com/repos/romovs/amber/releases/latest";
+    private static final String url = "https://api.github.com/repos/romovs/amber/releases/latest";
+
+    public UpdateChecker() {
+        super("Update Checker");
+    }
 
     public void run() {
         try {

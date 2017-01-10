@@ -54,7 +54,7 @@ public class Fightsess extends Widget {
     private final Tex[] keysftex = new Tex[10];
     private final static Text.Foundry fnd = new Text.Foundry(Text.sans.deriveFont(Font.BOLD, 12));
 
-   // private static final Map<Long, Tex> cdvalues = new HashMap<Long, Tex>(7);
+    // private static final Map<Long, Tex> cdvalues = new HashMap<Long, Tex>(7);
 
     /*private static final Map<String, Integer> atkcds = new HashMap<String, Integer>(9){{
         put("Chop", 50);
@@ -123,22 +123,22 @@ public class Fightsess extends Widget {
     private final Collection<Sprite> curfx = new ArrayList<Sprite>();
 
     private void fxon(long gobid, Resource fx) {
-	MapView map = getparent(GameUI.class).map;
-	Gob gob = ui.sess.glob.oc.getgob(gobid);
-	if((map == null) || (gob == null))
-	    return;
-	Pair<Long, Resource> id = new Pair<Long, Resource>(gobid, fx);
-	Sprite spr = cfx.get(id);
-	if(spr == null)
-	    cfx.put(id, spr = Sprite.create(null, fx, Message.nil));
-	map.drawadd(gob.loc.apply(spr));
-	curfx.add(spr);
+        MapView map = getparent(GameUI.class).map;
+        Gob gob = ui.sess.glob.oc.getgob(gobid);
+        if((map == null) || (gob == null))
+            return;
+        Pair<Long, Resource> id = new Pair<Long, Resource>(gobid, fx);
+        Sprite spr = cfx.get(id);
+        if(spr == null)
+            cfx.put(id, spr = Sprite.create(null, fx, Message.nil));
+        map.drawadd(gob.loc.apply(spr));
+        curfx.add(spr);
     }
 
     public void tick(double dt) {
-	for(Sprite spr : curfx)
-	    spr.tick((int)(dt * 1000));
-	curfx.clear();
+        for(Sprite spr : curfx)
+            spr.tick((int)(dt * 1000));
+        curfx.clear();
     }
 
     private static final Text.Furnace ipf = new PUtils.BlurFurn(new Text.Foundry(Text.serif, 18, new Color(128, 128, 255)).aa(true), 1, 1, new Color(48, 48, 96));
@@ -478,7 +478,7 @@ public class Fightsess extends Widget {
                 }
             }
         } else { // F1-F5
-             if (key == 0) {
+            if (key == 0) {
                 int n = -1;
                 switch(ev.getKeyCode()) {
                     case KeyEvent.VK_1: n = 0; break;

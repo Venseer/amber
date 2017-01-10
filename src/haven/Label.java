@@ -35,7 +35,6 @@ public class Label extends Widget {
     Text text;
     String texts;
     Color col = Color.WHITE;
-    private static final Pattern contPattern = Pattern.compile("([0-9]+\\.?[0-9]*)", Pattern.CASE_INSENSITIVE);
 
     @RName("lbl")
     public static class $_ implements Factory {

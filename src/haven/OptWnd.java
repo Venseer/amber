@@ -35,10 +35,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 
-import static haven.GItem.Quality.AVG_MODE_ARITHMETIC;
-import static haven.GItem.Quality.AVG_MODE_GEOMETRIC;
-import static haven.GItem.Quality.AVG_MODE_QUADRATIC;
-
 public class OptWnd extends Window {
     public static final int VERTICAL_MARGIN = 10;
     public static final int HORIZONTAL_MARGIN = 5;
@@ -107,7 +103,9 @@ public class OptWnd extends Window {
                             try {
                                 cf.flight.set(true);
                             } catch (GLSettings.SettingException e) {
-                                getparent(GameUI.class).error(e.getMessage());
+                                GameUI gui = getparent(GameUI.class);
+                                if (gui != null)
+                                    gui.error(e.getMessage());
                                 return;
                             }
                         } else {
@@ -127,7 +125,9 @@ public class OptWnd extends Window {
                             try {
                                 cf.lshadow.set(true);
                             } catch (GLSettings.SettingException e) {
-                                getparent(GameUI.class).error(e.getMessage());
+                                GameUI gui = getparent(GameUI.class);
+                                if (gui != null)
+                                    gui.error(e.getMessage());
                                 return;
                             }
                         } else {
@@ -146,7 +146,9 @@ public class OptWnd extends Window {
                         try {
                             cf.fsaa.set(val);
                         } catch (GLSettings.SettingException e) {
-                            getparent(GameUI.class).error(e.getMessage());
+                            GameUI gui = getparent(GameUI.class);
+                            if (gui != null)
+                                gui.error(e.getMessage());
                             return;
                         }
                         a = val;
@@ -191,6 +193,16 @@ public class OptWnd extends Window {
                     public void set(boolean val) {
                         Config.disabletiletrans = val;
                         Utils.setprefb("disabletiletrans", val);
+                        a = val;
+                    }
+                });
+                appender.add(new CheckBox("Disable terrain smoothing (requires logout)") {
+                    {
+                        a = Config.disableterrainsmooth;
+                    }
+                    public void set(boolean val) {
+                        Config.disableterrainsmooth = val;
+                        Utils.setprefb("disableterrainsmooth", val);
                         a = val;
                     }
                 });
@@ -587,7 +599,7 @@ public class OptWnd extends Window {
                 }
             }
         });
-        appender.add(new CheckBox("Show player paths") {
+        appender.add(new CheckBox("Show player's path") {
             {
                 a = Config.showplayerpaths;
             }
@@ -595,17 +607,6 @@ public class OptWnd extends Window {
             public void set(boolean val) {
                 Utils.setprefb("showplayerpaths", val);
                 Config.showplayerpaths = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Show animal paths") {
-            {
-                a = Config.showanimalpaths;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("showanimalpaths", val);
-                Config.showanimalpaths = val;
                 a = val;
             }
         });
@@ -775,17 +776,6 @@ public class OptWnd extends Window {
             public void set(boolean val) {
                 Utils.setprefb("autologout", val);
                 Config.autologout = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Print server time to System log") {
-            {
-                a = Config.servertimesyslog;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("servertimesyslog", val);
-                Config.servertimesyslog = val;
                 a = val;
             }
         });
@@ -1250,43 +1240,6 @@ public class OptWnd extends Window {
                 a = val;
             }
         });
-
-        Label highest = new Label("Highest");
-        Label avgESV = new Label("Avg E/S/V");
-        Label all = new Label("All");
-        Label avgSV = new Label("Avg S/V");
-        Label lowest = new Label("Lowest");
-
-        appender.setVerticalMargin(0);
-        appender.addRow(highest, avgESV, all, avgSV, lowest);
-
-        final int showQualityWidth = HorizontalAligner.apply(Arrays.asList(highest, avgESV, all, avgSV, lowest), HORIZONTAL_MARGIN);
-
-        appender.setVerticalMargin(VERTICAL_MARGIN);
-        appender.add(new HSlider(showQualityWidth, 0, 4, 0) {
-            protected void attach(UI ui) {
-                super.attach(ui);
-                val = Config.showqualitymode;
-            }
-            public void changed() {
-                Config.showqualitymode = val;
-                Utils.setprefi("showqualitymode", val);
-            }
-        });
-        appender.add(new CheckBox("Show LP gain multiplier for curios") {
-            {
-                a = Config.showlpgainmult;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("showlpgainmult", val);
-                Config.showlpgainmult = val;
-                a = val;
-            }
-        });
-
-        appender.addRow(new Label("Calculate Avg as (req. logout):"), avgQModeDropdown());
-
         appender.add(new CheckBox("Round item quality to a whole number") {
             {
                 a = Config.qualitywhole;
@@ -1403,6 +1356,61 @@ public class OptWnd extends Window {
             public void set(boolean val) {
                 Utils.setprefb("autoslice", val);
                 Config.autoslice = val;
+                a = val;
+            }
+        });
+        appender.add(new CheckBox("Automatically select 'Pluck' action") {
+            {
+                a = Config.autopluck;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("autopluck", val);
+                Config.autopluck = val;
+                a = val;
+            }
+        });
+        appender.add(new CheckBox("Automatically select 'Clean' action") {
+            {
+                a = Config.autoclean;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("autoclean", val);
+                Config.autoclean = val;
+                a = val;
+            }
+        });
+        appender.add(new CheckBox("Automatically select 'Skin' action") {
+            {
+                a = Config.autoskin;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("autoskin", val);
+                Config.autoskin = val;
+                a = val;
+            }
+        });
+        appender.add(new CheckBox("Automatically select 'Butcher' action") {
+            {
+                a = Config.autobutcher;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("autobutcher", val);
+                Config.autobutcher = val;
+                a = val;
+            }
+        });
+        appender.add(new CheckBox("Automatically select 'Flay' action") {
+            {
+                a = Config.autoflay;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("autoflay", val);
+                Config.autoflay = val;
                 a = val;
             }
         });
@@ -1708,7 +1716,6 @@ public class OptWnd extends Window {
             @Override
             public void change(Locale item) {
                 super.change(item);
-                Resource.language = item.toString();
                 Utils.setpref("language", item.toString());
             }
         };
@@ -1740,42 +1747,6 @@ public class OptWnd extends Window {
         }
 
         return new ArrayList<Locale>(languages);
-    }
-
-    private static final Pair[] avgQModes = new Pair[]{
-            new Pair<>(Resource.getLocString(Resource.BUNDLE_LABEL, "Quadratic"), AVG_MODE_QUADRATIC),
-            new Pair<>(Resource.getLocString(Resource.BUNDLE_LABEL, "Geometric"), AVG_MODE_GEOMETRIC),
-            new Pair<>(Resource.getLocString(Resource.BUNDLE_LABEL, "Arithmetic"), AVG_MODE_ARITHMETIC)
-    };
-
-    @SuppressWarnings("unchecked")
-    private Dropbox<Pair<String, Integer>> avgQModeDropdown() {
-        List<String> values = Arrays.stream(avgQModes).map(x -> x.a.toString()).collect(Collectors.toList());
-        Dropbox<Pair<String, Integer>> modes = new Dropbox<Pair<String, Integer>>(avgQModes.length, values) {
-            @Override
-            protected Pair<String, Integer> listitem(int i) {
-                return avgQModes[i];
-            }
-
-            @Override
-            protected int listitems() {
-                return avgQModes.length;
-            }
-
-            @Override
-            protected void drawitem(GOut g, Pair<String, Integer> item, int i) {
-                g.text(item.a, Coord.z);
-            }
-
-            @Override
-            public void change(Pair<String, Integer> item) {
-                super.change(item);
-                Config.avgmode = item.b;
-                Utils.setprefi("avgmode", item.b);
-            }
-        };
-        modes.change(avgQModes[Config.avgmode]);
-        return modes;
     }
 
     private static final Pair[] combatkeys = new Pair[]{

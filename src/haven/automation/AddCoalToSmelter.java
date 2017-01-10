@@ -3,6 +3,8 @@ package haven.automation;
 
 import haven.*;
 
+import static haven.OCache.posres;
+
 public class AddCoalToSmelter implements Runnable {
     private GameUI gui;
     private Gob smelter;
@@ -58,7 +60,7 @@ public class AddCoalToSmelter implements Runnable {
         coal = gui.vhand.item;
 
         for (; count > 0; count--) {
-            gui.map.wdgmsg("itemact", Coord.z, smelter.rc, count == 1 ? 0 : 1, 0, (int) smelter.id, smelter.rc, 0, -1);
+            gui.map.wdgmsg("itemact", Coord.z, smelter.rc.floor(posres), count == 1 ? 0 : 1, 0, (int) smelter.id, smelter.rc.floor(posres), 0, -1);
             timeout = 0;
             while (true) {
                 WItem newcoal = gui.vhand;

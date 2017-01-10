@@ -40,7 +40,6 @@ import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 
 public class Resource implements Serializable {
-    private static File rescustom = new File("res");
     private static ResCache prscache;
     public static ThreadGroup loadergroup = null;
     private static Map<String, LayerFactory<?>> ltypes = new TreeMap<String, LayerFactory<?>>();
@@ -54,8 +53,7 @@ public class Resource implements Serializable {
     public static Class<Audio> audio = Audio.class;
     public static Class<Tooltip> tooltip = Tooltip.class;
 
-    public static String language = Utils.getpref("language", "en");
-    public static Map<String, String> l10nTooltip, l10nPagina, l10nWindow, l10nButton, l10nFlower, l10nMsg, l10nLabel, l10nAction;
+    public static final String language = Utils.getpref("language", "en");
     public static final String BUNDLE_TOOLTIP = "tooltip";
     public static final String BUNDLE_PAGINA = "pagina";
     public static final String BUNDLE_WINDOW = "window";
@@ -642,19 +640,8 @@ public class Resource implements Serializable {
         if (_local == null) {
             synchronized (Resource.class) {
                 if (_local == null) {
-                    Pool local = new Pool(new FileSource(rescustom));
+                    Pool local = new Pool(new FileSource(new File("res")));
                     local.add(new JarSource());
-                    try {
-                        String dir = Config.resdir;
-                        if (dir == null)
-                            dir = System.getenv("HAFEN_RESDIR");
-                        if (dir != null)
-                            local.add(new FileSource(new File(dir)));
-                    } catch (Exception e) {
-			/* Ignore these. We don't want to be crashing the client
-			 * for users just because of errors in development
-			 * aids. */
-                    }
                     _local = local;
                 }
             }
@@ -792,26 +779,17 @@ public class Resource implements Serializable {
     }
 
     static {
-        if (!language.equals("en") || Resource.L10N_DEBUG) {
-            l10nTooltip = l10n(BUNDLE_TOOLTIP, language);
-            l10nPagina = l10n(BUNDLE_PAGINA, language);
-            l10nWindow = l10n(BUNDLE_WINDOW, language);
-            l10nButton = l10n(BUNDLE_BUTTON, language);
-            l10nFlower = l10n(BUNDLE_FLOWER, language);
-            l10nMsg = l10n(BUNDLE_MSG, language);
-            l10nLabel = l10n(BUNDLE_LABEL, language);
-            l10nAction = l10n(BUNDLE_ACTION, language);
-        }
-
         l10nBundleMap =  new HashMap<String, Map<String, String>>(8) {{
-            put(BUNDLE_TOOLTIP, l10nTooltip);
-            put(BUNDLE_PAGINA, l10nPagina);
-            put(BUNDLE_WINDOW, l10nWindow);
-            put(BUNDLE_BUTTON, l10nButton);
-            put(BUNDLE_FLOWER, l10nFlower);
-            put(BUNDLE_MSG, l10nMsg);
-            put(BUNDLE_LABEL, l10nLabel);
-            put(BUNDLE_ACTION, l10nAction);
+            if (!language.equals("en") || Resource.L10N_DEBUG) {
+                put(BUNDLE_TOOLTIP, l10n(BUNDLE_TOOLTIP, language));
+                put(BUNDLE_PAGINA, l10n(BUNDLE_PAGINA, language));
+                put(BUNDLE_WINDOW, l10n(BUNDLE_WINDOW, language));
+                put(BUNDLE_BUTTON, l10n(BUNDLE_BUTTON, language));
+                put(BUNDLE_FLOWER, l10n(BUNDLE_FLOWER, language));
+                put(BUNDLE_MSG, l10n(BUNDLE_MSG, language));
+                put(BUNDLE_LABEL, l10n(BUNDLE_LABEL, language));
+                put(BUNDLE_ACTION, l10n(BUNDLE_ACTION, language));
+            }
         }};
 
         for (Class<?> cl : dolda.jglob.Loader.get(LayerName.class).classes()) {
@@ -941,7 +919,7 @@ public class Resource implements Serializable {
             Resource res = super.getres();
             String locText = getLocString(BUNDLE_TOOLTIP, res, text);
 
-            if (res != null && !language.equals("en")) {
+            if (!language.equals("en")) {
                 if (locText.equals(text) || !res.name.startsWith("gfx/invobjs") ||
                         // exclude meat "conditions" since the tooltip is dynamically generated and it won't be in right order
                         text.contains("Raw ") || text.contains("Filet of ") || text.contains("Sizzling") ||
@@ -1865,13 +1843,41 @@ public class Resource implements Serializable {
             "%s Giving the Chase",
             "A Favor for %s",
             "%s's Laughter",
-            "Blood for %s"
+            "Blood for %s",
+            "%s's Follies",
+            "Under %s's Star",
+            "%s's Story",
+            "Errands for %s",
+            "Affair with %s",
+            "%s's Catch",
+            "As %s Wishes",
+            "Poaching for %s",
+            "Crazy Old %s",
+            "Flowers for %s",
+            "Silly %s",
+            "%s's Gathering",
+            "%s has invited you to join his party. Do you wish to do so?",
+            "%s has requested to spar with you. Do you accept?",
+            "Experience points gained: %s"
     };
 
     private static final String[] fmtLocStringsFlower = new String[]{
             "Gild (%s%% chance)",
             "Follow %s",
             "Travel along %s"
+    };
+
+    private static final String[] fmtLocStringsMsg = new String[]{
+            "That land is owned by %s.",
+            "The name of this charterstone is \"%s\".",
+            "Will refill in %s days",
+            "Will refill in %s day",
+            "Will refill in %s hours",
+            "Will refill in %s hour",
+            "Will refill in %s minutes",
+            "Will refill in %s minute",
+            "Will refill in %s seconds",
+            "Will refill in %s second"
     };
 
     public static String getLocString(String bundle, String key) {
@@ -1881,29 +1887,21 @@ public class Resource implements Serializable {
         if (Resource.L10N_DEBUG)
             Resource.saveStrings(bundle, key, key);
         String ll = map.get(key);
-        // strings which require special handling
+        // strings which need to be formatted
         if (ll == null && bundle == BUNDLE_LABEL) {
             for (String s : fmtLocStringsLabel) {
                 String llfmt = fmtLocString(map, key, s);
                 if (llfmt != null)
                     return llfmt;
             }
-
-            // following strings are handled differently since character name could contain format characters
-            final String partyInvite = " has invited you to join his party. Do you wish to do so?";
-            if (key.endsWith(partyInvite)) {
-                ll = map.get("%s" + partyInvite);
-                if (ll != null)
-                    return String.format(ll, key.substring(0, key.indexOf(partyInvite)));
-            }
-            final String spar = "has requested to spar with you. Do you accept?";
-            if (key.endsWith(spar)) {
-                ll = map.get("%s " + spar);
-                if (ll != null)
-                    return String.format(ll, key.substring(0, key.length() - spar.length()));
-            }
         } else if (ll == null && bundle == BUNDLE_FLOWER) {
             for (String s : fmtLocStringsFlower) {
+                String llfmt = fmtLocString(map, key, s);
+                if (llfmt != null)
+                    return llfmt;
+            }
+        } else if (ll == null && bundle == BUNDLE_MSG) {
+            for (String s : fmtLocStringsMsg) {
                 String llfmt = fmtLocString(map, key, s);
                 if (llfmt != null)
                     return llfmt;
@@ -1932,16 +1930,6 @@ public class Resource implements Serializable {
         return ll != null ? ll : def;
     }
 
-    public static String getLocStringOrNull(String bundle, String key) {
-        Map<String, String> map = l10nBundleMap.get(bundle);
-        if (map == null)
-            return null;
-        if (Resource.L10N_DEBUG)
-            Resource.saveStrings(bundle, key, key);
-        String ll = map.get(key);
-        return ll != null ? ll : null;
-    }
-
     public static String getLocContent(String str) {
         String loc;
         if ((loc = Resource.locContent(str, " l of ")) != null)
@@ -1956,8 +1944,13 @@ public class Resource implements Serializable {
     private static String locContent(String str, String type) {
         int i = str.indexOf(type);
         if (i > 0) {
+            Map<String, String> map = l10nBundleMap.get(Resource.BUNDLE_LABEL);
+            if (map == null)
+                return str;
             String contName = str.substring(i);
-            String locContName = Resource.getLocStringOrNull(Resource.BUNDLE_LABEL, contName);
+            if (Resource.L10N_DEBUG)
+                Resource.saveStrings(Resource.BUNDLE_LABEL, contName, contName);
+            String locContName = map.get(contName);
             if (locContName != null)
                 return str.substring(0, i) + locContName + " (" + str.substring(i + type.length()) + ")";
             return str;

@@ -38,6 +38,9 @@ public class FlowerMenu extends Widget {
     public static final int ph = 30;
     public Petal[] opts;
     private UI.Grab mg, kg;
+    private static String nextAutoSel;
+    private static long nextAutoSelTimeout;
+    public static String lastSel;
     
     @RName("sm")
     public static class $_ implements Factory {
@@ -110,7 +113,14 @@ public class FlowerMenu extends Widget {
                         Config.autoeat && p.name.equals("Eat") ||
                         Config.autosplit && p.name.equals("Split") ||
                         Config.autokill && p.name.equals("Kill") ||
-                        Config.autoslice && p.name.equals("Slice"))) {
+                        Config.autoslice && p.name.equals("Slice") ||
+                        Config.autopluck && p.name.equals("Pluck") ||
+                        Config.autoclean && p.name.equals("Clean") ||
+                        Config.autoskin && p.name.equals("Skin") ||
+                        Config.autoflay && p.name.equals("Flay") ||
+                        Config.autobutcher && p.name.equals("Butcher") ||
+                        p.name.equals(nextAutoSel) && System.currentTimeMillis() - nextAutoSelTimeout < 2000)) {
+                    nextAutoSel = null;
                     choose(p);
                     break;
                 }
@@ -243,8 +253,16 @@ public class FlowerMenu extends Widget {
     public void choose(Petal option) {
         if (option == null) {
             wdgmsg("cl", -1);
+            lastSel = null;
         } else {
             wdgmsg("cl", option.num, ui.modflags());
+            lastSel = option.name;
+            MapView.pllastcc = null;
         }
+    }
+
+    public static void setNextSelection(String name) {
+        nextAutoSel = name;
+        nextAutoSelTimeout = System.currentTimeMillis();
     }
 }

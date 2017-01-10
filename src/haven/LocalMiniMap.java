@@ -33,15 +33,15 @@ import java.awt.image.*;
 import java.util.*;
 import java.util.List;
 
-import haven.automation.MusselPicker;
+import static haven.OCache.posres;
+
 import haven.resutil.Ridges;
 
 public class LocalMiniMap extends Widget {
     private static final Tex resize = Resource.loadtex("gfx/hud/wndmap/lg/resize");
     private static final Tex gridblue = Resource.loadtex("gfx/hud/mmap/gridblue");
     private static final Tex gridred = Resource.loadtex("gfx/hud/mmap/gridred");
-    public static final Text.Foundry bushf = new Text.Foundry(Text.sans.deriveFont(Font.BOLD), 12);
-    private static final Text.Foundry partyf = bushf;
+    public static final Text.Foundry bld12fnd = new Text.Foundry(Text.sans.deriveFont(Font.BOLD), 12);
     public final MapView mv;
     public final MapFile save;
     private Coord cc = null;
@@ -70,8 +70,8 @@ public class LocalMiniMap extends Widget {
             return size() > 7;
         }
     };
-    private final static Tex bushicn = Text.renderstroked("\u22C6", Color.CYAN, Color.BLACK, bushf).tex();
-    private final static Tex treeicn = Text.renderstroked("\u25B2", Color.CYAN, Color.BLACK, bushf).tex();
+    private final static Tex bushicn = Text.renderstroked("\u22C6", Color.CYAN, Color.BLACK, bld12fnd).tex();
+    private final static Tex treeicn = Text.renderstroked("\u25B2", Color.CYAN, Color.BLACK, bld12fnd).tex();
     private Map<Color, Tex> xmap = new HashMap<Color, Tex>(6);
     public static Coord plcrel = null;
 
@@ -101,8 +101,8 @@ public class LocalMiniMap extends Widget {
         return (img);
     }
 
-    public Tex drawmap(Coord ul, Coord sz) {
-        BufferedImage[] texes = new BufferedImage[256];
+    public Tex drawmap(Coord ul, BufferedImage[] texes) {
+        Coord sz = cmaps;
         MCache m = ui.sess.glob.map;
         BufferedImage buf = TexI.mkbuf(sz);
         Coord c = new Coord();
@@ -160,11 +160,11 @@ public class LocalMiniMap extends Widget {
         }
     }
 
-    public Coord p2c(Coord pc) {
-        return (pc.div(tilesz).sub(cc).add(sz.div(2)));
+    public Coord p2c(Coord2d pc) {
+        return (pc.floor(tilesz).sub(cc).add(sz.div(2)));
     }
 
-    public Coord c2p(Coord c) {
+    public Coord2d c2p(Coord c) {
         return (c.sub(sz.div(2)).add(cc).mul(tilesz).add(tilesz.div(2)));
     }
 
@@ -360,14 +360,14 @@ public class LocalMiniMap extends Widget {
     public void tick(double dt) {
         Gob pl = ui.sess.glob.oc.getgob(mv.plgob);
         if(pl == null)
-            this.cc = mv.cc.div(tilesz);
+            this.cc = mv.cc.floor(tilesz);
         else
-            this.cc = pl.rc.div(tilesz);
+            this.cc = pl.rc.floor(tilesz);
 
         if (Config.playerposfile != null && MapGridSave.gul != null) {
             try {
                 // instead of synchronizing MapGridSave.gul we just handle NPE
-                plcrel = pl.rc.sub((MapGridSave.gul.x + 50) * tilesz.x, (MapGridSave.gul.y + 50) * tilesz.y);
+             //   plcrel = pl.rc.sub((MapGridSave.gul.x + 50) * tilesz.x, (MapGridSave.gul.y + 50) * tilesz.y);
             } catch (NullPointerException npe) {
             }
         }
@@ -390,28 +390,30 @@ public class LocalMiniMap extends Widget {
             if (cur == null || plg != cur.grid || seq != cur.seq) {
                 Defer.Future<MapTile> f;
                 synchronized (cache) {
-                    f = cache.get(new Pair<MCache.Grid, Integer>(plg, seq));
+                    f = cache.get(new Pair<>(plg, seq));
                     if (f == null) {
-                        f = Defer.later(new Defer.Callable<MapTile>() {
-                            public MapTile call() {
-                                boolean gczero = plg.gc.equals(Coord.z);
-                                if (gczero && cur == null || cur != null && gczero && cur.grid != plg)
-                                    maptiles.clear();
-                                Coord ul = plg.ul;
-                                Coord gc = plg.gc;
-                                maptiles.put(gc.add(-1, -1), drawmap(ul.add(-100, -100), cmaps));
-                                maptiles.put(gc.add(0, -1), drawmap(ul.add(0, -100), cmaps));
-                                maptiles.put(gc.add(1, -1), drawmap(ul.add(100, -100), cmaps));
-                                maptiles.put(gc.add(-1, 0), drawmap(ul.add(-100, 0), cmaps));
-                                maptiles.put(gc, drawmap(ul, cmaps));
-                                maptiles.put(gc.add(1, 0), drawmap(ul.add(100, 0), cmaps));
-                                maptiles.put(gc.add(-1, 1), drawmap(ul.add(-100, 100), cmaps));
-                                maptiles.put(gc.add(0, 1), drawmap(ul.add(0, 100), cmaps));
-                                maptiles.put(gc.add(1, 1), drawmap(ul.add(100, 100), cmaps));
-                                return new MapTile(plg, seq);
-                            }
+                        if (cur != null && plg != cur.grid) {
+                            int x = Math.abs(plg.gc.x);
+                            int y = Math.abs(plg.gc.y);
+                            if (x == 0 && y == 0 || x == 10 && y == 10)
+                                maptiles.clear();
+                        }
+                        f = Defer.later(() -> {
+                            Coord ul = plg.ul;
+                            Coord gc = plg.gc;
+                            BufferedImage[] texes = new BufferedImage[256];
+                            maptiles.put(gc.add(-1, -1), drawmap(ul.add(-100, -100), texes));
+                            maptiles.put(gc.add(0, -1), drawmap(ul.add(0, -100), texes));
+                            maptiles.put(gc.add(1, -1), drawmap(ul.add(100, -100), texes));
+                            maptiles.put(gc.add(-1, 0), drawmap(ul.add(-100, 0), texes));
+                            maptiles.put(gc, drawmap(ul, texes));
+                            maptiles.put(gc.add(1, 0), drawmap(ul.add(100, 0), texes));
+                            maptiles.put(gc.add(-1, 1), drawmap(ul.add(-100, 100), texes));
+                            maptiles.put(gc.add(0, 1), drawmap(ul.add(0, 100), texes));
+                            maptiles.put(gc.add(1, 1), drawmap(ul.add(100, 100), texes));
+                            return new MapTile(plg, seq);
                         });
-                        cache.put(new Pair<MCache.Grid, Integer>(plg, seq), f);
+                        cache.put(new Pair<>(plg, seq), f);
                     }
                 }
                 if (f.done()) {
@@ -465,20 +467,21 @@ public class LocalMiniMap extends Widget {
         synchronized (ui.sess.glob.party.memb) {
             Collection<Party.Member> members = ui.sess.glob.party.memb.values();
             for (Party.Member m : members) {
+                Coord2d ppc;
                 Coord ptc;
                 double angle;
                 try {
-                    ptc = m.getc();
-                    if (ptc == null) // chars are located in different worlds
+                    ppc = m.getc();
+                    if (ppc == null) // chars are located in different worlds
                         continue;
 
-                    ptc = p2c(ptc).add(delta);
+                    ptc = p2c(ppc).add(delta);
                     Gob gob = m.getgob();
                     // draw 'x' if gob is outside of view range
                     if (gob == null) {
                         Tex tex = xmap.get(m.col);
                         if (tex == null) {
-                            tex = Text.renderstroked("\u2716",  m.col, Color.BLACK, partyf).tex();
+                            tex = Text.renderstroked("\u2716",  m.col, Color.BLACK, bld12fnd).tex();
                             xmap.put(m.col, tex);
                         }
                         g.image(tex, ptc.sub(6, 6));
@@ -508,38 +511,24 @@ public class LocalMiniMap extends Widget {
     }
 
     public boolean mousedown(Coord c, int button) {
-        if (Config.alternmapctrls) {
-            if (button != 2) {
-                if (cc == null)
-                    return false;
-                Gob gob = findicongob(c.sub(delta));
-                if (gob == null) {
-                    mv.wdgmsg("click", rootpos().add(c.sub(delta)), c2p(c.sub(delta)), button, ui.modflags());
-                } else {
-                    mv.wdgmsg("click", rootpos().add(c.sub(delta)), c2p(c.sub(delta)), button, ui.modflags(), 0, (int) gob.id, gob.rc, 0, -1);
-                    if (Config.autopickmussels)
-                        mv.startMusselsPicker(gob);
-                }
-            } else if (button == 2 && !Config.maplocked) {
-                doff = c;
-                dragging = ui.grabmouse(this);
+        if (button != 2) {
+            if (cc == null)
+                return false;
+            Coord csd = c.sub(delta);
+            Coord2d mc = c2p(csd);
+            if (button == 1)
+                MapView.pllastcc = mc;
+            Gob gob = findicongob(csd);
+            if (gob == null) {
+                mv.wdgmsg("click", rootpos().add(csd), mc.floor(posres), button, ui.modflags());
+            } else {
+                mv.wdgmsg("click", rootpos().add(csd), mc.floor(posres), button, ui.modflags(), 0, (int) gob.id, gob.rc.floor(posres), 0, -1);
+                if (Config.autopickmussels)
+                    mv.startMusselsPicker(gob);
             }
-        } else {
-            if (button == 3) {
-                if (cc == null)
-                    return false;
-                Gob gob = findicongob(c.sub(delta));
-                if (gob == null) {
-                    mv.wdgmsg("click", rootpos().add(c.sub(delta)), c2p(c.sub(delta)), 1, ui.modflags());
-                } else {
-                    mv.wdgmsg("click", rootpos().add(c.sub(delta)), c2p(c.sub(delta)), button, ui.modflags(), 0, (int) gob.id, gob.rc, 0, -1);
-                    if (Config.autopickmussels)
-                        mv.startMusselsPicker(gob);
-                }
-            } else if (button == 1 && !Config.maplocked) {
-                doff = c;
-                dragging = ui.grabmouse(this);
-            }
+        } else if (button == 2 && !Config.maplocked) {
+            doff = c;
+            dragging = ui.grabmouse(this);
         }
         return true;
     }

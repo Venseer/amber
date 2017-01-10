@@ -37,7 +37,7 @@ public class Makewindow extends Widget {
     List<Indir<Resource>> qmod = null;
     static final Text qmodl = Text.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Quality:"));
     int xoff = 45;
-    final int qmy = 38, outy = 65;
+    private static final int qmy = 38, outy = 65;
     public static final Text.Foundry nmf = new Text.Foundry(Text.serif, 20).aa(true);
     private int qModProduct = -1;
     private static final Tex softcapl = Text.render("Softcap:").tex();

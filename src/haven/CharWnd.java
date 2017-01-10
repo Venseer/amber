@@ -26,14 +26,14 @@
 
 package haven;
 
+import haven.resutil.FoodInfo;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.*;
 import java.util.List;
 
 import static haven.PUtils.*;
-
-import haven.resutil.FoodInfo;
 
 public class CharWnd extends Window {
     public static final RichText.Foundry ifnd = new RichText.Foundry(Resource.remote(), java.awt.font.TextAttribute.FAMILY, "SansSerif", java.awt.font.TextAttribute.SIZE, Config.fontsizeglobal).aa(true);
@@ -884,6 +884,13 @@ public class CharWnd extends Window {
                 buf.append("$img[" + res.name + "]\n\n");
                 buf.append("$b{$font[serif,16]{" + res.layer(Resource.tooltip).t + "}}\n\n\n");
                 buf.append(res.layer(Resource.pagina).text);
+                if (Config.cures.containsKey(res.name)) {
+                    buf.append(Resource.getLocString(Resource.BUNDLE_LABEL, "\n\nTreated with:\n"));
+                    for (String c : Config.cures.get(res.name)) {
+                        buf.append("$img[" + c + "]");
+                        buf.append(Resource.remote().load(c).get().layer(Resource.tooltip).t + "\n");
+                    }
+                }
                 return (buf.toString());
             }
 
@@ -1666,10 +1673,12 @@ public class CharWnd extends Window {
             y += aw.sz.y;
             base.add(aw = battr.add(new Attr(glob, "dex", every), wbox.btloff().add(x, y)));
             y += aw.sz.y;
-            base.add(aw = battr.add(new Attr(glob, "psy", other), wbox.btloff().add(x, y)));
+            base.add(aw = battr.add(new Attr(glob, "wil", other), wbox.btloff().add(x, y)));
+            y += aw.sz.y;
+            base.add(aw = battr.add(new Attr(glob, "psy", every), wbox.btloff().add(x, y)));
             y += aw.sz.y;
             Frame.around(battr, base);
-            y += 24;
+            y += 16;
             battr.add(new Img(catf.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Food Event Points")).tex()), new Coord(x - 2, y));
             y += 35;
             feps = battr.add(new FoodMeter(), new Coord(x, y));
@@ -1681,7 +1690,7 @@ public class CharWnd extends Window {
             cons = battr.add(new Constipations(attrw, base.size()), wbox.btloff().add(x, y));
             y += cons.sz.y;
             Frame.around(battr, Collections.singletonList(cons));
-            y += 24;
+            y += 16;
             battr.add(new Img(catf.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Hunger Level")).tex()), new Coord(x - 2, y));
             y += 35;
             glut = battr.add(new GlutMeter(), new Coord(x, y));
@@ -1709,13 +1718,17 @@ public class CharWnd extends Window {
             y += aw.sz.y;
             skill.add(aw = sattr.add(new SAttr(glob, "smithing", every), wbox.btloff().add(x, y)));
             y += aw.sz.y;
-            skill.add(aw = sattr.add(new SAttr(glob, "carpentry", other), wbox.btloff().add(x, y)));
+            skill.add(aw = sattr.add(new SAttr(glob, "masonry", other), wbox.btloff().add(x, y)));
             y += aw.sz.y;
-            skill.add(aw = sattr.add(new SAttr(glob, "cooking", every), wbox.btloff().add(x, y)));
+            skill.add(aw = sattr.add(new SAttr(glob, "carpentry", every), wbox.btloff().add(x, y)));
             y += aw.sz.y;
-            skill.add(aw = sattr.add(new SAttr(glob, "farming", other), wbox.btloff().add(x, y)));
+            skill.add(aw = sattr.add(new SAttr(glob, "cooking", other), wbox.btloff().add(x, y)));
             y += aw.sz.y;
-            skill.add(aw = sattr.add(new SAttr(glob, "survive", every), wbox.btloff().add(x, y)));
+            skill.add(aw = sattr.add(new SAttr(glob, "farming", every), wbox.btloff().add(x, y)));
+            y += aw.sz.y;
+            skill.add(aw = sattr.add(new SAttr(glob, "survive", other), wbox.btloff().add(x, y)));
+            y += aw.sz.y;
+            skill.add(aw = sattr.add(new SAttr(glob, "lore", every), wbox.btloff().add(x, y)));
             y += aw.sz.y;
             Frame.around(sattr, skill);
 
@@ -1725,7 +1738,7 @@ public class CharWnd extends Window {
             y += 35;
             y += 151;
             int rx = x + attrw + 15;
-            Frame.around(sattr, Area.sized(new Coord(x, y).add(wbox.btloff()), new Coord(attrw + 20, 85)));
+            Frame.around(sattr, Area.sized(new Coord(x, y).add(wbox.btloff()), new Coord(attrw + 20, 96)));
             sattr.add(new Label("Experience points:"), new Coord(x + 15, y + 10));
             sattr.add(new EncLabel(new Coord(rx, y + 10)));
             sattr.add(new Label("Learning points:"), new Coord(x + 15, y + 25));
@@ -1753,13 +1766,13 @@ public class CharWnd extends Window {
                     }
                     CharWnd.this.wdgmsg("sattr", args.toArray(new Object[0]));
                 }
-            }, new Coord(rx - 75, y + 60));
+            }, new Coord(rx - 75, y + 70));
             sattr.add(new Button(75, "Reset") {
                 public void click() {
                     for (SAttr attr : skill)
                         attr.reset();
                 }
-            }, new Coord(rx - 165, y + 60));
+            }, new Coord(rx - 165, y + 70));
         }
 
         Tabs.Tab skills;

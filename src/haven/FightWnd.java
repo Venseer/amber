@@ -714,7 +714,7 @@ public class FightWnd extends Widget {
             public void click() {
                 Pair<Text, Integer> sel = schoolsDropdown.sel;
                 if (sel == null || sel.a.text.equals("unused save"))
-                     return;
+                    return;
 
                 Window renwnd = new Window(new Coord(225, 100), "Rename School") {
                     {

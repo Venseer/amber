@@ -1,3 +1,108 @@
+Version 1.47.1
+    Fixed:
+        * Map tile dumper saving tiles into wrong session under certain conditions.
+
+    Misc:
+        * Added new trees to tree list.
+        * Removed ore boulders from boulders list.
+        * Clear Search window's filter when reopening it.
+        * Updated Russian localization.
+
+
+Version 1.47.0
+    New:
+        * Option to disable terrain smoothing (by ghandhikus). See Video settings.
+
+    Fixed:
+        * Map tile dumper not creating new session when entering/leaving caves.
+        * Local minimap not refreshing properly under certain conditions.
+
+    Misc:
+        * Dropped triple-quality related modifications.
+        * Upstream code merge.
+
+
+Version 1.46.1
+    Fixed:
+        * Crash when storing resource and the destination file is locked. 
+
+
+Version 1.46.0
+    New:
+        * Object marking.
+        * Added Flay action to Menu Settings.
+        * Added ducks to hide icons list.
+        * Added cauldron to the objects which can be lighted using torch extension.
+        * Ctlr+A for opening the world map window.
+
+    Fixed:
+        * Wound description for bruises not showing.
+        * Remaining time formatting.
+
+    Misc:
+        * Updated Russian localization.
+
+
+Version 1.45.1
+    Fixed:
+        * Craft/build window issues: actions not being saved to history bar, list of actions not 
+          updating when discovering new items.
+        * Auto-leveler.
+        * Auto-miner not working under certain conditions.
+
+    Misc:
+        * Updated Russian localization.
+
+
+Version 1.45.0
+    New:
+        * Craft/Build search window.
+        * Visited charter stones list.
+        * Added Skin option to Menu Settings.
+
+    Fixed:
+        * Client locking up during "Waiting for map data..." under certain conditions.
+        * Auto-miner.
+        * Multiple player's movement vector issues.
+        * Local minimap disappearing while using cross-roads/charters under certain conditions.
+        * Remaining study time erroneously displayed instead of percentage for curios placed in cauldrons etc.
+        * kbd console command not being preserved across client restarts.
+
+    Misc:
+        * Extended localization support.
+        * Updated Russian localization.
+
+
+Version 1.44.0
+    New:
+        * Added pluck, clean, and butcher options to Menu Settings.
+        * Wound description now shows remedies which can be used to cure it.
+
+    Fixed:
+        * Crash when changing some video related settings before loging into a character.
+
+    Misc:
+        * Option to show animals paths was removed and option to show other players paths was changed 
+          to show only the path of your character.
+        * Removed "Alternative" minimap controls option.
+        * Alt+click to transfer all items from stockpile instead of shift+rmb.
+        * Toned-down drying rack highlight colors.
+        * Updated Russian localization.
+
+
+Version 1.43.1
+    Fixed:
+        * Movement vectors.
+        * Tile centering.
+        * Crash while clearing up minimap cache.
+        * Mussel picker, branch/coal fuelers.
+
+
+Version 1.43.0
+    Misc:
+        * Upstream merge.
+
+
 Version 1.42.1
     New:
         * Switch between currently selected quality mode and 'all' mode with alt+q.

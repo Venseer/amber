@@ -86,11 +86,16 @@ public class ISBox extends Widget implements DTarget {
         if (button == 1) {
             if (ui.modshift)
                 wdgmsg("xfer");
-            else
+            else if (ui.modmeta) {
+                // max inventory size is 9 * 8
+                for (int i = 0; i < 9 * 8; i++)
+                    wdgmsg("xfer");
+                return true;
+            } else
                 wdgmsg("click");
             return (true);
         } else if (button == 3) {
-            if (ui.modshift) {
+            if (ui.modmeta) {
                 // max inventory size is 9 * 8
                 for (int i = 0; i < 9 * 8; i++)
                     wdgmsg("xfer");

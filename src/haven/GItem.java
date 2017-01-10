@@ -31,6 +31,8 @@ import haven.res.ui.tt.q.qbuff.QBuff;
 import java.awt.Color;
 import java.util.*;
 
+import static haven.Text.numfnd;
+
 public class GItem extends AWidget implements ItemInfo.SpriteOwner, GSprite.Owner {
     public Indir<Resource> res;
     public MessageBuf sdt;
@@ -39,88 +41,21 @@ public class GItem extends AWidget implements ItemInfo.SpriteOwner, GSprite.Owne
     private GSprite spr;
     private Object[] rawinfo;
     private List<ItemInfo> info = Collections.emptyList();
-    public static final Color essenceclr = new Color(202, 110, 244);
-    public static final Color substanceclr = new Color(208, 189, 44);
-    public static final Color vitalityclr = new Color(157, 201, 72);
     private Quality quality;
     public Tex metertex;
     private double studytime = 0.0;
     public Tex timelefttex;
-    private String name = "";
 
     public static class Quality {
-        private static final Text.Foundry fnd = new Text.Foundry(Text.sans, 10);
-        public static final int AVG_MODE_QUADRATIC = 0;
-        public static final int AVG_MODE_GEOMETRIC = 1;
-        public static final int AVG_MODE_ARITHMETIC = 2;
-
-        public double max, min;
-        public double avg;
-        public Tex etex, stex, vtex;
-        public Tex maxtex, mintex, avgtex, avgwholetex, lpgaintex, avgsvtex, avgsvwholetex;
+        public double q;
+        public Tex qtex, qwtex;
         public boolean curio;
 
-        public Quality(double e, double s, double v, boolean curio) {
+        public Quality(double q, boolean curio) {
+            this.q = q;
             this.curio = curio;
-
-            Color colormax;
-            if (e == s && e == v) {
-                max = e;
-                colormax = Color.WHITE;
-            } else if (e >= s && e >= v) {
-                max = e;
-                colormax = essenceclr;
-            } else if (s >= e && s >= v) {
-                max = s;
-                colormax = substanceclr;
-            } else {
-                max = v;
-                colormax = vitalityclr;
-            }
-
-            Color colormin;
-            if (e == s && e == v) {
-                min = e;
-                colormin = Color.WHITE;
-            } else if (e <= s && e <= v) {
-                min = e;
-                colormin = essenceclr;
-            } else if (s <= e && s <= v) {
-                min = s;
-                colormin = substanceclr;
-            } else {
-                min = v;
-                colormin = vitalityclr;
-            }
-
-            if (Config.avgmode == AVG_MODE_QUADRATIC)
-                avg = Math.sqrt((e * e + s * s + v * v) / 3.0);
-            else if (Config.avgmode == AVG_MODE_GEOMETRIC)
-                avg = Math.pow(e * s * v, 1.0 / 3.0);
-            else // AVG_MODE_ARITHMETIC
-                avg = (e + s + v) / 3.0;
-
-            double avgsv;
-            if (Config.avgmode == AVG_MODE_QUADRATIC)
-                avgsv = Math.sqrt((s * s + v * v) / 2.0);
-            else if (Config.avgmode == AVG_MODE_GEOMETRIC)
-                avgsv = Math.pow(s * v, 1.0 / 2.0);
-            else // AVG_MODE_ARITHMETIC
-                avgsv = (s + v) / 2.0;
-
-            if (curio) {
-                double lpgain = Math.sqrt(Math.sqrt((e * e + s * s + v * v) / 300.0));
-                lpgaintex = Text.renderstroked(Utils.fmt3DecPlace(lpgain), Color.WHITE, Color.BLACK, fnd).tex();
-            }
-            etex = Text.renderstroked(Utils.fmt1DecPlace(e), essenceclr, Color.BLACK, fnd).tex();
-            stex = Text.renderstroked(Utils.fmt1DecPlace(s), substanceclr, Color.BLACK, fnd).tex();
-            vtex = Text.renderstroked(Utils.fmt1DecPlace(v), vitalityclr, Color.BLACK, fnd).tex();
-            mintex = Text.renderstroked(Utils.fmt1DecPlace(min), colormin, Color.BLACK, fnd).tex();
-            maxtex = Text.renderstroked(Utils.fmt1DecPlace(max), colormax, Color.BLACK, fnd).tex();
-            avgtex = Text.renderstroked(Utils.fmt1DecPlace(avg), colormax, Color.BLACK, fnd).tex();
-            avgsvtex = Text.renderstroked(Utils.fmt1DecPlace(avgsv), colormax, Color.BLACK, fnd).tex();
-            avgwholetex = Text.renderstroked(Math.round(avg) + "", colormax, Color.BLACK, fnd).tex();
-            avgsvwholetex = Text.renderstroked(Math.round(avgsv) + "", colormax, Color.BLACK, fnd).tex();
+            qtex = Text.renderstroked(Utils.fmt1DecPlace(q), Color.WHITE, Color.BLACK, numfnd).tex();
+            qwtex = Text.renderstroked(Math.round(q) + "", Color.WHITE, Color.BLACK, numfnd).tex();
         }
     }
 
@@ -200,7 +135,7 @@ public class GItem extends AWidget implements ItemInfo.SpriteOwner, GSprite.Owne
         int hoursleft = timeleft / 60;
         int minutesleft = timeleft - hoursleft * 60;
 
-        timelefttex = Text.renderstroked(String.format("%d:%d", hoursleft, minutesleft), Color.WHITE, Color.BLACK, Text.numfnd).tex();
+        timelefttex = Text.renderstroked(String.format("%d:%02d", hoursleft, minutesleft), Color.WHITE, Color.BLACK, numfnd).tex();
         return true;
     }
 
@@ -269,30 +204,21 @@ public class GItem extends AWidget implements ItemInfo.SpriteOwner, GSprite.Owne
             rawinfo = args;
         } else if (name == "meter") {
             meter = (int)((Number)args[0]).doubleValue();
-            metertex = Text.renderstroked(String.format("%d%%", meter), Color.WHITE, Color.BLACK, Text.numfnd).tex();
+            metertex = Text.renderstroked(String.format("%d%%", meter), Color.WHITE, Color.BLACK, numfnd).tex();
             timelefttex = null;
         }
     }
 
     public void qualitycalc(List<ItemInfo> infolist) {
-        double e = 0, s = 0, v = 0;
+        double q = 0;
         boolean curio = false;
         for (ItemInfo info : infolist) {
-            if (info instanceof QBuff) {
-                QBuff qb = (QBuff)info;
-                String name = qb.origName;
-                double val = qb.q;
-                if ("Essence".equals(name))
-                    e = val;
-                else if ("Substance".equals(name))
-                    s = val;
-                else if ("Vitality".equals(name))
-                    v = val;
-            } else if (info.getClass() == Curiosity.class) {
+            if (info instanceof QBuff)
+                q = ((QBuff)info).q;
+            else if (info.getClass() == Curiosity.class)
                 curio = true;
-            }
         }
-        quality = new Quality(e, s, v, curio);
+        quality = new Quality(q, curio);
     }
 
     public Quality quality() {

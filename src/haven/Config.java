@@ -30,6 +30,7 @@ import haven.error.ErrorHandler;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.awt.event.KeyEvent;
 import java.io.*;
 import java.net.URL;
 import java.util.*;
@@ -45,7 +46,6 @@ public class Config {
     public static boolean dbtext = false;
     public static boolean profile = false;
     public static boolean profilegpu = false;
-    public static String resdir = null;
     public static boolean nopreload = false;
     public static int mainport = 1870;
     public static int authport = 1871;
@@ -63,9 +63,7 @@ public class Config {
     public static boolean alarmred = Utils.getprefb("alarmred", false);
     public static double alarmredvol = Utils.getprefd("alarmredvol", 0.32);
     public static boolean showquality = Utils.getprefb("showquality", false);
-    public static int showqualitymode = Utils.getprefi("showqualitymode", 0);
     public static boolean qualitywhole = Utils.getprefb("qualitywhole", true);
-    public static boolean showlpgainmult = Utils.getprefb("showlpgainmult", false);
     public static int badcamsensitivity = Utils.getprefi("badcamsensitivity", 5);
     public static List<LoginData> logins = new ArrayList<LoginData>();
     public static boolean maplocked = Utils.getprefb("maplocked", false);
@@ -98,9 +96,7 @@ public class Config {
     public static boolean hidecrops = Utils.getprefb("hidecrops", false);
     public static boolean showfps = Utils.getprefb("showfps", false);
     public static boolean autohearth = Utils.getprefb("autohearth", false);
-    public static boolean servertimesyslog = Utils.getprefb("servertimesyslog", false);
     public static boolean showplayerpaths = Utils.getprefb("showplayerpaths", false);
-    public static boolean showanimalpaths = Utils.getprefb("showanimalpaths", false);
     public static boolean showstudylefttime = Utils.getprefb("showstudylefttime", false);
     public static boolean showinvonlogin = Utils.getprefb("showinvonlogin", false);
     public static boolean autopick = Utils.getprefb("autopick", false);
@@ -109,9 +105,13 @@ public class Config {
     public static boolean autoeat = Utils.getprefb("autoeat", false);
     public static boolean autokill = Utils.getprefb("autokill", false);
     public static boolean autoslice = Utils.getprefb("autoslice", false);
+    public static boolean autoclean = Utils.getprefb("autoclean", false);
+    public static boolean autopluck = Utils.getprefb("autopluck", false);
+    public static boolean autoskin = Utils.getprefb("autoskin", false);
+    public static boolean autobutcher = Utils.getprefb("autobutcher", false);
+    public static boolean autoflay = Utils.getprefb("autoflay", false);
     public static boolean runonlogin = Utils.getprefb("runonlogin", false);
     public static Coord chatsz = Utils.getprefc("chatsz", new Coord(683, 111));
-    public static boolean alternmapctrls = Utils.getprefb("alternmapctrls", true);
     public static boolean autostudy = Utils.getprefb("autostudy", true);
     public static boolean showdmgop = Utils.getprefb("showdmgop", false);
     public static boolean showdmgmy = Utils.getprefb("showdmgmy", false);
@@ -167,8 +167,8 @@ public class Config {
     public static boolean combaltopenings =  Utils.getprefb("combaltopenings", false);
     public static boolean studyhist =  Utils.getprefb("studyhist", false);
     public static boolean studybuff =  Utils.getprefb("studybuff", false);
-
-    public static int avgmode = Utils.getprefi("avgmode", 0);
+    public static int zkey =  Utils.getprefi("zkey", KeyEvent.VK_Z);
+    public static boolean disableterrainsmooth =  Utils.getprefb("disableterrainsmooth", false);
     private final static Map<String, Integer> defFontSzGlobal =  new HashMap<String, Integer>(3) {{
         put("zh", 16);
         put("en", 11);
@@ -199,31 +199,21 @@ public class Config {
     public final static String chatfile = "chatlog.txt";
     public static PrintWriter chatlog = null;
 
-    public final static HashMap<String, CheckListboxItem> boulders = new HashMap<String, CheckListboxItem>(24) {{
+    public final static HashMap<String, CheckListboxItem> boulders = new HashMap<String, CheckListboxItem>(14) {{
         put("basalt", new CheckListboxItem("Basalt"));
-        put("limonite", new CheckListboxItem("Limonite"));
         put("schist", new CheckListboxItem("Schist"));
         put("dolomite", new CheckListboxItem("Dolomite"));
-        put("magnetite", new CheckListboxItem("Black Ore"));
         put("gneiss", new CheckListboxItem("Gneiss"));
         put("granite", new CheckListboxItem("Granite"));
-        put("malachite", new CheckListboxItem("Malachite"));
-        put("hematite", new CheckListboxItem("Bloodstone"));
         put("porphyry", new CheckListboxItem("Porphyry"));
-        put("ilmenite", new CheckListboxItem("Heavy Earth"));
         put("quartz", new CheckListboxItem("Quartz"));
-        put("cassiterite", new CheckListboxItem("Cassiterite"));
         put("limestone", new CheckListboxItem("Limestone"));
         put("sandstone", new CheckListboxItem("Sandstone"));
-        put("chalcopyrite", new CheckListboxItem("Chalcopyrite"));
         put("cinnabar", new CheckListboxItem("Cinnabar"));
         put("feldspar", new CheckListboxItem("Feldspar"));
         put("marble", new CheckListboxItem("Marble"));
-        put("nagyagite", new CheckListboxItem("Leaf Ore"));
         put("flint", new CheckListboxItem("Flint"));
-        put("hornsilver", new CheckListboxItem("Horn Silver"));
         put("blackcoal", new CheckListboxItem("Black Coal"));
-        put("argentite", new CheckListboxItem("Silvershine"));
     }};
 
     public final static HashMap<String, CheckListboxItem> bushes = new HashMap<String, CheckListboxItem>(22) {{
@@ -251,7 +241,7 @@ public class Config {
         put("redcurrant", new CheckListboxItem("Redcurrant"));
     }};
 
-    public final static HashMap<String, CheckListboxItem> trees = new HashMap<String, CheckListboxItem>(44) {{
+    public final static HashMap<String, CheckListboxItem> trees = new HashMap<String, CheckListboxItem>(46) {{
         put("alder", new CheckListboxItem("Alder"));
         put("corkoak", new CheckListboxItem("Corkoak"));
         put("plumtree", new CheckListboxItem("Plum Tree"));
@@ -296,9 +286,11 @@ public class Config {
         put("pine", new CheckListboxItem("Pine"));
         put("birch", new CheckListboxItem("Birch"));
         put("planetree", new CheckListboxItem("Plane Tree"));
+        put("quincetree", new CheckListboxItem("Quince"));
+        put("almondtree", new CheckListboxItem("Almond"));
     }};
 
-    public final static HashMap<String, CheckListboxItem> icons = new HashMap<String, CheckListboxItem>(20) {{
+    public final static HashMap<String, CheckListboxItem> icons = new HashMap<String, CheckListboxItem>(21) {{
         put("dandelion", new CheckListboxItem("Dandelion"));
         put("chantrelle", new CheckListboxItem("Chantrelle"));
         put("blueberry", new CheckListboxItem("Blueberry"));
@@ -320,6 +312,7 @@ public class Config {
         put("wball", new CheckListboxItem("Wrecking Ball"));
         put("windweed", new CheckListboxItem("Wild Windsown Weed"));
         put("mussels", new CheckListboxItem("Mussels"));
+        put("mallard", new CheckListboxItem("Duck"));
     }};
 
     public final static Map<String, Tex> additonalicons = new HashMap<String, Tex>(25) {{
@@ -372,7 +365,7 @@ public class Config {
             "gfx/terobjs/caveorgan",
             "gfx/terobjs/crystalpatch"));
 
-    public final static ArrayList<Pair<String, String>> disableanim = new ArrayList<Pair<String, String>>() {{
+    public final static ArrayList<Pair<String, String>> disableanim = new ArrayList<Pair<String, String>>(4) {{
         add(new Pair<String, String>("Beehives", "gfx/terobjs/beehive"));
         add(new Pair<String, String>("Fires", "gfx/terobjs/pow"));
         add(new Pair<String, String>("Full trash stockpiles", "gfx/terobjs/stockpile-trash"));
@@ -380,6 +373,60 @@ public class Config {
     }};
     public final static Set<String> disableanimSet = new HashSet<String>(disableanim.size());
 
+    public final static HashMap<String, String[]> cures = new HashMap<String, String[]>(14) {{
+        put("paginae/wound/antburn", new String[]{
+                "gfx/invobjs/herbs/yarrow"
+        });
+        put("paginae/wound/blunttrauma", new String[]{
+                "gfx/invobjs/leech",
+                "gfx/invobjs/gauze"
+        });
+        put("paginae/wound/bruise", new String[]{
+                "gfx/invobjs/leech"
+        });
+        put("paginae/wound/concussion", new String[]{
+                "gfx/invobjs/coldcompress"
+        });
+        put("paginae/wound/cruelincision", new String[]{
+                "gfx/invobjs/gauze",
+                "gfx/invobjs/stitchpatch",
+                "gfx/invobjs/rootfill"
+        });
+        put("paginae/wound/deepcut", new String[]{
+                "gfx/invobjs/gauze",
+                "gfx/invobjs/stingingpoultice",
+                "gfx/invobjs/rootfill",
+                "gfx/invobjs/herbs/waybroad"
+        });
+        put("paginae/wound/fellslash", new String[]{
+                "gfx/invobjs/gauze"
+        });
+        put("paginae/wound/nicksnknacks", new String[]{
+                "gfx/invobjs/herbs/yarrow"
+        });
+        put("paginae/wound/punchsore", new String[]{
+                "gfx/invobjs/mudointment"
+        });
+        put("paginae/wound/scrapesncuts", new String[]{
+                "gfx/invobjs/herbs/yarrow",
+                "gfx/invobjs/mudointment"
+        });
+        put("paginae/wound/severemauling", new String[]{
+                "gfx/invobjs/hartshornsalve"
+        });
+        put("paginae/wound/swollenbump", new String[]{
+                "gfx/invobjs/coldcompress",
+                "gfx/invobjs/leech",
+                "gfx/invobjs/stingingpoultice"
+        });
+        put("paginae/wound/unfaced", new String[]{
+                "gfx/invobjs/leech",
+                "gfx/invobjs/mudointment"
+        });
+        put("paginae/wound/wretchedgore", new String[]{
+                "gfx/invobjs/stitchpatch"
+        });
+    }};
 
     static {
         Collections.sort(disableanim, (o1, o2) -> o1.a.compareTo(o2.a));
@@ -459,7 +506,6 @@ public class Config {
         out.println("  -G                 Enable GPU profiling");
         out.println("  -p FILE            Write player position to a memory mapped file");
         out.println("  -U URL             Use specified external resource URL");
-        out.println("  -r DIR             Use specified resource directory (or HAVEN_RESDIR)");
         out.println("  -A AUTHSERV[:PORT] Use specified authentication server");
         out.println("  -u USER            Authenticate as USER (together with -C)");
         out.println("  -C HEXCOOKIE       Authenticate with specified hex-encoded cookie");
@@ -485,9 +531,6 @@ public class Config {
                     break;
                 case 'G':
                     profilegpu = true;
-                    break;
-                case 'r':
-                    resdir = opt.arg;
                     break;
                 case 'A':
                     int p = opt.arg.indexOf(':');
