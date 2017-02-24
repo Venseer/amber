@@ -31,7 +31,7 @@ public class Ingredient extends Tip {
     public String descr() {
         return this.val == null ?
                 Resource.getLocString(Resource.BUNDLE_LABEL, name) :
-                String.format("%s (%d%%)", Resource.getLocString(Resource.BUNDLE_LABEL, name), Integer.valueOf((int) Math.floor(this.val.doubleValue() * 100.0D)));
+                String.format("%s (%d%%)", Resource.getLocString(Resource.BUNDLE_INGREDIENT, name), Integer.valueOf((int) Math.floor(this.val.doubleValue() * 100.0D)));
     }
 
     public static class Line extends Tip {

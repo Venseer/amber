@@ -34,8 +34,11 @@ public class AnimSprite extends Sprite {
 
     public static final Factory fact = new Factory() {
         public Sprite create(Owner owner, Resource res, Message sdt) {
-            if (res.layer(MeshAnim.Res.class) == null || Config.disableanimSet.contains(res.name))
-                return (null);
+            if (res.layer(MeshAnim.Res.class) == null)
+                return null;
+            CheckListboxItem itm = Config.disableanim.get(res.name);
+            if (itm != null && itm.selected)
+                return null;
             return (new AnimSprite(owner, res, sdt));
         }
     };

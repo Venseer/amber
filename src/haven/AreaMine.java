@@ -1,6 +1,7 @@
 package haven;
 
 import static haven.MCache.tilesz;
+import static haven.OCache.posres;
 
 public class AreaMine implements Runnable {
     private MapView mv;
@@ -138,7 +139,7 @@ public class AreaMine implements Runnable {
                         mv.wdgmsg("drop", Coord.z, gui.map.player().rc, 0);
 
                     mv.wdgmsg("click", Coord.z, tc.mul(11).add(5, 5), 3, 0);
-                    mv.wdgmsg("click", Coord.z, gui.map.player().rc, 1, 0);
+                    mv.wdgmsg("click", Coord.z, gui.map.player().rc.floor(posres), 1, 0);
                     break mine;
                 }
 
@@ -154,10 +155,8 @@ public class AreaMine implements Runnable {
                 // check if tile is done
                 t = map.gettile(tc);
                 res = map.tilesetr(t);
-                if (res != null) {
-                    if (res.name.equals("gfx/tiles/mine"))
-                        break;
-                }
+                if (res != null && res.name.equals("gfx/tiles/mine"))
+                    break;
 
                 // check if mining tool is equipped
                 Equipory e = gui.getequipory();
@@ -186,22 +185,6 @@ public class AreaMine implements Runnable {
 
                 if (notool)
                     break mine;
-
-                // otherwise if we are out of stamina - repeat
-                IMeter.Meter stam = gui.getmeter("stam", 0);
-                if (stam.a <= 30) {
-                    i--;
-                    break;
-                }
-
-                if (!Config.dropore && gui.maininv.getFreeSpace() == 0) {
-                    if (gui.vhand != null)
-                        mv.wdgmsg("drop", Coord.z, gui.map.player().rc, 0);
-
-                    mv.wdgmsg("click", Coord.z, tc.mul(11).add(5, 5), 3, 0);
-                    mv.wdgmsg("click", Coord.z, gui.map.player().rc, 1, 0);
-                    break mine;
-                }
             }
         }
 

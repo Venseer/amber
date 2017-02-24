@@ -29,8 +29,6 @@ package haven;
 import static haven.MCache.tilesz;
 
 import java.util.*;
-import javax.media.opengl.*;
-import java.awt.Color;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
@@ -137,7 +135,7 @@ public class MapMesh implements Rendered, Disposable {
         public MapSurface() {
             for (int y = vs.ul.y; y < vs.br.y; y++) {
                 for (int x = vs.ul.x; x < vs.br.x; x++) {
-                    surf[vs.o(x, y)] = new Vertex(x * (float)tilesz.x, y * -(float)tilesz.y, map.getz(ul.add(x, y)));
+                    surf[vs.o(x, y)] = new Vertex(x * (float)tilesz.x, y * -(float)tilesz.y, Config.disableelev ? 0 : map.getz(ul.add(x, y)));
                 }
             }
             for (int y = ts.ul.y; y < ts.br.y; y++) {
@@ -383,7 +381,7 @@ public class MapMesh implements Rendered, Disposable {
             final float si = (float) Math.sin(a), co = (float) Math.cos(a);
             this.cc = cc;
             final MeshBuf buf = new MeshBuf();
-            final float cz = (float)map.getcz(cc);
+            final float cz = Config.disableelev ? 0 : (float)map.getcz(cc);
             final Coord ult, brt;
             {
                 Coord tult = null, tbrt = null;

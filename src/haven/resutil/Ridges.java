@@ -199,8 +199,13 @@ public class Ridges extends MapMesh.Hooks {
         {
             Coord gc = tc.add(m.ul);
             int z1 = m.map.getz(gc.add(tccs[e])), z2 = m.map.getz(gc.add(tccs[(e + 1) % 4]));
-            lo = Math.min(z1, z2);
-            hi = Math.max(z1, z2);
+            if (Config.disableelev) {
+                lo = 0;
+                hi = 10;
+            } else {
+                lo = Math.min(z1, z2);
+                hi = Math.max(z1, z2);
+            }
         }
         int nseg = Math.max((hi - lo + (segh / 2)) / segh, 2) - 1;
         Vertex[] ret = new Vertex[nseg + 1];
@@ -556,7 +561,7 @@ public class Ridges extends MapMesh.Hooks {
             for (int i = 0; i < n; i++) {
                 col[i] = new Coord3f(tcx + ((rnd.nextFloat() - 0.5f) * 5.0f),
                         tcy + ((rnd.nextFloat() - 0.5f) * 5.0f),
-                        zs[i]);
+                        Config.disableelev ? 10 : zs[i]);
             }
         }
 

@@ -29,19 +29,25 @@ package haven;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.awt.RenderingHints;
+import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.image.BufferedImage;
+import java.awt.image.Raster;
+import java.awt.image.WritableRaster;
 import java.io.*;
-import java.nio.*;
+import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
+import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
-import java.lang.ref.*;
-import java.lang.reflect.*;
-import java.util.prefs.*;
+import java.nio.*;
 import java.util.*;
-import java.util.function.*;
-import java.awt.Graphics;
-import java.awt.Color;
-import java.awt.image.*;
+import java.util.function.IntPredicate;
+import java.util.function.Supplier;
+import java.util.prefs.Preferences;
 
 public class Utils {
     public static final java.nio.charset.Charset utf8 = java.nio.charset.Charset.forName("UTF-8");
@@ -262,6 +268,8 @@ public class Utils {
             if (jsonstr == null)
                 return;
             JSONArray ja = new JSONArray(jsonstr);
+            for (CheckListboxItem itm : data.values())
+                itm.selected = false;
             for (int i = 0; i < ja.length(); i++) {
                 CheckListboxItem itm = data.get(ja.getString(i));
                 if (itm != null)
@@ -1211,6 +1219,16 @@ public class Utils {
         return (splice(src, off, src.length - off));
     }
 
+    public static double[] splice(double[] src, int off, int len) {
+        double[] dst = new double[len];
+        System.arraycopy(src, off, dst, 0, len);
+        return (dst);
+    }
+
+    public static double[] splice(double[] src, int off) {
+        return (splice(src, off, src.length - off));
+    }
+
     public static int[] splice(int[] src, int off, int len) {
         int[] dst = new int[len];
         System.arraycopy(src, off, dst, 0, len);
@@ -1493,14 +1511,21 @@ public class Utils {
         Console.setscmd("gc", (cons, args) -> System.gc());
     }
 
-    // NOTE: following fmt*DecPlace methods will not work with values having large integer part
+    // NOTE: will not work with values having large integer part
     public static String fmt1DecPlace(double value) {
         double rvalue = (double) Math.round(value * 10) / 10;
         return (rvalue % 1 == 0) ? Integer.toString((int)rvalue) : Double.toString(rvalue);
     }
 
-    public static String fmt3DecPlace(double value) {
-        double rvalue = (double) Math.round(value * 1000) / 1000;
-        return (rvalue % 1 == 0) ? Integer.toString((int)rvalue) : Double.toString(rvalue);
+    public static Color hex2rgb(String clrhex) {
+        try {
+            return new Color(
+                    Integer.valueOf(clrhex.substring(0, 2), 16),
+                    Integer.valueOf(clrhex.substring(2, 4), 16),
+                    Integer.valueOf(clrhex.substring(4, 6), 16),
+                    255);
+        } catch (NumberFormatException e) {
+        }
+        return null;
     }
 }

@@ -26,13 +26,17 @@
 
 package haven;
 
-import java.util.*;
-import java.lang.reflect.*;
-import java.lang.annotation.*;
-
-import haven.Resource.Tile;
-import haven.Surface.Vertex;
 import haven.Surface.MeshVertex;
+import haven.Surface.Vertex;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.lang.reflect.Constructor;
+import java.util.Map;
+import java.util.Random;
+import java.util.TreeMap;
 
 public abstract class Tiler {
     public final int id;
@@ -116,7 +120,7 @@ public abstract class Tiler {
         public static final int[] rdiag = {0, 1, 2, 0, 2, 3}, ldiag = {0, 1, 3, 1, 2, 3};
 
         public static MPart splitquad(Coord lc, Coord gc, Surface.Vertex[] corners, boolean diag) {
-            return (new MPart(lc, gc, corners, ctcx, ctcy, diag ? rdiag : ldiag));
+            return (new MPart(lc, gc, corners, ctcx, ctcy, diag ? ldiag : rdiag));
         }
     }
 

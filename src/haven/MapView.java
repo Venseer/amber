@@ -50,7 +50,7 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
     public static Coord2d pllastcc;
     public Coord2d cc;
     public final Glob glob;
-    private int view = 2;
+    private static final int view = 2;
     private Collection<Delayed> delayed = new LinkedList<Delayed>();
     private Collection<Delayed> delayed2 = new LinkedList<Delayed>();
     private Collection<Rendered> extradraw = new LinkedList<Rendered>();
@@ -262,6 +262,8 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
         public void tick(double dt) {
             Coord3f cc = getcc();
             cc.y = -cc.y;
+            if (Config.disableelev)
+                cc.z = 0;
             view.update(PointedCam.compute(cc.add(camoff).add(0.0f, 0.0f, 15f), dist, elev, angl));
         }
 
@@ -324,6 +326,8 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
         public void tick2(double dt) {
             Coord3f cc = getcc();
             cc.y = -cc.y;
+            if (Config.disableelev)
+                cc.z = 0;
             this.cc = cc;
         }
 
@@ -390,6 +394,8 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
         public void tick2(double dt) {
             Coord3f mc = getcc();
             mc.y = -mc.y;
+            if (Config.disableelev)
+                mc.z = 0;
             if ((cc == null) || (Math.hypot(mc.x - cc.x, mc.y - cc.y) > 250))
                 cc = mc;
             else if (!exact || (mc.dist(cc) > 2))
@@ -428,11 +434,6 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
             if (c == null || dragorig == null)
                 return;
             tangl = anglorig + ((float) (c.x - dragorig.x) / 100.0f);
-        }
-
-        public void release() {
-            if (!Config.camfree && tfield > 100)
-                tangl = (float) (Math.PI * 0.5 * (Math.floor(tangl / (Math.PI * 0.5)) + 0.5));
         }
 
         private void chfield(float nf) {
@@ -641,15 +642,8 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
     };
 
     void addgob(RenderList rl, final Gob gob) {
-        try {
-            Resource res = gob.getres();
-            if (Config.hidecrops && res != null) {
-                if (res.name.startsWith("gfx/terobjs/plants") && !res.name.equals("gfx/terobjs/plants/trellis")) {
-                    return;
-                }
-            }
-        } catch (Loading le) {
-        }
+        if (Config.hidecrops && gob.type != null && gob.type.has(Gob.Type.PLANT))
+            return;
 
         GLState xf;
         try {
@@ -670,35 +664,29 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
         }
         rl.add(gob, GLState.compose(extra, xf, gob.olmod, gob.save));
 
-        try {
-            Resource res = gob.getres();
-            if (res != null) {
-                Gob.Overlay rovl = null;
-                boolean show = false;
+        Gob.Overlay rovl = null;
+        boolean show = false;
 
-                if (res.name.equals("gfx/terobjs/minesupport") || res.name.equals("gfx/terobjs/ladder")) {
-                    rovl = rovlsupport;
-                    show = Config.showminerad;
-                } else if (res.name.equals("gfx/terobjs/column")) {
-                    rovl = rovlcolumn;
-                    show = Config.showminerad;
-                }
-
-                if (res.name.equals("gfx/terobjs/trough")) {
-                    rovl = rovltrough;
-                    show = Config.showfarmrad;
-                } else if (res.name.equals("gfx/terobjs/beehive")) {
-                    rovl = rovlbeehive;
-                    show = Config.showfarmrad;
-                }
-
-                if (show && !gob.ols.contains(rovl))
-                    gob.ols.add(rovl);
-                else if (!show && rovl != null)
-                    gob.ols.remove(rovl);
-            }
-        } catch (Loading le) {
+        if (gob.type == Gob.Type.WOODEN_SUPPORT) {
+            rovl = rovlsupport;
+            show = Config.showminerad;
+        } else if (gob.type == Gob.Type.STONE_SUPPORT) {
+            rovl = rovlcolumn;
+            show = Config.showminerad;
         }
+
+        if (gob.type == Gob.Type.TROUGH) {
+            rovl = rovltrough;
+            show = Config.showfarmrad;
+        } else if (gob.type == Gob.Type.BEEHIVE) {
+            rovl = rovlbeehive;
+            show = Config.showfarmrad;
+        }
+
+        if (show && !gob.ols.contains(rovl))
+            gob.ols.add(rovl);
+        else if (!show && rovl != null)
+            gob.ols.remove(rovl);
     }
 
     public static class ChangeSet implements OCache.ChangeCallback {
@@ -1367,6 +1355,8 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
     }
 
     public Coord3f screenxf(Coord3f mc) {
+        if (Config.disableelev)
+            mc.z = 0;
         Coord3f mloc = new Coord3f(mc.x, -mc.y, mc.z);
 	    /* XXX: Peeking into the camera really is doubtfully nice. */
         return(camera.proj.toscreen(camera.view.fin(Matrix4f.id).mul4(mloc), sz));
@@ -1442,8 +1432,9 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
             }
 
             if (showgrid) {
-                Coord tc = new Coord((int)(cc.x / tilesz.x / MCache.cutsz.x - view - 1) * MCache.cutsz.x,
-                        (int)(cc.y / tilesz.y / MCache.cutsz.y - view - 1) * MCache.cutsz.y);
+                double tx = Math.ceil(cc.x / tilesz.x / MCache.cutsz.x);
+                double ty = Math.ceil(cc.y / tilesz.y / MCache.cutsz.y);
+                Coord tc = new Coord((int)(tx - view - 1) * MCache.cutsz.x, (int)(ty - view - 1) * MCache.cutsz.y);
                 if (!tc.equals(lasttc)) {
                     lasttc = tc;
                     gridol.update(tc);
@@ -2331,7 +2322,7 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
             }
 
             if (gobcls != null) {
-                gameui().menu.wdgmsg("act", new Object[]{"aggro"});
+                gameui().act("aggro");
                 wdgmsg("click", gobcls.sc, Coord.z, 1, ui.modflags(), 0, (int) gobcls.id, gobcls.rc.floor(posres), 0, 0);
                 Gob pl = player();
                 wdgmsg("click", pl.sc, pl.rc.floor(posres), 3, 0);
@@ -2392,14 +2383,8 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
         OCache oc = glob.oc;
         synchronized (oc) {
             for (Gob gob : oc) {
-                try {
-                    Resource res = gob.getres();
-                    if (res != null && res.name.startsWith("gfx/terobjs/trees")
-                            && !res.name.endsWith("log") && !res.name.endsWith("oldtrunk"))
-                        oc.changed(gob);
-                } catch (Loading l) {
-                }
-
+                if (gob.type == Gob.Type.TREE)
+                    oc.changed(gob);
             }
         }
     }
@@ -2408,15 +2393,8 @@ public class MapView extends PView implements DTarget, Console.Directory, PFList
         OCache oc = glob.oc;
         synchronized (oc) {
             for (Gob gob : oc) {
-                try {
-                    Resource res = gob.getres();
-                    if (res != null &&
-                            ((res.name.startsWith("gfx/terobjs/plants") && !res.name.endsWith("trellis")) ||
-                                    res.name.startsWith("gfx/terobjs/trees") || res.name.startsWith("gfx/terobjs/bushes")))
-                        oc.changed(gob);
-                } catch (Loading l) {
-                }
-
+                if (Gob.Type.PLANT.has(gob.type) || gob.type == Gob.Type.TREE || gob.type == Gob.Type.BUSH)
+                    oc.changed(gob);
             }
         }
     }

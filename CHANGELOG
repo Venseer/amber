@@ -1,3 +1,164 @@
+Version 1.54.2
+    Fixed:
+        * Aggro radius erroneously shown around mammoths.
+		* A couple of issues with world map.
+		* Mirkwood log highlight not working.
+		* Auto-mussel picker not working with Q key.
+
+	Misc:
+		* Restored automatic map tiles dumper.
+
+
+Version 1.54.1
+    Fixed:
+        * Regression introduced in v1.54.0
+
+
+Version 1.54.0
+    New:
+        * Allow removing resource markers.
+        * Console command 'savemap' for dumping world map tiles.
+		* Highlight intermediate harvestable stages for carrots and hemp.
+		* Add option to disable dropping tubers in auto-leveler.
+
+    Fixed:
+        * Raven's Bite not being listed and Attacks filter.
+		* Map highlight settings (trees, icons. etc) not being cleared when switching chars.
+		* Black eye didn't list available cures.
+		* Water vortex missing from world map filters.
+		* Auto-leveler for people having high ping.
+		
+    Misc:
+		* Added grub to icons list
+		* Tweaked blue kin color.
+
+
+Version 1.53.0
+    New:
+        * Separate Placed and Natural lists in worldmap replaced by single filterable list.
+        * Holding Alt while right clicking things will prevent automatic menu selection if such is defined.
+        * Extension for automatically filleting all the fish in inventory.
+        * Option to change the color of tree bounding boxes.
+
+    Fixed:
+        * Auto-leveler bug (probably..)
+
+    Misc:
+        * Changed Oldrtunk to Mirkwood Log in trees list and added Lingonberies to icons list.
+        * Refactored auto-menu options - old settings were not preserved.
+
+
+Version 1.52.3
+    Fixed:
+        * Missing dead wolverine icon.
+
+
+Version 1.52.2
+    Fixed:
+        * Crash in menu search.
+
+    Misc:
+        * Add radius to wolverines.
+
+
+Version 1.52.1
+    Fixed:
+        * Crime and tracking automatic toggle not working.
+
+    Misc:
+        * Use server provided values for everything that uses study times. 
+        * Display remaining study time using real time.
+
+
+Version 1.52.0
+    Misc:
+        * Upstream code merge.
+
+
+Version 1.51.0
+    New:
+        * Added study time and LP/H to curio tooltip (by Xcom).
+        * Added kin search.
+
+    Fixed:
+        * Miscellaneous crashes.
+
+    Misc:
+        * Use single smoke source for tarkilns.
+        * Added boars to clover feeder.
+        * Added giddyup and shear wool to auto-menu options.
+        * Restored auto-hearth option.
+
+
+Version 1.50.1
+    Fixed:
+        * Auto-miner issues due to server-side drinking.
+        * Barterstand crash.
+
+    Misc:
+        * Added icon for nidbanes.
+        * Increase Q forage distance to 20 tiles.
+        * Removed auto-hearth since auto-logout is more practical (and having both options is confusing).
+
+
+Version 1.50.0
+    New:
+        * Worldmap zoom.
+
+    Fixed:
+        * Local minimap borking sometimes.
+
+    Misc:
+        * Limited auto-picker (Q key) to 10 tiles
+        * Added ladybug, moths, etc to hide icons list thus allowing them to be picked with the Q key.
+
+
+Version 1.49.2
+    Fixed:
+        * Crash in PickForagable.
+
+    Misc:
+        * Add radius for walruses.
+        * Upstream code merge.
+        * Updated Russian localization.
+
+
+Version 1.49.1
+    Misc:
+        * Enable terrain elevation by default.
+
+
+Version 1.49.0
+    New:
+        * Option to disable terrain elevation.
+        * Pressing Q key will pick nearest forageable or the stuff from the icons list which is not currently hidden.
+
+    Fixed:
+        * Auto-lever stop button not working.
+
+
+Version 1.48.1
+    Fixed:
+        * Missing icon for dead walruses.
+
+
+Version 1.48.0
+    New:
+        * Clover feeder.
+        * Walrus sound alarm (controlled by same option as bear and lynx alarms).
+
+    Fixed:
+        * Search window filter not being cleared when closing the window with shift+s.
+        * Bush and tree icon positions being slightly off.
+
+    Misc:
+        * Updated curio timings (thanks to NicholasSavard).
+        * Added Toad Butter to relevant wound descriptions.
+        * Add timers to extensions menu.
+        * Upstream code merge.
+        * Updated Russian localization.
+
+
 Version 1.47.1
     Fixed:
         * Map tile dumper saving tiles into wrong session under certain conditions.

@@ -208,7 +208,7 @@ public class FBelt extends Widget implements DTarget, DropTarget {
             if (res.name.startsWith("paginae/amber"))
                 gameui().menu.use(act.ad);
             else
-                gameui().menu.wdgmsg("act", (Object[]) act.ad);
+                gameui().act(act.ad);
         }
     }
 

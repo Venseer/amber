@@ -26,6 +26,7 @@
 
 package haven;
 
+import haven.automation.WItemDestroyCallback;
 import haven.res.ui.tt.Wear;
 
 import java.awt.Color;
@@ -45,6 +46,7 @@ public class WItem extends Widget implements DTarget {
     public static final Color[] wearclr = new Color[]{
             new Color(233, 0, 14), new Color(218, 128, 87), new Color(246, 233, 87), new Color(145, 225, 60)
     };
+    private WItemDestroyCallback destroycb;
 
     public WItem(GItem item) {
         super(sqsz);
@@ -362,5 +364,16 @@ public class WItem extends Widget implements DTarget {
     public boolean iteminteract(Coord cc, Coord ul) {
         item.wdgmsg("itemact", ui.modflags());
         return (true);
+    }
+
+    @Override
+    public void reqdestroy() {
+        super.reqdestroy();
+        if (destroycb != null)
+            destroycb.notifyDestroy();
+    }
+
+    public void registerDestroyCallback(WItemDestroyCallback cb) {
+        this.destroycb = cb;
     }
 }

@@ -53,12 +53,25 @@ public class LocalMiniMap extends Widget {
     private static final Resource foragablesfx = Resource.local().loadwait("sfx/awwyeah");
     private static final Resource bearsfx = Resource.local().loadwait("sfx/bear");
     private static final Resource lynxfx = Resource.local().loadwait("sfx/lynx");
+    private static final Resource walrusfx = Resource.local().loadwait("sfx/walrus");
     private static final Resource trollsfx = Resource.local().loadwait("sfx/troll");
     private static final Resource mammothsfx = Resource.local().loadwait("sfx/mammoth");
     private static final Resource doomedsfx = Resource.local().loadwait("sfx/doomed");
     private static final Resource swagsfx = Resource.local().loadwait("sfx/swag");
 	private final HashSet<Long> sgobs = new HashSet<Long>();
-    private final HashMap<Coord, Tex> maptiles = new HashMap<Coord, Tex>(28, 0.75f) {
+    private final Map<Coord, Tex> maptiles = new LinkedHashMap<Coord, Tex>(28, 0.75f, false) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Coord, Tex> eldest) {
+            if (size() > 28) {
+                try {
+                    eldest.getValue().dispose();
+                } catch (RuntimeException e) {
+                }
+                return true;
+            }
+            return false;
+        }
+
         @Override
         public void clear() {
             values().forEach(Tex::dispose);
@@ -72,8 +85,10 @@ public class LocalMiniMap extends Widget {
     };
     private final static Tex bushicn = Text.renderstroked("\u22C6", Color.CYAN, Color.BLACK, bld12fnd).tex();
     private final static Tex treeicn = Text.renderstroked("\u25B2", Color.CYAN, Color.BLACK, bld12fnd).tex();
+    private final static Tex bldricn = Text.renderstroked("\u25AA", Color.CYAN, Color.BLACK, bld12fnd).tex();
     private Map<Color, Tex> xmap = new HashMap<Color, Tex>(6);
     public static Coord plcrel = null;
+    public long lastnewgid;
 
 
     private static class MapTile {
@@ -180,46 +195,35 @@ public class LocalMiniMap extends Widget {
 
                     GobIcon icon = gob.getattr(GobIcon.class);
                     if (icon != null || Config.additonalicons.containsKey(res.name)) {
-                        if (Config.dangerousgobres.contains(res.name)) {
+                        if (Gob.Type.MOB.has(gob.type) || gob.type == Gob.Type.BAT) {
                             dangergobs.add(gob);
                             continue;
                         }
 
                         CheckListboxItem itm = Config.icons.get(res.basename());
                         if (itm == null || !itm.selected) {
-                            Coord gc = p2c(gob.rc);
                             Tex tex;
-                            if (icon != null && gob.knocked != Boolean.TRUE) {
-                                tex = icon.tex();
-                            } else {
-                                Tex addtex = Config.additonalicons.get(res.name);
-                                tex = addtex != null ? addtex : icon.tex();
-                            }
-                            g.image(tex, gc.sub(tex.sz().div(2)).add(delta));
+                            if (icon != null)
+                                tex = gob.knocked == Boolean.TRUE ? icon.texgrey() : icon.tex();
+                            else
+                                tex = Config.additonalicons.get(res.name);
+                            g.image(tex, p2c(gob.rc).sub(tex.sz().div(2)).add(delta));
                         }
                     }
 
                     String basename = res.basename();
-                    if (res.name.startsWith("gfx/terobjs/bumlings")) {
+                    if (gob.type == Gob.Type.BOULDER) {
                         CheckListboxItem itm = Config.boulders.get(basename.substring(0, basename.length() - 1));
-                        if (itm != null && itm.selected) {
-                            Coord pc = p2c(gob.rc).add(delta).sub(3, 3);
-                            g.chcolor(Color.BLACK);
-                            g.frect(pc, new Coord(6, 6));
-                            g.chcolor(Color.CYAN);
-                            g.frect(pc.add(1, 1), new Coord(4, 4));
-                            g.chcolor();
-                        }
-                    } else if (res.name.startsWith("gfx/terobjs/bushes")) {
+                        if (itm != null && itm.selected)
+                            g.image(bldricn, p2c(gob.rc).add(delta).sub(bldricn.sz().div(2)));
+                    } else if (gob.type == Gob.Type.BUSH) {
                         CheckListboxItem itm = Config.bushes.get(basename);
-                        if (itm != null && itm.selected) {
-                            g.image(bushicn, p2c(gob.rc).add(delta).sub(3, 3));
-                        }
-                    } else if (res.name.startsWith("gfx/terobjs/trees")) {
+                        if (itm != null && itm.selected)
+                            g.image(bushicn, p2c(gob.rc).add(delta).sub(bushicn.sz().div(2)));
+                    } else if (gob.type == Gob.Type.TREE || gob.type == Gob.Type.OLDTRUNK) {
                         CheckListboxItem itm = Config.trees.get(basename);
-                        if (itm != null && itm.selected) {
-                            g.image(treeicn, p2c(gob.rc).add(delta).sub(3, 3));
-                        }
+                        if (itm != null && itm.selected)
+                            g.image(treeicn, p2c(gob.rc).add(delta).sub(treeicn.sz().div(2)));
                     }
                 } catch (Loading l) {
                 }
@@ -229,15 +233,12 @@ public class LocalMiniMap extends Widget {
                 try {
                     GobIcon icon = gob.getattr(GobIcon.class);
                     if (icon != null) {
-                        Coord gc = p2c(gob.rc);
                         Tex tex;
-                        if (gob.knocked != Boolean.TRUE) {
-                            tex = icon.tex();
-                        } else {
-                            Resource res = gob.getres();
-                            tex = res == null ? icon.tex() : Config.additonalicons.get(res.name);
-                        }
-                        g.image(tex, gc.sub(tex.sz().div(2)).add(delta));
+                        if (icon != null)
+                            tex = gob.knocked == Boolean.TRUE ? icon.texgrey() : icon.tex();
+                        else
+                            tex = Config.additonalicons.get(gob.getres().name);
+                        g.image(tex, p2c(gob.rc).sub(tex.sz().div(2)).add(delta));
                     }
                 } catch (Loading l) {
                 }
@@ -249,7 +250,7 @@ public class LocalMiniMap extends Widget {
                     if (res == null)
                         continue;
 
-                    if (res.name.endsWith("/body") && gob.id != mv.player().id) {
+                    if (gob.type == Gob.Type.PLAYER && gob.id != mv.player().id) {
                         if (ui.sess.glob.party.memb.containsKey(gob.id))
                             continue;
 
@@ -278,11 +279,10 @@ public class LocalMiniMap extends Widget {
                             enemy = true;
                         }
 
-                        if (Config.autologout && enemy) {
+                        if (Config.autologout && enemy)
                             gameui().act("lo");
-                        } else if (Config.autohearth && enemy) {
-                            gameui().menu.wdgmsg("act", new Object[]{"travel", "hearth"});
-                        }
+                        else if (Config.autohearth && enemy)
+                            gameui().act("travel", "hearth");
 
                         continue;
                     }
@@ -296,23 +296,26 @@ public class LocalMiniMap extends Widget {
                     } else if (Config.alarmlocres && Config.locres.contains(res.name)) {
                         sgobs.add(gob.id);
                         Audio.play(swagsfx, Config.alarmlocresvol);
-                    } else if (Config.alarmbears && res.name.equals("gfx/kritter/bear/bear") && gob.knocked == Boolean.FALSE) {
+                    } else if (Config.alarmbears && gob.type == Gob.Type.BEAR && gob.knocked == Boolean.FALSE) {
                         sgobs.add(gob.id);
                         Audio.play(bearsfx, Config.alarmbearsvol);
-                    } else if (Config.alarmbears && res.name.equals("gfx/kritter/lynx/lynx") && gob.knocked == Boolean.FALSE) {
+                    } else if (Config.alarmbears && gob.type == Gob.Type.LYNX && gob.knocked == Boolean.FALSE) {
                         sgobs.add(gob.id);
                         Audio.play(lynxfx, Config.alarmbearsvol);
-                    } else if (res.name.equals("gfx/kritter/troll/troll")) {
+                    } else if (Config.alarmbears && gob.type == Gob.Type.WALRUS && gob.knocked == Boolean.FALSE) {
+                        sgobs.add(gob.id);
+                        Audio.play(walrusfx, Config.alarmbearsvol);
+                    } else if (gob.type == Gob.Type.TROLL) {
                         if (mv.areamine != null)
                             mv.areamine.terminate();
                         if (Config.alarmtroll) {
                             sgobs.add(gob.id);
                             Audio.play(trollsfx, Config.alarmtrollvol);
                         }
-                    } else if (Config.alarmmammoth && res.name.equals("gfx/kritter/mammoth/mammoth") && gob.knocked == Boolean.FALSE) {
+                    } else if (Config.alarmmammoth && gob.type == Gob.Type.MAMMOTH && gob.knocked == Boolean.FALSE) {
                         sgobs.add(gob.id);
                         Audio.play(mammothsfx, Config.alarmmammothvol);
-                    } else if (Config.alarmbram && (res.name.equals("gfx/terobjs/vehicle/bram") || res.name.equals("gfx/terobjs/vehicle/catapult"))) {
+                    } else if (Config.alarmbram && gob.type == Gob.Type.SIEGE_MACHINE) {
                         sgobs.add(gob.id);
                         Audio.play(doomedsfx, Config.alarmbramvol);
                     }
@@ -341,7 +344,6 @@ public class LocalMiniMap extends Widget {
                         Coord gc = p2c(gob.rc);
                         Coord sz = new Coord(18, 18);
                         if (c.isect(gc.sub(sz.div(2)), sz)) {
-                            boolean ignore = false;
                             Resource res = gob.getres();
                             if (res != null && Config.additonalicons.containsKey(res.name)) {
                                 CheckListboxItem itm = Config.icons.get(res.basename());
@@ -395,8 +397,10 @@ public class LocalMiniMap extends Widget {
                         if (cur != null && plg != cur.grid) {
                             int x = Math.abs(plg.gc.x);
                             int y = Math.abs(plg.gc.y);
-                            if (x == 0 && y == 0 || x == 10 && y == 10)
+                            if ((x == 0 && y == 0 || x == 10 && y == 10) && lastnewgid != plg.id) {
                                 maptiles.clear();
+                                lastnewgid = plg.id;
+                            }
                         }
                         f = Defer.later(() -> {
                             Coord ul = plg.ul;

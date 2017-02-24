@@ -26,15 +26,18 @@
 
 package haven;
 
-import java.util.*;
-import java.awt.Color;
-import java.awt.image.*;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 public class GobIcon extends GAttrib {
     public static final PUtils.Convolution filter = new PUtils.Hanning(1);
     private static final Map<Indir<Resource>, Tex> cache = new WeakHashMap<Indir<Resource>, Tex>();
+    private static final Map<Indir<Resource>, Tex> cachegrey = new WeakHashMap<Indir<Resource>, Tex>();
     public final Indir<Resource> res;
     private Tex tex;
+    private boolean greyscale = false;
 
     public GobIcon(Gob g, Indir<Resource> res) {
         super(g);
@@ -60,5 +63,26 @@ public class GobIcon extends GAttrib {
             }
         }
         return (this.tex);
+    }
+
+    public Tex texgrey() {
+        if (!greyscale) {
+            synchronized (cachegrey) {
+                if (!cachegrey.containsKey(res)) {
+                    BufferedImage img = PUtils.monochromize(res.get().layer(Resource.imgc).img, Color.WHITE);
+                    Tex tex = new TexI(img);
+                    if (tex.sz().x <= 20 && tex.sz().y <= 20) {
+                        cachegrey.put(res, tex);
+                    } else {
+                        img = PUtils.rasterimg(PUtils.blurmask2(img.getRaster(), 1, 1, Color.BLACK));
+                        img = PUtils.convolvedown(img, new Coord(20, 20), filter);
+                        cachegrey.put(res, new TexI(img));
+                    }
+                }
+                this.tex = cachegrey.get(res);
+            }
+            greyscale = true;
+        }
+        return this.tex;
     }
 }

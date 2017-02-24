@@ -30,7 +30,7 @@ public class GobArcheryVector extends Sprite {
         double a = followGob != null ? followGob.a : gob.a;
         float x = (float) (DISTANCE * Math.cos(a));
         float y = (float) (DISTANCE * Math.sin(-a));
-        float z = gob.glob.map.getcz(pc.x + x, pc.y + y) - pc.z;
+        float z = Config.disableelev ? 0 : gob.glob.map.getcz(pc.x + x, pc.y + y) - pc.z;
 
         g.apply();
         BGL gl = g.gl;

@@ -107,22 +107,14 @@ public class FlowerMenu extends Widget {
             for (Petal p : opts) {
                 p.move(p.ta + ((1 - s) * PI), p.rad * s);
                 p.a = s;
-                if (s == 1.0 &&
-                        (Config.autopick && p.name.equals("Pick") ||
-                        Config.autoharvest && p.name.equals("Harvest") ||
-                        Config.autoeat && p.name.equals("Eat") ||
-                        Config.autosplit && p.name.equals("Split") ||
-                        Config.autokill && p.name.equals("Kill") ||
-                        Config.autoslice && p.name.equals("Slice") ||
-                        Config.autopluck && p.name.equals("Pluck") ||
-                        Config.autoclean && p.name.equals("Clean") ||
-                        Config.autoskin && p.name.equals("Skin") ||
-                        Config.autoflay && p.name.equals("Flay") ||
-                        Config.autobutcher && p.name.equals("Butcher") ||
-                        p.name.equals(nextAutoSel) && System.currentTimeMillis() - nextAutoSelTimeout < 2000)) {
-                    nextAutoSel = null;
-                    choose(p);
-                    break;
+                if (s == 1.0) {
+                    CheckListboxItem itm = Config.flowermenus.get(p.name);
+                    if (itm != null && itm.selected && !ui.modmeta ||
+                            p.name.equals(nextAutoSel) && System.currentTimeMillis() - nextAutoSelTimeout < 2000) {
+                        nextAutoSel = null;
+                        choose(p);
+                        break;
+                    }
                 }
             }
         }

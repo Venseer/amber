@@ -26,11 +26,20 @@
 
 package haven;
 
+import java.util.Iterator;
+
 import static java.lang.Math.PI;
 
 public class Coord implements Comparable<Coord>, java.io.Serializable {
     public int x, y;
     public static Coord z = new Coord(0, 0);
+    public static Coord[] uecw = {new Coord(0, -1), new Coord(1, 0), new Coord(0, 1), new Coord(-1, 0)};
+    public static Coord[] uccw = {new Coord(0, 0), new Coord(1, 0), new Coord(1, 1), new Coord(0, 1)};
+    public static Coord[] upcw = {new Coord( 0, -1), new Coord( 1, -1), new Coord( 1,  0), new Coord( 1,  1),
+            new Coord( 0,  1), new Coord(-1,  1), new Coord(-1,  0), new Coord(-1, -1)};
+    public static Coord[] usqc = {new Coord(-1, -1), new Coord( 0, -1), new Coord( 1, -1),
+            new Coord(-1,  0), new Coord( 0,  0), new Coord( 1,  0),
+            new Coord(-1,  1), new Coord( 0,  1), new Coord( 1,  1)};
 
     public Coord(int x, int y) {
         this.x = x;
@@ -128,6 +137,10 @@ public class Coord implements Comparable<Coord>, java.io.Serializable {
         return (div(new Coord(d, d)));
     }
 
+    public Coord div(double d) {
+        return new Coord((int)(x/d), (int)(y / d));
+    }
+
     public Coord mod(Coord d) {
         return (new Coord(Utils.floormod(x, d.x), Utils.floormod(y, d.y)));
     }
@@ -192,5 +205,23 @@ public class Coord implements Comparable<Coord>, java.io.Serializable {
         double sin = Math.sin(angle);
         return new Coord((int) Math.round(x * cos - y * sin),
                          (int) Math.round(y * cos + x * sin));
+    }
+
+    public Iterable<Coord> offsets(Coord... list) {
+        return(new Iterable<Coord>() {
+            public Iterator<Coord> iterator() {
+                return(new Iterator<Coord>() {
+                    int i = 0;
+
+                    public boolean hasNext() {
+                        return(i < list.length);
+                    }
+
+                    public Coord next() {
+                        return(add(list[i++]));
+                    }
+                });
+            }
+        });
     }
 }

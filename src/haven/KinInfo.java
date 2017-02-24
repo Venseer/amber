@@ -28,14 +28,12 @@ package haven;
 
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
-import java.awt.Color;
 
 public class KinInfo extends GAttrib {
     public static final BufferedImage vlg = Resource.loadimg("gfx/hud/vilind");
     public static final Text.Foundry nfnd = new Text.Foundry(Text.dfont, Config.fontsizeglobal);
     public String name;
     public int group, type;
-    public long seen = 0;
     private Tex rnm = null;
 
     public KinInfo(Gob g, String name, int group, int type) {
@@ -94,31 +92,14 @@ public class KinInfo extends GAttrib {
         public void draw2d(GOut g) {
             if (gob.sc != null) {
                 Coord sc = gob.sc.add(new Coord(gob.sczu.mul(15)));
-                if (sc.isect(Coord.z, g.sz)) {
-                    long now = System.currentTimeMillis();
-                    if (seen == 0)
-                        seen = now;
-                    int tm = (int) (now - seen);
-                    Color show = null;
-                    boolean auto = (type & 1) == 0;
-
-                    if (Config.showkinnames) {
-                        KinInfo kininfo = gob.getattr(KinInfo.class);
-                        if (kininfo != null) {
-                            show = BuddyWnd.gc[kininfo.group];
-                        }
-                    } else if (auto && (tm < 7500)) {
-                        show = Utils.clipcol(255, 255, 255, 255 - ((255 * tm) / 7500));
-                    }
-
-                    if (show != null) {
+                if (sc.isect(Coord.z, g.sz) && Config.showkinnames) {
+                    KinInfo kininfo = gob.getattr(KinInfo.class);
+                    if (kininfo != null) {
                         Tex t = rendered();
-                        g.chcolor(show);
+                        g.chcolor(BuddyWnd.gc[kininfo.group]);
                         g.aimage(t, sc, 0.5, 1.0);
                         g.chcolor();
                     }
-                } else {
-                    seen = 0;
                 }
             }
         }

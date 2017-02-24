@@ -26,6 +26,7 @@
 
 package haven;
 
+import haven.resutil.Curiosity;
 import haven.resutil.FoodInfo;
 
 import java.awt.*;
@@ -34,6 +35,7 @@ import java.util.*;
 import java.util.List;
 
 import static haven.PUtils.*;
+
 
 public class CharWnd extends Window {
     public static final RichText.Foundry ifnd = new RichText.Foundry(Resource.remote(), java.awt.font.TextAttribute.FAMILY, "SansSerif", java.awt.font.TextAttribute.SIZE, Config.fontsizeglobal).aa(true);
@@ -692,7 +694,8 @@ public class CharWnd extends Window {
         }
 
         private void upd() {
-            int texp = 0, tw = 0, tenc = 0, tlph = 0;
+            int texp = 0, tw = 0, tenc = 0;
+            double tlph = 0;
             for (GItem item : study.children(GItem.class)) {
                 try {
                     Curiosity ci = ItemInfo.find(Curiosity.class, item.info());
@@ -700,17 +703,7 @@ public class CharWnd extends Window {
                         texp += ci.exp;
                         tw += ci.mw;
                         tenc += ci.enc;
-
-                        try {
-                            Resource res = item.getres();
-                            if (res != null) {
-                                Double t = CurioStudyTimes.curios.get(res.basename());
-                                if (t != null) {
-                                    tlph += Math.round(ci.exp / t);
-                                }
-                            }
-                        } catch (Loading l) {
-                        }
+                        tlph += (ci.exp / (ci.time / 60));
                     }
                 } catch (Loading l) {
                 }
@@ -718,7 +711,7 @@ public class CharWnd extends Window {
             this.texp = texp;
             this.tw = tw;
             this.tenc = tenc;
-            this.tlph = tlph;
+            this.tlph = (int) Math.round(tlph);
         }
 
         public void draw(GOut g) {
@@ -918,6 +911,7 @@ public class CharWnd extends Window {
         public static final Color[] stcol = {
                 new Color(255, 255, 64), new Color(64, 255, 64), new Color(255, 64, 64),
         };
+        public static final char[] stsym = {'\u2022', '\u2713', '\u2717'};
         public final int id;
         public Indir<Resource> res;
         public String title;
@@ -1054,9 +1048,7 @@ public class CharWnd extends Window {
                 buf.append(res.layer(Resource.pagina).text);
                 buf.append("\n");
                 for (Condition cond : this.cond) {
-                    buf.append(RichText.Parser.col2a(stcol[cond.done]));
-                    buf.append("{ \u2022 ");
-                    buf.append(cond.desc);
+                    buf.append(String.format("%s{ %c %s", RichText.Parser.col2a(stcol[cond.done]), stsym[cond.done], cond.desc));
                     if (cond.status != null) {
                         buf.append(' ');
                         buf.append(cond.status);
@@ -1189,7 +1181,7 @@ public class CharWnd extends Window {
                 }
 
                 private Text ct(Condition c) {
-                    return(qcfnd.render(" \u2022 " + c.desc + ((c.status != null)?(" " + c.status):""), stcol[c.done]));
+                    return (qcfnd.render(" " + stsym[c.done] + " " + c.desc + ((c.status != null)?(" " + c.status):""), stcol[c.done]));
                 }
 
                 void update() {

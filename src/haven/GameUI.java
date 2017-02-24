@@ -27,6 +27,8 @@
 package haven;
 
 import haven.automation.ErrorSysMsgCallback;
+import haven.automation.PickForageable;
+import haven.resutil.FoodInfo;
 
 import java.awt.*;
 import java.util.*;
@@ -82,8 +84,8 @@ public class GameUI extends ConsoleHost implements Console.Directory {
     public static boolean swimon = false;
     public static boolean crimeon = false;
     public static boolean trackon = false;
-    private boolean crimeautotgld = false;
-    private boolean trackautotgld = false;
+    public boolean crimeautotgld = false;
+    public boolean trackautotgld = false;
     public FBelt fbelt;
     public CraftHistoryBelt histbelt;
     private ErrorSysMsgCallback errmsgcb;
@@ -155,7 +157,6 @@ public class GameUI extends ConsoleHost implements Console.Directory {
                 return (new Coord(GameUI.this.sz.x, Math.min(brpanel.c.y - 79, GameUI.this.sz.y - menupanel.sz.y)));
             }
         }, new Coord(1, 0)));
-        menu = brpanel.add(new MenuGrid(), 20, 34);
 
         brpanel.add(new Img(Resource.loadtex("gfx/hud/brframe")), 0, 0);
         menupanel.add(new MainMenu(), 0, 0);
@@ -261,7 +262,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             this.id = id;
             this.base = base;
             this.g = g;
-            cur = show(tvis = Utils.getprefb(id + "-visible", true)) ? 0 : 1;
+            cur = show(tvis = true) ? 0 : 1;
         }
 
         public <T extends Widget> T add(T child) {
@@ -317,12 +318,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             return (vis);
         }
 
-        public boolean mshow() {
-            return (mshow(Utils.getprefb(id + "-visible", true)));
-        }
-
         public boolean cshow(boolean vis) {
-            Utils.setprefb(id + "-visible", vis);
             if (vis != tvis)
                 mshow(vis);
             return (vis);
@@ -422,6 +418,13 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             ntab(p, btn);
             btn.tooltip = Text.render(p.cap);
         }
+
+        @Override
+        public boolean show(boolean show) {
+            if (show)
+                gameui().buddies.clearSearch();
+            return super.show(show);
+        }
     }
 
     static class DraggedItem {
@@ -472,16 +475,6 @@ public class GameUI extends ConsoleHost implements Console.Directory {
                 minimapWnd.mapfile = mapfile;
             }
 
-
-            if (Config.enabletracking && menu != null && !trackon) {
-                menu.wdgmsg("act", new Object[]{"tracking"});
-                trackautotgld = true;
-            }
-            if (Config.enablecrime && menu != null && !crimeon) {
-                crimeautotgld = true;
-                menu.wdgmsg("act", new Object[]{"crime"});
-            }
-
             if (trackon) {
                 buffs.addchild(new BuffToggle("track", Bufflist.bufftrack));
                 errornosfx("Tracking is now turned on.");
@@ -494,6 +487,8 @@ public class GameUI extends ConsoleHost implements Console.Directory {
                 buffs.addchild(new BuffToggle("swim", Bufflist.buffswim));
                 errornosfx("Swimming is now turned on.");
             }
+        } else if (place == "menu") {
+            menu = (MenuGrid)brpanel.add(child, 20, 34);
         } else if (place == "fight") {
             fv = urpanel.add((Fightview) child, 0, 0);
         } else if (place == "fsess") {
@@ -771,10 +766,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
     }
 
     public void wdgmsg(Widget sender, String msg, Object... args) {
-        if (sender == menu) {
-            wdgmsg(msg, args);
-            return;
-        } else if ((sender == chrwdg) && (msg == "close")) {
+        if ((sender == chrwdg) && (msg == "close")) {
             chrwdg.hide();
         } else if((polities.contains(sender)) && (msg == "close")) {
             sender.hide();
@@ -912,10 +904,6 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         } else if ((key == 27) && (map != null) && !map.hasfocus) {
             setfocus(map);
             return (true);
-        } else if (key == 17 /*ctrl+q*/) {
-            timerswnd.show(!timerswnd.visible);
-            timerswnd.raise();
-            return true;
         } else if (ev.isControlDown() && ev.getKeyCode() == KeyEvent.VK_G) {
             if (map != null)
                 map.togglegrid();
@@ -999,8 +987,12 @@ public class GameUI extends ConsoleHost implements Console.Directory {
                 mapfile.raise();
                 fitwdg(mapfile);
             }
+            return true;
+        } else if (!ev.isShiftDown() && ev.getKeyCode() == KeyEvent.VK_Q) {
+            Thread t = new Thread(new PickForageable(this), "PickForageable");
+            t.start();
+            return true;
         }
-
         return (super.globtype(key, ev));
     }
 
@@ -1304,6 +1296,13 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         cmdmap.put("help", (cons, args) -> {
             cons.out.println("Available console commands:");
             cons.findcmds().forEach((s, cmd) -> cons.out.println(s));
+        });
+        cmdmap.put("savemap", (cons, args) -> {
+            new Thread(() -> mapfile.view.dumpTiles(), "MapDumper").start();
+        });
+        cmdmap.put("baseq", (cons, args) -> {
+            FoodInfo.showbaseq = Utils.parsebool(args[1]);
+            msg("q10 FEP values in tooltips are now " + (FoodInfo.showbaseq ? "enabled" : "disabled"));
         });
     }
 

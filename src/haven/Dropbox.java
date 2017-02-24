@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public abstract class Dropbox<T> extends ListWidget<T> {
+    public static final Coord itemtextc = new Coord(5, 0);
     public static final Tex drop = Resource.loadtex("gfx/hud/dropdown");
     public final int listh;
     private final Coord dropc;

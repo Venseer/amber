@@ -27,10 +27,13 @@
 package haven;
 
 
+import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.util.*;
+import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
@@ -206,6 +209,16 @@ public class OptWnd extends Window {
                         a = val;
                     }
                 });
+                appender.add(new CheckBox("Disable terrain elevation (requires logout)") {
+                    {
+                        a = Config.disableelev;
+                    }
+                    public void set(boolean val) {
+                        Config.disableelev = val;
+                        Utils.setprefb("disableelev", val);
+                        a = val;
+                    }
+                });
                 appender.add(new CheckBox("Disable flavor objects including ambient sounds") {
                     {
                         a = Config.hideflocomplete;
@@ -285,32 +298,16 @@ public class OptWnd extends Window {
                 });
 
                 add(new Label("Disable animations (req. restart):"), new Coord(440, 0));
-                CheckListbox animlist = new CheckListbox(180, 18) {
+                CheckListbox disanimlist = new CheckListbox(180, 8) {
+                    @Override
                     protected void itemclick(CheckListboxItem itm, int button) {
                         super.itemclick(itm, button);
-
-                        String[] selected = getselected();
-                        Utils.setprefsa("disableanim", selected);
-
-                        Config.disableanimSet.clear();
-                        for (String selname : selected) {
-                            for (Pair<String, String> selpair : Config.disableanim) {
-                                if (selpair.a.equals(selname)) {
-                                    Config.disableanimSet.add(selpair.b);
-                                    break;
-                                }
-                            }
-                        }
+                        Utils.setprefchklst("disableanim", Config.disableanim);
                     }
                 };
-
-                for (Pair<String, String> obj : Config.disableanim) {
-                    boolean selected = false;
-                    if (Config.disableanimSet.contains(obj.b))
-                        selected = true;
-                    animlist.items.add(new CheckListboxItem(obj.a, selected));
-                }
-                add(animlist, new Coord(440, 15));
+                for (CheckListboxItem itm : Config.disableanim.values())
+                    disanimlist.items.add(itm);
+                add(disanimlist, new Coord(440, 15));
 
                 pack();
             }
@@ -966,41 +963,18 @@ public class OptWnd extends Window {
         appender.setVerticalMargin(VERTICAL_MARGIN);
         appender.setHorizontalMargin(HORIZONTAL_MARGIN);
 
-        appender.add(new CheckBox("Free camera rotation") {
-            {
-                a = Config.camfree;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("camfree", val);
-                Config.camfree = val;
-                a = val;
-            }
-        });
-        appender.addRow(
-                new Label("Bad camera scrolling sensitivity"),
+        appender.addRow(new Label("Bad camera scrolling sensitivity"),
                 new HSlider(50, 0, 50, 0) {
                     protected void attach(UI ui) {
                         super.attach(ui);
                         val = Config.badcamsensitivity;
                     }
+
                     public void changed() {
                         Config.badcamsensitivity = val;
                         Utils.setprefi("badcamsensitivity", val);
                     }
                 });
-        // TODO: deprecated. pending complete removal.
-        /*appender.add(new CheckBox("Minimap: use MMB to drag & L/RMB to move") {
-            {
-                a = Config.alternmapctrls;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("alternmapctrls", val);
-                Config.alternmapctrls = val;
-                a = val;
-            }
-        });*/
         appender.add(new CheckBox("Use French (AZERTY) keyboard layout") {
             {
                 a = Config.userazerty;
@@ -1199,6 +1173,26 @@ public class OptWnd extends Window {
         //appender.addRow(new Label("Window title font size (req. restart):"), makeFontSizeWndCapDropdown());
         appender.addRow(new Label("Chat font size (req. restart):"), makeFontSizeChatDropdown());
 
+        appender.addRow(new Label("Tree bounding box color (6-digit HEX):"),
+                new TextEntry(85, Config.treeboxclr) {
+                    @Override
+                    public boolean type(char c, KeyEvent ev) {
+                        if (!parent.visible)
+                            return false;
+
+                        boolean ret = buf.key(ev);
+                        if (text.length() == 6) {
+                            Color clr = Utils.hex2rgb(text);
+                            if (clr != null) {
+                                GobHitbox.fillclrstate = new States.ColState(clr);
+                                Utils.setpref("treeboxclr", text);
+                            }
+                        }
+                        return ret;
+                    }
+                }
+        );
+
         Button resetWndBtn = new Button(220, "Reset Windows (req. logout)") {
             @Override
             public void click() {
@@ -1210,11 +1204,6 @@ public class OptWnd extends Window {
                 Utils.delpref("quickslotsc");
                 Utils.delpref("chatsz");
                 Utils.delpref("chatvis");
-                Utils.delpref("gui-bl-visible");
-                Utils.delpref("gui-br-visible");
-                Utils.delpref("gui-ul-visible");
-                Utils.delpref("gui-ur-visible");
-                Utils.delpref("gui-um-visible");
                 Utils.delpref("menu-visible");
                 Utils.delpref("fbelt_c");
                 Utils.delpref("fbelt_vertical");
@@ -1293,127 +1282,6 @@ public class OptWnd extends Window {
                 a = val;
             }
         });
-        appender.add(new CheckBox("Automatically select 'Pick' action") {
-            {
-                a = Config.autopick;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("autopick", val);
-                Config.autopick = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Automatically select 'Harvest' action") {
-            {
-                a = Config.autoharvest;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("autoharvest", val);
-                Config.autoharvest = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Automatically select 'Eat' action") {
-            {
-                a = Config.autoeat;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("autoeat", val);
-                Config.autoeat = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Automatically select 'Split' action") {
-            {
-                a = Config.autosplit;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("autosplit", val);
-                Config.autosplit = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Automatically select 'Kill' action") {
-            {
-                a = Config.autokill;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("autokill", val);
-                Config.autokill = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Automatically select 'Slice' action") {
-            {
-                a = Config.autoslice;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("autoslice", val);
-                Config.autoslice = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Automatically select 'Pluck' action") {
-            {
-                a = Config.autopluck;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("autopluck", val);
-                Config.autopluck = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Automatically select 'Clean' action") {
-            {
-                a = Config.autoclean;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("autoclean", val);
-                Config.autoclean = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Automatically select 'Skin' action") {
-            {
-                a = Config.autoskin;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("autoskin", val);
-                Config.autoskin = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Automatically select 'Butcher' action") {
-            {
-                a = Config.autobutcher;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("autobutcher", val);
-                Config.autobutcher = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Automatically select 'Flay' action") {
-            {
-                a = Config.autoflay;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("autoflay", val);
-                Config.autoflay = val;
-                a = val;
-            }
-        });
         appender.add(new CheckBox("Automatically pick all clustered mussels (auto 'Pick' needs to be enabled)") {
             {
                 a = Config.autopickmussels;
@@ -1425,6 +1293,20 @@ public class OptWnd extends Window {
                 a = val;
             }
         });
+        appender.add(new Label("Automatic selecton:"));
+
+        CheckListbox flowerlist = new CheckListbox(140, 15) {
+            @Override
+            protected void itemclick(CheckListboxItem itm, int button) {
+                super.itemclick(itm, button);
+                Utils.setprefchklst("flowersel", Config.flowermenus);
+            }
+        };
+
+        Utils.loadprefchklist("flowersel", Config.flowermenus);
+        for (CheckListboxItem itm : Config.flowermenus.values())
+            flowerlist.items.add(itm);
+        flowermenus.add(flowerlist, new Coord(0, 70));
 
         flowermenus.add(new PButton(200, "Back", 27, main), new Coord(210, 360));
         flowermenus.pack();

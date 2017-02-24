@@ -31,9 +31,10 @@ public class AutoLeveler extends Window implements GobSelectCallback, ErrorSysMs
     public boolean running;
     private String lasteerrmsg;
     private Set<Gob> fullstockpiles = new HashSet<Gob>();
+    private boolean droptubers = false;
 
     public AutoLeveler() {
-        super(new Coord(270, 180), "Auto Leveler");
+        super(new Coord(270, 220), "Auto Leveler");
 
         Widget inf = add(new Widget(new Coord(245, 55)) {
             public void draw(GOut g) {
@@ -50,10 +51,20 @@ public class AutoLeveler extends Window implements GobSelectCallback, ErrorSysMs
                         "Nearest survey flag will be used for leveling.\n\n" +
                         "Put flasks/waterskins in inventory for auto-drinking\n"), CharWnd.ifnd));
 
+        add(new CheckBox("Drop Odd Tubers") {
+            {
+                a = droptubers;
+            }
+
+            public void set(boolean val) {
+                droptubers = a = val;
+            }
+        }, new Coord(15, 90));
+
         Label lblstxt = new Label("Stockpiles Selected:", infof);
-        add(lblstxt, new Coord(15, 90));
+        add(lblstxt, new Coord(15, 120));
         lbls = new Label("0", countf, true);
-        add(lbls, new Coord(120, 88));
+        add(lbls, new Coord(120, 118));
 
         clearbtn = new Button(140, "Clear Selection") {
             @Override
@@ -63,7 +74,7 @@ public class AutoLeveler extends Window implements GobSelectCallback, ErrorSysMs
                 lbls.settext(stockpiles.size() + "");
             }
         };
-        add(clearbtn, new Coord(65, 115));
+        add(clearbtn, new Coord(65, 145));
 
         runbtn = new Button(140, "Run") {
             @Override
@@ -101,12 +112,11 @@ public class AutoLeveler extends Window implements GobSelectCallback, ErrorSysMs
                 runner.start();
             }
         };
-        add(runbtn, new Coord(65, 150));
+        add(runbtn, new Coord(65, 180));
 
         stopbtn = new Button(140, "Stop") {
             @Override
             public void click() {
-                running = false;
                 terminate = true;
                 if (gameui().map.pfthread != null)
                     gameui().map.pfthread.interrupt();
@@ -114,9 +124,10 @@ public class AutoLeveler extends Window implements GobSelectCallback, ErrorSysMs
                     runner.interrupt();
                 try {
                     if (running)
-                        gameui().map.wdgmsg("click", Coord.z, gameui().map.player().rc, 1, 0);
+                        gameui().map.wdgmsg("click", Coord.z, gameui().map.player().rc.floor(posres), 1, 0);
                 } catch (Exception e) { // ignored
                 }
+                running = false;
                 this.hide();
                 runbtn.show();
                 clearbtn.show();
@@ -127,7 +138,7 @@ public class AutoLeveler extends Window implements GobSelectCallback, ErrorSysMs
             }
         };
         stopbtn.hide();
-        add(stopbtn, new Coord(65, 150));
+        add(stopbtn, new Coord(65, 180));
     }
 
     @Override
@@ -226,10 +237,11 @@ public class AutoLeveler extends Window implements GobSelectCallback, ErrorSysMs
                         }
 
                         // drop tubbers
-                        List<WItem> tubers = gui.maininv.getItemsPartial("Odd Tuber");
-                        for (WItem tuber : tubers)
-                            tuber.item.wdgmsg("drop", Coord.z);
-
+                        if (droptubers) {
+                            List<WItem> tubers = gui.maininv.getItemsPartial("Odd Tuber");
+                            for (WItem tuber : tubers)
+                                tuber.item.wdgmsg("drop", Coord.z);
+                        }
 
                         stam = gameui().getmeter("stam", 0);
                         if (stam != null && stam.a < 30)
@@ -321,7 +333,7 @@ public class AutoLeveler extends Window implements GobSelectCallback, ErrorSysMs
             }
 
             // check whtether stockpile is full
-            Window spwnd = gui.waitfForWnd("Stockpile", 1500);
+            Window spwnd = gui.waitfForWnd("Stockpile", 2500);
             if (spwnd == null)
                 continue;
 

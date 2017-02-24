@@ -10,7 +10,6 @@ import haven.TexI;
 import haven.GSprite.Owner;
 import haven.ItemInfo.Name;
 import haven.ItemInfo.SpriteOwner;
-
 import java.util.List;
 import java.util.Random;
 
@@ -26,7 +25,7 @@ public class Spec implements Owner, SpriteOwner {
     public Spec(ResData var1, Glob var2, Object[] var3) {
         this.res = var1;
         this.glob = var2;
-        this.info = var3 == null ? definfo : var3;
+        this.info = var3 == null?definfo:var3;
     }
 
     public Glob glob() {
@@ -34,11 +33,11 @@ public class Spec implements Owner, SpriteOwner {
     }
 
     public Resource getres() {
-        return this.res.res.get();
+        return (Resource)this.res.res.get();
     }
 
     public Random mkrandoom() {
-        if (this.rnd == null) {
+        if(this.rnd == null) {
             this.rnd = new Random();
         }
 
@@ -50,19 +49,19 @@ public class Spec implements Owner, SpriteOwner {
     }
 
     public Resource resource() {
-        return this.res.res.get();
+        return (Resource)this.res.res.get();
     }
 
     public GSprite spr() {
-        if (this.spr == null) {
-            this.spr = GSprite.create(this, this.res.res.get(), this.res.sdt.clone());
+        if(this.spr == null) {
+            this.spr = GSprite.create(this, (Resource)this.res.res.get(), this.res.sdt.clone());
         }
 
         return this.spr;
     }
 
     public List<ItemInfo> info() {
-        if (this.cinfo == null) {
+        if(this.cinfo == null) {
             this.cinfo = ItemInfo.buildinfo(this, this.info);
         }
 
@@ -75,7 +74,7 @@ public class Spec implements Owner, SpriteOwner {
 
     public String name() {
         GSprite var1 = this.spr();
-        Name var2 = ItemInfo.find(Name.class, this.info());
-        return var2 == null ? null : var2.str.text;
+        Name var2 = (Name)ItemInfo.find(Name.class, this.info());
+        return var2 == null?null:var2.str.text;
     }
 }

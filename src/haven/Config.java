@@ -55,7 +55,6 @@ public class Config {
     public static boolean showkinnames = Utils.getprefb("showkinnames", false);
     public static boolean savemmap = Utils.getprefb("savemmap", true);
     public static boolean studylock = Utils.getprefb("studylock", false);
-    public static boolean camfree = Utils.getprefb("camfree", false);
     public static boolean chatsave = Utils.getprefb("chatsave", false);
     public static boolean chattimestamp = Utils.getprefb("chattimestamp", false);
     public static boolean alarmunknown = Utils.getprefb("alarmunknown", false);
@@ -99,17 +98,6 @@ public class Config {
     public static boolean showplayerpaths = Utils.getprefb("showplayerpaths", false);
     public static boolean showstudylefttime = Utils.getprefb("showstudylefttime", false);
     public static boolean showinvonlogin = Utils.getprefb("showinvonlogin", false);
-    public static boolean autopick = Utils.getprefb("autopick", false);
-    public static boolean autoharvest = Utils.getprefb("autoharvest", false);
-    public static boolean autosplit = Utils.getprefb("autosplit", false);
-    public static boolean autoeat = Utils.getprefb("autoeat", false);
-    public static boolean autokill = Utils.getprefb("autokill", false);
-    public static boolean autoslice = Utils.getprefb("autoslice", false);
-    public static boolean autoclean = Utils.getprefb("autoclean", false);
-    public static boolean autopluck = Utils.getprefb("autopluck", false);
-    public static boolean autoskin = Utils.getprefb("autoskin", false);
-    public static boolean autobutcher = Utils.getprefb("autobutcher", false);
-    public static boolean autoflay = Utils.getprefb("autoflay", false);
     public static boolean runonlogin = Utils.getprefb("runonlogin", false);
     public static Coord chatsz = Utils.getprefc("chatsz", new Coord(683, 111));
     public static boolean autostudy = Utils.getprefb("autostudy", true);
@@ -169,6 +157,8 @@ public class Config {
     public static boolean studybuff =  Utils.getprefb("studybuff", false);
     public static int zkey =  Utils.getprefi("zkey", KeyEvent.VK_Z);
     public static boolean disableterrainsmooth =  Utils.getprefb("disableterrainsmooth", false);
+    public static boolean disableelev =  Utils.getprefb("disableelev", false);
+    public static String treeboxclr =  Utils.getpref("treeboxclr", "549394");
     private final static Map<String, Integer> defFontSzGlobal =  new HashMap<String, Integer>(3) {{
         put("zh", 16);
         put("en", 11);
@@ -199,7 +189,7 @@ public class Config {
     public final static String chatfile = "chatlog.txt";
     public static PrintWriter chatlog = null;
 
-    public final static HashMap<String, CheckListboxItem> boulders = new HashMap<String, CheckListboxItem>(14) {{
+    public final static HashMap<String, CheckListboxItem> boulders = new HashMap<String, CheckListboxItem>(13) {{
         put("basalt", new CheckListboxItem("Basalt"));
         put("schist", new CheckListboxItem("Schist"));
         put("dolomite", new CheckListboxItem("Dolomite"));
@@ -213,7 +203,6 @@ public class Config {
         put("feldspar", new CheckListboxItem("Feldspar"));
         put("marble", new CheckListboxItem("Marble"));
         put("flint", new CheckListboxItem("Flint"));
-        put("blackcoal", new CheckListboxItem("Black Coal"));
     }};
 
     public final static HashMap<String, CheckListboxItem> bushes = new HashMap<String, CheckListboxItem>(22) {{
@@ -279,7 +268,7 @@ public class Config {
         put("hazel", new CheckListboxItem("Hazel"));
         put("spruce", new CheckListboxItem("Spruce"));
         put("hornbeam", new CheckListboxItem("Hornbeam"));
-        put("oldtrunk", new CheckListboxItem("Oldtrunk"));
+        put("oldtrunk", new CheckListboxItem("Mirkwood Log"));
         put("conkertree", new CheckListboxItem("Conker Tree"));
         put("mulberry", new CheckListboxItem("Mulberry"));
         put("sweetgum", new CheckListboxItem("Sweetgum"));
@@ -290,7 +279,7 @@ public class Config {
         put("almondtree", new CheckListboxItem("Almond"));
     }};
 
-    public final static HashMap<String, CheckListboxItem> icons = new HashMap<String, CheckListboxItem>(21) {{
+    public final static HashMap<String, CheckListboxItem> icons = new HashMap<String, CheckListboxItem>(28) {{
         put("dandelion", new CheckListboxItem("Dandelion"));
         put("chantrelle", new CheckListboxItem("Chantrelle"));
         put("blueberry", new CheckListboxItem("Blueberry"));
@@ -313,9 +302,32 @@ public class Config {
         put("windweed", new CheckListboxItem("Wild Windsown Weed"));
         put("mussels", new CheckListboxItem("Mussels"));
         put("mallard", new CheckListboxItem("Duck"));
+        put("ladybug", new CheckListboxItem("Ladybug"));
+        put("silkmoth", new CheckListboxItem("Silkmoth"));
+        put("hedgehog", new CheckListboxItem("Hedgehog"));
+        put("squirrel", new CheckListboxItem("Squirrel"));
+        put("rabbit", new CheckListboxItem("Rabbit"));
+        put("lingon", new CheckListboxItem("Lingonberries"));
+        put("grub", new CheckListboxItem("Grub"));
     }};
 
-    public final static Map<String, Tex> additonalicons = new HashMap<String, Tex>(25) {{
+    public final static HashMap<String, CheckListboxItem> flowermenus = new HashMap<String, CheckListboxItem>(13) {{
+        put("Pick", new CheckListboxItem("Pick", Resource.BUNDLE_FLOWER));
+        put("Harvest", new CheckListboxItem("Harvest", Resource.BUNDLE_FLOWER));
+        put("Eat", new CheckListboxItem("Eat", Resource.BUNDLE_FLOWER));
+        put("Split", new CheckListboxItem("Split", Resource.BUNDLE_FLOWER));
+        put("Kill", new CheckListboxItem("Kill", Resource.BUNDLE_FLOWER));
+        put("Slice", new CheckListboxItem("Slice", Resource.BUNDLE_FLOWER));
+        put("Pluck", new CheckListboxItem("Pluck", Resource.BUNDLE_FLOWER));
+        put("Clean", new CheckListboxItem("Clean", Resource.BUNDLE_FLOWER));
+        put("Skin", new CheckListboxItem("Skin", Resource.BUNDLE_FLOWER));
+        put("Flay", new CheckListboxItem("Flay", Resource.BUNDLE_FLOWER));
+        put("Butcher", new CheckListboxItem("Butcher", Resource.BUNDLE_FLOWER));
+        put("Giddyup!", new CheckListboxItem("Giddyup!", Resource.BUNDLE_FLOWER));
+        put("Shear wool", new CheckListboxItem("Shear wool", Resource.BUNDLE_FLOWER));
+    }};
+
+    public final static Map<String, Tex> additonalicons = new HashMap<String, Tex>(16) {{
         put("gfx/terobjs/vehicle/bram", Resource.loadtex("gfx/icons/bram"));
         put("gfx/kritter/toad/toad", Resource.loadtex("gfx/icons/toad"));
         put("gfx/terobjs/vehicle/rowboat", Resource.loadtex("gfx/icons/rowboat"));
@@ -331,22 +343,8 @@ public class Config {
         put("gfx/terobjs/vehicle/wheelbarrow", Resource.loadtex("gfx/icons/wheelbarrow"));
         put("gfx/terobjs/vehicle/cart", Resource.loadtex("gfx/icons/cart"));
         put("gfx/terobjs/vehicle/wreckingball", Resource.loadtex("gfx/icons/wball"));
-        // grayscale icons for dead animals
-        put("gfx/kritter/badger/badger", Resource.loadtex("gfx/icons/badger"));
-        put("gfx/kritter/bear/bear", Resource.loadtex("gfx/icons/bear"));
-        put("gfx/kritter/boar/boar", Resource.loadtex("gfx/icons/boar"));
-        put("gfx/kritter/fox/fox", Resource.loadtex("gfx/icons/fox"));
-        put("gfx/kritter/horse/horse", Resource.loadtex("gfx/icons/horse"));
-        put("gfx/kritter/lynx/lynx", Resource.loadtex("gfx/icons/lynx"));
-        put("gfx/kritter/mammoth/mammoth", Resource.loadtex("gfx/icons/mammoth"));
-        put("gfx/kritter/moose/moose", Resource.loadtex("gfx/icons/moose"));
-        put("gfx/kritter/reddeer/reddeer", Resource.loadtex("gfx/icons/reddeer"));
-        put("gfx/kritter/troll/troll", Resource.loadtex("gfx/icons/troll"));
+        put("gfx/kritter/nidbane/nidbane", Resource.loadtex("gfx/icons/spooky"));
     }};
-
-    public final static Set<String> dangerousgobres = new HashSet<String>(Arrays.asList(
-            "gfx/kritter/bat/bat", "gfx/kritter/bear/bear", "gfx/kritter/boar/boar", "gfx/kritter/lynx/lynx",
-            "gfx/kritter/badger/badger"));
 
     public final static Set<String> foragables = new HashSet<String>(Arrays.asList(
             "gfx/terobjs/herbs/flotsam", "gfx/terobjs/herbs/chimingbluebell", "gfx/terobjs/herbs/edelweiss",
@@ -365,19 +363,19 @@ public class Config {
             "gfx/terobjs/caveorgan",
             "gfx/terobjs/crystalpatch"));
 
-    public final static ArrayList<Pair<String, String>> disableanim = new ArrayList<Pair<String, String>>(4) {{
-        add(new Pair<String, String>("Beehives", "gfx/terobjs/beehive"));
-        add(new Pair<String, String>("Fires", "gfx/terobjs/pow"));
-        add(new Pair<String, String>("Full trash stockpiles", "gfx/terobjs/stockpile-trash"));
-        add(new Pair<String, String>("Idle animals", "/idle"));
+    public final static HashMap<String, CheckListboxItem> disableanim = new HashMap<String, CheckListboxItem>(4) {{
+        put("gfx/terobjs/beehive", new CheckListboxItem("Beehives"));
+        put("gfx/terobjs/pow", new CheckListboxItem("Fires"));
+        put("gfx/terobjs/stockpile-trash", new CheckListboxItem("Full trash stockpiles"));
+        put("/idle", new CheckListboxItem("Idle animals"));
     }};
-    public final static Set<String> disableanimSet = new HashSet<String>(disableanim.size());
 
-    public final static HashMap<String, String[]> cures = new HashMap<String, String[]>(14) {{
+    public final static HashMap<String, String[]> cures = new HashMap<String, String[]>(15) {{
         put("paginae/wound/antburn", new String[]{
                 "gfx/invobjs/herbs/yarrow"
         });
         put("paginae/wound/blunttrauma", new String[]{
+                "gfx/invobjs/toadbutter",
                 "gfx/invobjs/leech",
                 "gfx/invobjs/gauze"
         });
@@ -420,28 +418,20 @@ public class Config {
                 "gfx/invobjs/stingingpoultice"
         });
         put("paginae/wound/unfaced", new String[]{
+                "gfx/invobjs/toadbutter",
                 "gfx/invobjs/leech",
                 "gfx/invobjs/mudointment"
         });
         put("paginae/wound/wretchedgore", new String[]{
                 "gfx/invobjs/stitchpatch"
         });
+        put("paginae/wound/blackeye", new String[]{
+                "gfx/invobjs/toadbutter"
+        });
     }};
 
     static {
-        Collections.sort(disableanim, (o1, o2) -> o1.a.compareTo(o2.a));
-
-        String[] disableanimsel = Utils.getprefsa("disableanim", null);
-        if (disableanimsel != null) {
-            for (String selname : disableanimsel) {
-                for (Pair<String, String> selpair : Config.disableanim) {
-                    if (selpair.a.equals(selname)) {
-                        Config.disableanimSet.add(selpair.b);
-                        break;
-                    }
-                }
-            }
-        }
+        Utils.loadprefchklist("disableanim", Config.disableanim);
 
         String p;
         if ((p = getprop("haven.authck", null)) != null)

@@ -28,7 +28,7 @@ public class GobPath extends Sprite {
         double lcy = mc.y;
         double x = lcx - pc.x;
         double y = -lcy + pc.y;
-        double z = Math.sqrt(x * x + y * y) >= 44 * 11 ? 0 : gob.glob.map.getcz(lcx, lcy) - pc.z;
+        double z = Config.disableelev || Math.sqrt(x * x + y * y) >= 44 * 11 ? 0 : gob.glob.map.getcz(lcx, lcy) - pc.z;
 
         g.apply();
         BGL gl = g.gl;

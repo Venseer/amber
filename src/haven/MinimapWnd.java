@@ -290,10 +290,20 @@ public class MinimapWnd extends Widget {
             Utils.setprefc("mmapwndsz", sz);
             Utils.setprefc("mmapsz", mmap.sz);
         } else {
-            if (dm != null)
+            if (dm != null) {
                 this.c = this.c.add(c.add(doff.inv()));
-            else
+                if (this.c.x < 0)
+                    this.c.x = 0;
+                if (this.c.y < 0)
+                    this.c.y = 0;
+                Coord gsz = gameui().sz;
+                if (this.c.x + sz.x > gsz.x)
+                    this.c.x = gsz.x - sz.x;
+                if (this.c.y + sz.y > gsz.y)
+                    this.c.y = gsz.y - sz.y;
+            } else {
                 super.mousemove(c);
+            }
         }
     }
 

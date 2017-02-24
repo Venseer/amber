@@ -26,9 +26,13 @@
 
 package haven;
 
-import java.util.*;
-import javax.media.opengl.*;
 import haven.glsl.ShaderMacro;
+
+import javax.media.opengl.GL;
+import javax.media.opengl.GL2;
+import javax.media.opengl.GL3;
+import java.util.*;
+
 import static haven.GOut.checkerr;
 
 public abstract class GLState {
@@ -92,15 +96,6 @@ public abstract class GLState {
         public Slot(Type type, Class<T> scl, Slot<?>[] dep, Slot<?>[] rdep) {
             this.type = type;
             this.scl = scl;
-            synchronized(Slot.class) {
-                this.id = slotnum++;
-                dirty = true;
-                Slot<?>[] nlist = new Slot<?>[slotnum];
-                System.arraycopy(idlist, 0, nlist, 0, idlist.length);
-                nlist[this.id] = this;
-                idlist = nlist;
-                all.add(this);
-            }
             if(dep == null)
                 this.dep = new Slot<?>[0];
             else
@@ -116,6 +111,15 @@ public abstract class GLState {
             for(Slot<?> ds : this.rdep) {
                 if(ds == null)
                     throw(new NullPointerException());
+            }
+            synchronized (Slot.class) {
+                this.id = slotnum++;
+                dirty = true;
+                Slot<?>[] nlist = new Slot<?>[slotnum];
+                System.arraycopy(idlist, 0, nlist, 0, idlist.length);
+                nlist[this.id] = this;
+                idlist = nlist;
+                all.add(this);
             }
         }
 

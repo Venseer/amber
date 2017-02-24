@@ -28,6 +28,7 @@ package haven.resutil;
 
 import haven.*;
 
+import java.text.DecimalFormat;
 import java.util.*;
 import java.awt.Color;
 import java.awt.image.*;
@@ -37,6 +38,8 @@ public class FoodInfo extends ItemInfo.Tip {
     public final Event[] evs;
     public final Effect[] efs;
     public final int[] types;
+    public static boolean showbaseq;
+    private final static DecimalFormat basefepfmt = new DecimalFormat("0.##");
 
     public FoodInfo(Owner owner, double end, double glut, Event[] evs, Effect[] efs, int[] types) {
         super(owner);
@@ -78,7 +81,17 @@ public class FoodInfo extends ItemInfo.Tip {
         imgs.add(base);
         for (int i = 0; i < evs.length; i++) {
             Color col = Utils.blendcol(evs[i].ev.col, Color.WHITE, 0.5);
-            imgs.add(catimgsh(5, evs[i].img, RichText.render(String.format("%s: $col[%d,%d,%d]{%s}", evs[i].ev.nm, col.getRed(), col.getGreen(), col.getBlue(), Utils.odformat2(evs[i].a, 2)), 0).img));
+            String str;
+            if (showbaseq) {
+                GItem.Quality q = ((GItem) owner).quality();
+                str = String.format("%s: $col[%d,%d,%d]{%s}  $col[%d,%d,%d]{(%s)}",
+                        evs[i].ev.nm,
+                        col.getRed(), col.getGreen(), col.getBlue(), Utils.odformat2(evs[i].a, 2),
+                        col.getRed(), col.getGreen(), col.getBlue(), q != null ? basefepfmt.format(evs[i].a / Math.sqrt(q.q / 10)) : "???");
+            } else {
+                str = String.format("%s: $col[%d,%d,%d]{%s}", evs[i].ev.nm, col.getRed(), col.getGreen(), col.getBlue(), Utils.odformat2(evs[i].a, 2));
+            }
+            imgs.add(catimgsh(5, evs[i].img, RichText.render(str, 0).img));
         }
         for (int i = 0; i < efs.length; i++) {
             BufferedImage efi = ItemInfo.longtip(efs[i].info);

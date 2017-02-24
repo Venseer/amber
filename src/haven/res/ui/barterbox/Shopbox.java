@@ -4,6 +4,7 @@ import haven.*;
 import haven.Button;
 import haven.GSprite.Owner;
 import haven.ItemInfo.SpriteOwner;
+import haven.Label;
 import haven.Resource.Image;
 import haven.Resource.Pagina;
 import haven.res.ui.tt.q.qbuff.QBuff;
@@ -13,18 +14,15 @@ import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.Random;
 
-// ui/barterstand:58
+// ui/barterstand
 public class Shopbox extends Widget implements SpriteOwner, Owner {
-    public static final Text any = Text.render("Any");
+    public static final Text any = Text.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Any"));
+    public static final Text qlbl = Text.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Quality:"), Color.LIGHT_GRAY);
     public static final Tex bg = Resource.loadtex("ui/shopbox");
-    public static final Tex subst = Resource.remote().loadwait("ui/tt/q/subst").layer(Resource.imgc).tex();
-    public static final Tex essnc = Resource.remote().loadwait("ui/tt/q/essnc").layer(Resource.imgc).tex();
-    public static final Tex vital = Resource.remote().loadwait("ui/tt/q/vital").layer(Resource.imgc).tex();
     public static final Coord itemc = new Coord(5, 5);
     public static final Coord buyc = new Coord(5, 66);
     public static final Coord pricec = new Coord(200, 5);
-    public static final Coord qualc = new Coord(200, 41);
-    public static final Coord selqualc = new Coord(5, 41);
+    public static final Coord qualc = (new Coord(200, 5)).add(Inventory.invsq.sz()).add(40, 0);
     public static final Coord cbtnc = new Coord(200, 66);
     public static final Coord spipec = new Coord(85, 66);
     public static final Coord bpipec = new Coord(280, 66);
@@ -32,11 +30,9 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
     public Spec price;
     public Text num;
     public int pnum;
-    public int pqs;
-    public int pqe;
-    public int pqv;
+    public int pq;
     private Text pnumt;
-    private Text pqst, pqet, pqvt;
+    private Text pqt;
     private GSprite spr;
     private Object[] info = new Object[0];
     private Text quality;
@@ -45,9 +41,7 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
     private Button bbtn;
     private Button cbtn;
     private TextEntry pnume;
-    private TextEntry pqse;
-    private TextEntry pqee;
-    private TextEntry pqve;
+    private TextEntry pqe;
     public final boolean admin;
     public final AttrCache<Tex> itemnum = new One(this);
     private List<ItemInfo> cinfo;
@@ -63,26 +57,17 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
     public Shopbox(boolean var1) {
         super(bg.sz());
         if (this.admin = var1) {
-            this.spipe = (Button) this.add(new Button(75, "Connect"), spipec);
-            this.bpipe = (Button) this.add(new Button(75, "Connect"), bpipec);
-            this.cbtn = (Button) this.add(new Button(75, "Change"), cbtnc);
-            this.pnume = (TextEntry) this.adda(new TextEntry(30, ""), pricec.add(Inventory.invsq.sz()).add(5, 0), 0.0D, 1.0D);
+            this.spipe = (Button)this.add(new Button(75, "Connect"), spipec);
+            this.bpipe = (Button)this.add(new Button(75, "Connect"), bpipec);
+            this.cbtn = (Button)this.add(new Button(75, "Change"), cbtnc);
+            this.pnume = (TextEntry)this.adda(new TextEntry(30, ""), pricec.add(Inventory.invsq.sz()).add(5, 0), 0.0D, 1.0D);
             this.pnume.canactivate = true;
             this.pnume.dshow = true;
-            this.adda(new Img(essnc), qualc.add(0, 10), 0.0D, 0.5D);
-            this.pqee = (TextEntry) this.adda(new TextEntry(40, ""), qualc.add(17, 10), 0.0D, 0.5D);
-            this.pqee.canactivate = true;
-            this.pqee.dshow = true;
-            this.adda(new Img(subst), qualc.add(60, 10), 0.0D, 0.5D);
-            this.pqse = (TextEntry) this.adda(new TextEntry(40, ""), qualc.add(77, 10), 0.0D, 0.5D);
-            this.pqse.canactivate = true;
-            this.pqse.dshow = true;
-            this.adda(new Img(vital), qualc.add(120, 10), 0.0D, 0.5D);
-            this.pqve = (TextEntry) this.adda(new TextEntry(40, ""), qualc.add(137, 10), 0.0D, 0.5D);
-            this.pqve.canactivate = true;
-            this.pqve.dshow = true;
+            this.adda(new Label("Quality:"), qualc.add(0, 0), 0.0D, 1.0D);
+            this.pqe = (TextEntry)this.adda(new TextEntry(40, ""), qualc.add(40, 0), 0.0D, 1.0D);
+            this.pqe.canactivate = true;
+            this.pqe.dshow = true;
         }
-
     }
 
     public void draw(GOut g) {
@@ -110,48 +95,34 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
                 }
 
                 if (this.num != null) {
-                    g.aimage(this.num.tex(), itemc.add(Inventory.invsq.sz()).add(5, 0), 0.0D, 1.0D);
+                    g.aimage(this.num.tex(), itemc.add(Inventory.invsq.sz()).add(5, 0), 0.0D, 2.3D);
                 }
 
                 if (quality != null) {
-                    Coord qc = new Coord(selqualc);
-                    g.image(subst, qc);
-                    g.image(quality.tex(), qc.add(17, 0));
+                    g.aimage(qlbl.tex(), itemc.add(Inventory.invsq.sz()).add(5, 0), 0.0D, 1.0D);
+                    g.aimage(quality.tex(), itemc.add(Inventory.invsq.sz()).add(8 + qlbl.tex().sz().x, 0), 0.0D, 1.0D);
                 }
             }
         }
 
         Spec var8 = this.price;
-        if (var8 != null) {
+        if(var8 != null) {
             var3 = g.reclip(pricec, Inventory.invsq.sz());
             var3.image(Inventory.invsq, Coord.z);
 
             try {
                 var8.spr().draw(var3);
             } catch (Loading var6) {
-                var3.image(((Image) WItem.missing.layer(Resource.imgc)).tex(), Coord.z, Inventory.sqsz);
+                var3.image(((Image)WItem.missing.layer(Resource.imgc)).tex(), Coord.z, Inventory.sqsz);
             }
 
-            if (!this.admin && this.pnumt != null) {
-                g.aimage(this.pnumt.tex(), pricec.add(Inventory.invsq.sz()).add(5, 0), 0.0D, 1.0D);
+            if(!this.admin && this.pnumt != null) {
+                g.aimage(this.pnumt.tex(), pricec.add(Inventory.invsq.sz()), 0.0D, 1.0D);
             }
 
-            if (!this.admin) {
-                Coord qc = new Coord(qualc);
-                if (this.pqet != null) {
-                    g.image(essnc, qc);
-                    g.image(this.pqet.tex(), qc.add(17, 0));
-                    qc = qc.add(60, 0);
-                }
-                if (this.pqst != null) {
-                    g.image(subst, qc);
-                    g.image(this.pqst.tex(), qc.add(17, 0));
-                    qc = qc.add(60, 0);
-                }
-                if (this.pqvt != null) {
-                    g.image(vital, qc);
-                    g.image(this.pqvt.tex(), qc.add(17, 0));
-                }
+            if(!this.admin && this.pqt != null) {
+                g.aimage(qlbl.tex(), qualc, 0.0D, 1.0D);
+                g.aimage(this.pqt.tex(), qualc.add(qlbl.tex().sz().x + 4, 0), 0.0D, 1.0D);
             }
         }
 
@@ -252,20 +223,19 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
     }
 
     public void wdgmsg(Widget var1, String var2, Object... var3) {
-        if (var1 == this.bbtn) {
+        if(var1 == this.bbtn) {
             this.wdgmsg("buy", new Object[0]);
-        } else if (var1 == this.spipe) {
+        } else if(var1 == this.spipe) {
             this.wdgmsg("spipe", new Object[0]);
-        } else if (var1 == this.bpipe) {
+        } else if(var1 == this.bpipe) {
             this.wdgmsg("bpipe", new Object[0]);
-        } else if (var1 == this.cbtn) {
+        } else if(var1 == this.cbtn) {
             this.wdgmsg("change", new Object[0]);
-        } else if (var1 != this.pnume && var1 != this.pqse && var1 != this.pqee && var1 != this.pqve) {
+        } else if(var1 != this.pnume && var1 != this.pqe) {
             super.wdgmsg(var1, var2, var3);
         } else {
-            this.wdgmsg("price", new Object[]{parsenum(this.pnume), parsenum(this.pqse), parsenum(this.pqee), parsenum(this.pqve)});
+            this.wdgmsg("price", new Object[]{parsenum(this.pnume), parsenum(this.pqe)});
         }
-
     }
 
     private void updbtn() {
@@ -303,7 +273,7 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
             int var7;
             if (var1 == "n") {
                 var7 = ((Integer) var2[0]).intValue();
-                this.num = Text.render(String.format(Resource.getLocString(Resource.BUNDLE_LABEL, "%d left"), new Object[]{Integer.valueOf(var7)}));
+                this.num = Text.render(String.format("%d left", new Object[]{Integer.valueOf(var7)}));
             } else if (var1 == "price") {
                 byte var8 = 0;
                 if (var2[var8] == null) {
@@ -314,12 +284,13 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
                     Indir<Resource> var4 = this.ui.sess.getres(((Integer) var2[var8]).intValue());
                     Object var5 = Message.nil;
                     if (var2[var7] instanceof byte[]) {
-                        var5 = new MessageBuf(((byte[]) var2[var7++]));
+                        var5 = new MessageBuf((byte[]) ((byte[]) var2[var7++]));
                     }
 
                     Object var6 = null;
                     if (var2[var7] instanceof Object[]) {
                         for (var6 = new Object[0][]; var2[var7] instanceof Object[]; var6 = Utils.extend((Object[]) var6, var2[var7++])) {
+                            ;
                         }
                     }
 
@@ -328,23 +299,15 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
 
                 this.pricetip = null;
                 this.pnum = ((Integer) var2[var7++]).intValue();
-                this.pqs = ((Integer) var2[var7++]).intValue();
-                this.pqe = ((Integer) var2[var7++]).intValue();
-                this.pqv = ((Integer) var2[var7++]).intValue();
+                this.pq = ((Integer) var2[var7++]).intValue();
                 if (!this.admin) {
                     this.pnumt = rnum("×%d", this.pnum);
-                    this.pqst = this.pqs > 0 ? rnum("%d+", this.pqs) : any;
-                    this.pqet = this.pqe > 0 ? rnum("%d+", this.pqe) : any;
-                    this.pqvt = this.pqv > 0 ? rnum("%d+", this.pqv) : any;
+                    this.pqt = this.pq > 0 ? rnum("%d+", this.pq) : any;
                 } else {
                     this.pnume.settext(this.pnum > 0 ? Integer.toString(this.pnum) : "");
                     this.pnume.commit();
-                    this.pqse.settext(this.pqs > 0 ? Integer.toString(this.pqs) : "");
-                    this.pqse.commit();
-                    this.pqee.settext(this.pqe > 0 ? Integer.toString(this.pqe) : "");
-                    this.pqee.commit();
-                    this.pqve.settext(this.pqv > 0 ? Integer.toString(this.pqv) : "");
-                    this.pqve.commit();
+                    this.pqe.settext(this.pq > 0 ? Integer.toString(this.pq) : "");
+                    this.pqe.commit();
                 }
 
                 this.updbtn();
