@@ -90,12 +90,12 @@ public class IMeter extends Widget {
                 meters.add(new Meter((Color) args[i], (Integer) args[i + 1]));
             this.meters = meters;
 
-            if (Config.ponyalarm && ponyalarm) {
+            if (ponyalarm) {
                 try {
                     Resource res = bg.get();
                     if (res != null && res.name.equals("gfx/hud/meter/mount")) {
                         if (meters.get(0).a <= 10) {
-                            Audio.play(ponysfx, Config.ponyalarmvol);
+                            Audio.play(ponysfx, 1.0);
                             ponyalarm = false;
                         }
                     }

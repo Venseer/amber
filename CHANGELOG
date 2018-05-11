@@ -1,3 +1,201 @@
+Version 1.42.1
+    New:
+        * Switch between currently selected quality mode and 'all' mode with alt+q.
+
+    Fixed:
+        * Belt hotkeys being invoked when typing into stockpile window.
+        * Hitbox not shown for domestic horses.
+
+    Misc:
+        * Take one item from stockpile when clicking take without entering an amount.
+        * Changed extensions menu icon.
+        * Updated Russian localization.
+        * Upstream merge.
+
+
+Version 1.42.0
+    New:
+        * Option to show previously studied curiosities in study window.
+        * Option to show buff icon if study window is not fully occupied.
+        * Added minimap icons for dead hedgehogs and squirrels.
+
+    Fixed:
+        * Automatic ground leveler not taking dirt from stockpiles.
+        * F-hotkeys not working when stockpile window is open.
+        * Various small fixes.
+
+    Misc:
+        * Option to aggro closest player on Tab key has been replaced by shift+tab.
+        * Localization improvements.
+
+
+Version 1.41.1
+    Misc:
+        * Upstream code merge.
+
+
+Version 1.41.0
+    Misc:
+        * Reverted back to AWT.
+
+
+Version 1.40.0
+    New:
+        * Full-screen mode with support for resolution changing.
+        * Support for hardware mouse cursors on Linux and Mac OS X.
+
+    Fixed:
+        * Tile centering bug.
+        * Localized resource alarm not firing on rock crystals.
+
+    Misc:
+        * Updated Chinese translation.
+        * Updated curio study times.
+        * Changed screenshot file type to PNG.
+
+
+Version 1.39.1
+    Fixed:
+        * Rockcrystal not being recognized for sound alarm
+        * Crash while viewing a barterstand with no buy button.
+
+
+Version 1.39.0
+    New:
+        * Show item quality in barter stand windows.
+        * Simplified opening indicators.
+        * Option to show current keybindings for combat actions.
+        * Grayed out icons for dead animals (except aurochs).
+        * Alarm for localized resources.
+
+    Fixed:
+        * Animal radius not being removed after killing the animal.
+
+
+Version 1.38.1
+    New:
+        * Highlight Travel menu options.
+
+    Fixed:
+        * Combat school not switching without pressing save.
+        * Mussel picker not working with minimap.
+
+    Misc:
+        * Localization support improvements.
+        * Updated Russian localization.
+        * Code cleanup.
+
+
+Version 1.38.0
+    New:
+        * Alternative combat UI.
+
+    Fixed:
+        * Fixed circular progress indicators.
+
+
+Version 1.37.0
+    New:
+        * Automatic picking of clustered mussels.
+        * Confirmation dialog for magic actions.
+        * Walk while having an item on the cursor with alt+lmb.
+        * Allow taking specific number of items from stockpiles.
+
+    Fixed:
+        * Aiming vectors not working on ATI/AMD GPUs.
+        * Overlapping flower menus (e.g. cross roads).
+        * Using branches with steel refueler.
+        * Incoming party messages not being saved to file (log chats option).
+        * Buff tooltips not working when pointing at the lower half of buff icons.
+        * Combat moves were mistakenly placed under maneuvers filters and vise versa.
+
+    Misc:
+        * Chinese translation updated by raislin_mage.
+        * Russian translation updated by zebratul.
+        * Settings window was reorganized.
+        * Changed colors of beehive and trough radiuses.
+        * Large window close button is now embedded into the client.
+        * Different sound for lynx alarm.
+
+
+Version 1.36.4
+    Fixed:
+        * ctrl+tab for switching opponents not working on Windows.
+
+    Misc:
+        * Merged upstream changes.
+        * Updated en/ru l10n.
+
+
+Version 1.36.3
+    Misc:
+        * Combat settings UI redesing + action filters.
+
+
+Version 1.36.2
+    Fixed:
+        * Combat settings UI overlapping issues on Windows.
+
+
+Version 1.36.1
+    New:
+        * Option to change combat key bindings.
+        * Option to log combat actions to system log.
+
+
+Version 1.36.0
+    New:
+        * Load indicator for ovens, smelters, forges.
+
+    Fixed:
+        * Rare crash in fill oven/smelters task.
+
+    Misc:
+        * shift+wheel for switching combat opponents has been replaced with ctrl+tab
+        * Display human readable names in map settings instead of resource names.
+
+
+Version 1.35.3
+    Fixed:
+        * Last stage indicator flickering on some crops. 
+
+    Misc:
+        * Updated curio study times.
+        * Standardized controls for moving the F-bar, history bar, and hand slots.
+        * Improved localization support.
+        * Updated Russian localization and English strings.
+        * Various code cleanups.
+
+
+Version 1.35.2
+    Fixed:
+        * Slow auto-mining.
+        * Crash when having non existent resources (e.g. from another client) on the F-belt.
+
+    Misc:
+        * Added windweed to hide icons list.
+        * Open system log by default.
+        * Updated russian localization and english strings.
+
+
+Version 1.35.0
+    Fixed:
+        * Pathfinding issues (by elsid).
+        * Russian localization (by elsid).
+
+    Misc:
+        * Option to set transparency of the quality background (by elsid).
+        * Optimized grid overlay rendering.
+        * Merged vanilla changes.
+
+
+Version 1.34.2
+    Misc:
+        * Various improvements to localization support.
+        * Various code cleanups.
+        * Merged vanilla changes.
+
+
 Version 1.34.1
     New:
         * [Preliminary] Chinese translation (by forsaken628).

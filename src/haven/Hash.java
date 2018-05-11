@@ -26,38 +26,27 @@
 
 package haven;
 
-import java.net.*;
-import java.io.*;
+public interface Hash<T> {
+    public int hash(T ob);
 
-public abstract class BrowserAuth extends AuthClient.Credentials {
-    public abstract String method();
+    public boolean equal(T x, T y);
 
-    public String tryauth(AuthClient cl) throws IOException {
-        if (WebBrowser.self == null)
-            throw (new AuthException("Could not find any web browser to launch"));
-        Message rpl = cl.cmd("web", method());
-        String stat = rpl.string();
-        URL url;
-        if (stat.equals("ok")) {
-            url = new URL(rpl.string());
-        } else if (stat.equals("no")) {
-            throw (new AuthException(rpl.string()));
-        } else {
-            throw (new RuntimeException("Unexpected reply `" + stat + "' from auth server"));
+    public static final Hash<Object> eq = new Hash<Object>() {
+        public int hash(Object ob) {
+            return ((ob == null) ? 0 : ob.hashCode());
         }
-        try {
-            WebBrowser.self.show(url);
-        } catch (WebBrowser.BrowserException e) {
-            throw (new AuthException("Could not launch web browser"));
+
+        public boolean equal(Object x, Object y) {
+            return ((x == null) ? (y == null) : x.equals(y));
         }
-        rpl = cl.cmd("wait");
-        stat = rpl.string();
-        if (stat.equals("ok")) {
-            return (rpl.string());
-        } else if (stat.equals("no")) {
-            throw (new AuthException(rpl.string()));
-        } else {
-            throw (new RuntimeException("Unexpected reply `" + stat + "' from auth server"));
+    };
+    public static final Hash<Object> id = new Hash<Object>() {
+        public int hash(Object ob) {
+            return (System.identityHashCode(ob));
         }
-    }
+
+        public boolean equal(Object x, Object y) {
+            return (x == y);
+        }
+    };
 }

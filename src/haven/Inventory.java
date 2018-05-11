@@ -37,7 +37,7 @@ public class Inventory extends Widget implements DTarget {
     @RName("inv")
     public static class $_ implements Factory {
         public Widget create(Widget parent, Object[] args) {
-            return (new Inventory((Coord) args[0]));
+            return (parent instanceof CharWnd ? new InventoryStudy((Coord) args[0]) : new Inventory((Coord) args[0]));
         }
     }
 
@@ -142,24 +142,6 @@ public class Inventory extends Widget implements DTarget {
                         }
                         break;
                     }
-                }
-            }
-        } else if (msg.equals("transfer")) {
-            Window stockpile = gameui().getwnd("Stockpile");
-            if (stockpile == null) {
-                super.wdgmsg(sender, msg, args);
-                return;
-            }
-
-            for (Widget w = stockpile.lchild; w != null; w = w.prev) {
-                if (w instanceof ISBox) {
-                    ISBox isb = (ISBox) w;
-                    if (isb.getfreespace() <= 0)
-                        return;
-                    GItem gitem = (GItem)sender;
-                    gitem.wdgmsg("take", args[0]);
-                    isb.drop(null, null);
-                    break;
                 }
             }
         } else {

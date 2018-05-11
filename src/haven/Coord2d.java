@@ -149,10 +149,18 @@ public class Coord2d implements Comparable<Coord2d>, java.io.Serializable {
     }
 
     public double dist(Coord2d o) {
-	return(Math.hypot(y - o.y, x - o.x));
+	return(Math.hypot(x - o.x, y - o.y));
+    }
+
+    public double abs() {
+	return(Math.hypot(x, y));
     }
 
     public static Coord2d sc(double a, double r) {
 	return(new Coord2d(Math.cos(a) * r, Math.sin(a) * r));
+    }
+
+    public String toString() {
+	return("(" + x + ", " + y + ")");
     }
 }

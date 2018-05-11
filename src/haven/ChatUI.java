@@ -148,8 +148,6 @@ public class ChatUI extends Widget {
         public int urgency = 0;
 
         public static abstract class Message {
-            public final long time = System.currentTimeMillis();
-
             public abstract Text text();
 
             public abstract Tex tex();
@@ -679,7 +677,7 @@ public class ChatUI extends Widget {
                 append(cmsg);
                 if (urgency > 0)
                     notify(cmsg, urgency);
-                save(cmsg.text().text);
+                save(name, cmsg.text().text);
             } else {
                 super.uimsg(msg, args);
             }
@@ -692,7 +690,7 @@ public class ChatUI extends Widget {
 
     public static class MultiChat extends EntryChannel {
         public final int urgency;
-        private final String name;
+        protected final String name;
         private final Map<Integer, Color> pc = new HashMap<Integer, Color>();
 
         public class NamedMessage extends Message {
@@ -783,13 +781,13 @@ public class ChatUI extends Widget {
                 if (from == null) {
                     MyMessage my = new MyMessage(line, iw());
                     append(my);
-                    save(my.text().text, super.getparent(GameUI.class).buddies.getCharName());
+                    save(name, my.text().text, super.getparent(GameUI.class).buddies.getCharName());
                 } else {
                     Message cmsg = new NamedMessage(from, line, fromcolor(from), iw());
                     append(cmsg);
                     if (urgency > 0)
                         notify(cmsg, urgency);
-                    save(cmsg.text().text);
+                    save(name, cmsg.text().text);
                 }
             } else {
                 super.uimsg(msg, args);
@@ -823,15 +821,16 @@ public class ChatUI extends Widget {
                 if (from == null) {
                     MyMessage my = new MyMessage(line, iw());
                     append(my);
-                    save(my.text().text, super.getparent(GameUI.class).buddies.getCharName());
+                    save(name, my.text().text, super.getparent(GameUI.class).buddies.getCharName());
                 } else {
                     Message cmsg = new NamedMessage(from, line, Utils.blendcol(col, Color.WHITE, 0.5), iw());
                     append(cmsg);
+                    save(name, cmsg.text().text);
                     if (urgency > 0)
                         notify(cmsg, urgency);
 
                     long time = System.currentTimeMillis();
-                    if (Config.chatalarm && (lastmsg == 0 || (time - lastmsg) / 1000 / 60 > 3)) {
+                    if (Config.chatalarm && (lastmsg == 0 || (time - lastmsg) / 1000 > 50)) {
                         Audio.play(alarmsfx, Config.chatalarmvol);
                         lastmsg = time;
                     }
@@ -873,17 +872,17 @@ public class ChatUI extends Widget {
                     notify(cmsg, 3);
                     
                     BuddyWnd.Buddy buddy = getparent(GameUI.class).buddies.find(other);
-                    save(cmsg.text().text, buddy != null ? buddy.name : "???");
+                    save("Private Chat", cmsg.text().text, buddy != null ? buddy.name : "???");
 
                     long time = System.currentTimeMillis();
-                    if (lastmsg == 0 || (time - lastmsg) / 1000 / 60 > 10) {
+                    if (lastmsg == 0 || (time - lastmsg) / 1000 > 50) {
                         Audio.play(alarmsfx, Config.chatalarmvol);
                         lastmsg = time;
                     }
                 } else if (t.equals("out")) {
                     OutMessage om = new OutMessage(line, iw());
                     append(om);
-                    save(om.text().text, super.getparent(GameUI.class).buddies.getCharName());
+                    save("Private Chat", om.text().text, super.getparent(GameUI.class).buddies.getCharName());
                 }
             } else if (msg == "err") {
                 String err = (String) args[0];
@@ -1375,14 +1374,14 @@ public class ChatUI extends Widget {
         return "[" + new SimpleDateFormat("HH:mm").format(new Date()) + "] " + text;
     }
 
-    private static void save(String text, String name) {
+    private static void save(String chatName, String text, String name) {
         if (Config.chatsave)
-            save(Config.chattimestamp ?
-                    text.substring(0, 7) + " " + name + ":" + text.substring(7) :
-                    name + ": " + text);
+            save(chatName, Config.chattimestamp ?
+                            text.substring(0, 7) + " " + name + ":" + text.substring(7) :
+                            name + ": " + text);
     }
 
-    private synchronized static void save(String text) {
+    private synchronized static void save(String chatName, String text) {
         if (Config.chatsave) {
             try {
                 if (Config.chatlog == null) {
@@ -1391,7 +1390,7 @@ public class ChatUI extends Widget {
                     Config.chatlog = new PrintWriter(osw, true);
                 }
                 String date = new SimpleDateFormat("[yyyy-MM-dd HH:mm:ss] ").format(new Date());
-                Config.chatlog.println(date + (Config.chattimestamp ? text.substring(8) : text));
+                Config.chatlog.println("[" + chatName + "]" + date + (Config.chattimestamp ? text.substring(8) : text));
             } catch (IOException e) {
                 e.printStackTrace();
             }

@@ -20,14 +20,12 @@ public class QuickSlotsWdg extends Widget implements DTarget {
             WItem left = e.quickslots[6];
             if (left != null) {
                 drawitem(g.reclipl(lc, g.sz), left);
-                if (Config.showcontentsbars)
-                    drawamountbar(g, left.item, 44 + 6);
+                drawamountbar(g, left.item, 44 + 6);
             }
             WItem right = e.quickslots[7];
             if (right != null) {
                 drawitem(g.reclipl(rc, g.sz), right);
-                if (Config.showcontentsbars)
-                    drawamountbar(g, right.item, 0);
+                drawamountbar(g, right.item, 0);
             }
         }
     }
@@ -97,18 +95,16 @@ public class QuickSlotsWdg extends Widget implements DTarget {
     public boolean mousedown(Coord c, int button) {
        if (ui.modmeta)
             return true;
-
-        if (button == 1 && c.x > 44 && c.x < 50) {
-            dragging = ui.grabmouse(this);
-            dc = c;
-            return true;
-        }
-        dragging = null;
         Equipory e = gameui().getequipory();
         if (e != null) {
             WItem w = e.quickslots[c.x <= 47 ? 6 : 7];
             if (w != null) {
+                dragging = null;
                 w.mousedown(new Coord(w.sz.x / 2, w.sz.y / 2), button);
+                return true;
+            } else if (button == 1) {
+                dragging = ui.grabmouse(this);
+                dc = c;
                 return true;
             }
         }

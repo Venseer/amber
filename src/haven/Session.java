@@ -34,7 +34,7 @@ import java.lang.ref.*;
 import static haven.OCache.posres;
 
 public class Session {
-    public static final int PVER = 5;
+    public static final int PVER = 8;
 
     public static final int MSG_SESS = 0;
     public static final int MSG_REL = 1;
@@ -280,14 +280,24 @@ public class Session {
                                 oc.cres(gob, getres(resid), sdt);
                         } else if (type == OD_LINBEG) {
                             Coord2d s = msg.coord().mul(posres);
-                            Coord2d t = msg.coord().mul(posres);
-                            int c = msg.int32();
+                            Coord2d v = msg.coord().mul(posres);
                             if (gob != null)
-                                oc.linbeg(gob, s, t, c);
+                                oc.linbeg(gob, s, v);
                         } else if (type == OD_LINSTEP) {
-                            int l = msg.int32();
-                            if (gob != null)
-                                oc.linstep(gob, l);
+                            double t, e;
+                            int w = msg.int32();
+                            if(w == -1) {
+                                t = e = -1;
+                            } else if((w & 0x80000000) == 0) {
+                                t = w * 0x1p-10;
+                                e = -1;
+                            } else {
+                                t = (w & ~0x80000000) * 0x1p-10;
+                                w = msg.int32();
+                                e = (w < 0)?-1:(w * 0x1p-10);
+                            }
+                            if(gob != null)
+                                oc.linstep(gob, t, e);
                         } else if (type == OD_SPEECH) {
                             float zo = msg.int16() / 100.0f;
                             String text = msg.string();
@@ -336,6 +346,7 @@ public class Session {
                                 oc.cmppose(gob, seq, poses, tposes, interp, ttime);
                         } else if (type == OD_CMPMOD) {
                             List<Composited.MD> mod = new LinkedList<Composited.MD>();
+                            int mseq = 0;
                             while (true) {
                                 int modid = msg.uint16();
                                 if (modid == 65535)
@@ -353,12 +364,15 @@ public class Session {
                                     }
                                     tex.add(new ResData(getres(resid), sdt));
                                 }
-                                mod.add(new Composited.MD(modr, tex));
+                                Composited.MD md = new Composited.MD(modr, tex);
+                                md.id = mseq++;
+                                mod.add(md);
                             }
                             if (gob != null)
                                 oc.cmpmod(gob, mod);
                         } else if (type == OD_CMPEQU) {
                             List<Composited.ED> equ = new LinkedList<Composited.ED>();
+                            int eseq = 0;
                             while (true) {
                                 int h = msg.uint8();
                                 if (h == 255)
@@ -381,7 +395,9 @@ public class Session {
                                 } else {
                                     off = Coord3f.o;
                                 }
-                                equ.add(new Composited.ED(et, at, new ResData(res, sdt), off));
+                                Composited.ED ed = new Composited.ED(et, at, new ResData(res, sdt), off);
+                                ed.id = eseq++;
+                                equ.add(ed);
                             }
                             if (gob != null)
                                 oc.cmpequ(gob, equ);
@@ -420,14 +436,9 @@ public class Session {
                             if (oid == 0xffffffffl) {
                                 if (gob != null)
                                     oc.homostop(gob);
-                            } else if (oid == 0xfffffffel) {
-                                Coord2d tgtc = msg.coord().mul(posres);
-                                int v = msg.uint16();
-                                if (gob != null)
-                                    oc.homocoord(gob, tgtc, v);
                             } else {
                                 Coord2d tgtc = msg.coord().mul(posres);
-                                int v = msg.uint16();
+                                double v = msg.int32() * 0x1p-10 * 11;
                                 if (gob != null)
                                     oc.homing(gob, oid, tgtc, v);
                             }

@@ -21,11 +21,12 @@
 
   <target name="hafen-client" depends="build-env">
     <javac srcdir="src" destdir="build/classes" debug="on"
-	   source="1.8" target="1.8" includeantruntime="no">
+	   source="1.8" target="1.8" includeantruntime="no" encoding="UTF-8">
       <classpath>
 	<pathelement path="lib/jogl.jar" />
 	<pathelement path="lib/gluegen-rt.jar" />
 	<pathelement path="lib/jglob.jar" />
+        <pathelement path="lib/junit.jar" />
       </classpath>
       <compilerarg value="-Xlint:unchecked" />
       <compilerarg value="-Xlint:-options" />
@@ -55,7 +56,7 @@
       <fileset dir="build/classes-lib" />
       <manifest>
 	<attribute name="Main-Class" value="haven.MainFrame" />
-	<attribute name="Class-Path" value="jogl.jar gluegen-rt.jar builtin-res.jar hafen-res.jar amber-res.jar l10n.jar" />
+	<attribute name="Class-Path" value="jogl.jar gluegen-rt.jar amber-res.jar builtin-res.jar hafen-res.jar l10n.jar" />
       </manifest>
     </jar>
     <chmod file="build/hafen.jar" perm="a+x" />
@@ -93,10 +94,10 @@
         <fileset dir="build" includes="*.jar" excludes="*natives*.jar"/>
         <fileset dir="${basedir}" includes="README, CHANGELOG"/>
         <fileset dir="lib/jogl-natives" includes="*.jar"/>
-        <fileset dir="etc" includes="*.bat,run.sh"/>
+        <fileset dir="etc" includes="*.bat,run.sh,run.command"/>
     </zip>
     <zip destfile="${basedir}/${name}-${version}-upd.zip" update="false">
-        <fileset dir="build" includes="amber-res.jar, hafen.jar, l10n.jar" />
+        <fileset dir="build" includes="amber-res.jar, hafen.jar, l10n.jar, builtin-res.jar" />
         <fileset dir="${basedir}" includes="CHANGELOG"/>
     </zip>
   </target>
@@ -126,5 +127,21 @@
         <sysproperty key="haven.defserv" value="sh.seatribe.se" />
         <sysproperty key="haven.resdir" value="/home/fredrik/src/hafen/res" />
       </java>
+  </target>
+
+  <target name="test" depends="jars">
+    <junit showoutput="true" printsummary="true">
+      <classpath>
+        <pathelement location="lib/junit.jar" />
+        <pathelement location="lib/hamcrest/core.jar" />
+        <pathelement location="build/hafen.jar" />
+      </classpath>
+      <formatter usefile="false" type="plain" />
+      <batchtest fork="true" >
+        <fileset dir="src">
+          <include name="haven/pathfinder/test/PathfinderIsInsideBoundBoxTest.java" />
+        </fileset>
+      </batchtest>
+    </junit>
   </target>
 </project>

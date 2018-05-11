@@ -10,14 +10,20 @@ import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
 public class BPRadSprite extends Sprite {
-    static final GLState smat = new ColState(new Color(192, 0, 0, 80));
+    public static final GLState smatDanger = new ColState(new Color(192, 0, 0, 80));
+    public static final GLState smatBeehive = new ColState(new Color(233, 234, 134, 80));
+    public static final GLState smatTrough = new ColState(new Color(147, 234, 133, 80));
+    final GLState smat;
     final VertexArray posa;
     final NormalArray nrma;
     final ShortBuffer sidx;
 
-    public BPRadSprite(float rad, float basez) {
+
+    public BPRadSprite(float rad, float basez, GLState smat) {
         super(null, null);
 
+        this.smat = smat;
+        
         int per = Math.max(24, (int) (2 * Math.PI * (double) rad / 11.0D));
         FloatBuffer pa = Utils.mkfbuf(per * 3 * 2);
         FloatBuffer na = Utils.mkfbuf(per * 3 * 2);

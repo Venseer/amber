@@ -107,8 +107,17 @@ public class Composite extends Drawable {
             try {
                 Composited.Poses np = comp.new Poses(loadposes(nposes, comp.skel, nposesold));
                 np.set(nposesold ? 0 : ipollen);
-                nposes = null;
                 updequ();
+                for (ResData resdata : nposes) {
+                    Resource posres = resdata.res.get();
+                    if (posres != null && posres.name.endsWith("/knock")) {
+                        gob.knocked = Boolean.TRUE;
+                        break;
+                    }
+                }
+                if (gob.knocked == null)
+                    gob.knocked = Boolean.FALSE;
+                nposes = null;
             } catch (Loading e) {
             }
         } else if (tposes != null) {

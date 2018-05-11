@@ -61,9 +61,11 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
     private Overlay bowvector = null;
     private static final Material.Colors dframeEmpty = new Material.Colors(new Color(0, 255, 0, 255));
     private static final Material.Colors dframeDone = new Material.Colors(new Color(255, 0, 0, 255));
-    private static final Gob.Overlay animalradius = new Gob.Overlay(new BPRadSprite(100.0F, -10.0F));
+    private static final Gob.Overlay animalradius = new Gob.Overlay(new BPRadSprite(100.0F, -10.0F, BPRadSprite.smatDanger));
     private static final Set<String> dangerousanimalrad = new HashSet<String>(Arrays.asList(
             "gfx/kritter/bear/bear", "gfx/kritter/boar/boar", "gfx/kritter/lynx/lynx", "gfx/kritter/badger/badger"));
+    // knocked will be null if pose update request hasn't been received yet
+    public Boolean knocked = null;
 
     public static class Overlay implements Rendered {
         public Indir<Resource> res;
@@ -187,6 +189,7 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
     }
 
     public static class Static {}
+    public static class SemiStatic {}
 
     public Gob(Glob glob, Coord2d c, long id, int frame) {
         this.glob = glob;
@@ -470,52 +473,41 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
 
         Drawable d = getattr(Drawable.class);
         if (d != null) {
-            boolean hide = false;
-            if (Config.hidegobs) {
-                try {
-                    if (res != null && res.name.startsWith("gfx/terobjs/trees")
-                            && !res.name.endsWith("log") && !res.name.endsWith("oldtrunk")) {
-                        hide = true;
-                        GobHitbox.BBox bbox = GobHitbox.getBBox(this, true);
-                        if (bbox != null) {
-                            rl.add(new Overlay(new GobHitbox(this, bbox.a, bbox.b, true)), null);
-                        }
-                    }
-                } catch (Loading le) {
+            if (Config.hidegobs && res != null && res.name.startsWith("gfx/terobjs/trees") &&
+                    !res.name.endsWith("log") && !res.name.endsWith("oldtrunk")) {
+                    GobHitbox.BBox bbox = GobHitbox.getBBox(this, true);
+                    if (bbox != null) {
+                        rl.add(new Overlay(new GobHitbox(this, bbox.a, bbox.b, true)), null);
                 }
+            } else {
+                d.setup(rl);
             }
 
-            if (Config.showboundingboxes && !hide) {
+            if (Config.showboundingboxes) {
                 GobHitbox.BBox bbox = GobHitbox.getBBox(this, true);
                 if (bbox != null)
                     rl.add(new Overlay(new GobHitbox(this, bbox.a, bbox.b, false)), null);
             }
 
-            if (!hide)
-                d.setup(rl);
-
             if (Config.showplantgrowstage) {
                 if (res != null && res.name.startsWith("gfx/terobjs/plants") && !res.name.endsWith("trellis")) {
                     GAttrib rd = getattr(ResDrawable.class);
                     if (rd != null) {
-                        try {
-                            int stage = ((ResDrawable) rd).sdt.peekrbuf(0);
-                            if (cropstgmaxval == 0) {
-                                for (FastMesh.MeshRes layer : res.layers(FastMesh.MeshRes.class)) {
-                                    int stg = layer.id / 10;
-                                    if (stg > cropstgmaxval)
-                                        cropstgmaxval = stg;
-                                }
+                        int stage = ((ResDrawable) rd).sdt.peekrbuf(0);
+                        if (cropstgmaxval == 0) {
+                            for (FastMesh.MeshRes layer : res.layers(FastMesh.MeshRes.class)) {
+                                int stg = layer.id / 10;
+                                if (stg > cropstgmaxval)
+                                    cropstgmaxval = stg;
                             }
-                            Overlay ol = findol(Sprite.GROWTH_STAGE_ID);
-                            if (ol == null && (stage == cropstgmaxval || stage > 0 && stage < 5)) {
-                                addol(new Gob.Overlay(Sprite.GROWTH_STAGE_ID, new PlantStageSprite(stage, cropstgmaxval)));
-                            } else if (stage <= 0 || stage >= 5) {
-                                ols.remove(ol);
-                            } else if (((PlantStageSprite)ol.spr).stg != stage) {
-                                ((PlantStageSprite)ol.spr).update(stage, cropstgmaxval);
-                            }
-                        } catch (ArrayIndexOutOfBoundsException e) { // ignored
+                        }
+                        Overlay ol = findol(Sprite.GROWTH_STAGE_ID);
+                        if (ol == null && (stage == cropstgmaxval || stage > 0 && stage < 6)) {
+                            addol(new Gob.Overlay(Sprite.GROWTH_STAGE_ID, new PlantStageSprite(stage, cropstgmaxval)));
+                        } else if (stage <= 0 || (stage != cropstgmaxval && stage >= 6)) {
+                            ols.remove(ol);
+                        } else if (((PlantStageSprite)ol.spr).stg != stage) {
+                            ((PlantStageSprite)ol.spr).update(stage, cropstgmaxval);
                         }
                     }
                 }
@@ -523,44 +515,25 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
                 if (res != null && (res.name.startsWith("gfx/terobjs/trees") || res.name.startsWith("gfx/terobjs/bushes"))) {
                     ResDrawable rd = getattr(ResDrawable.class);
                     if (rd != null && !rd.sdt.eom()) {
-                        try {
-                            final int stage = rd.sdt.peekrbuf(0);
-                            if (stage < 100) {
-                                Overlay ol = findol(Sprite.GROWTH_STAGE_ID);
-                                if (ol == null) {
-                                    addol(new Gob.Overlay(Sprite.GROWTH_STAGE_ID, new TreeStageSprite(stage)));
-                                } else if (((TreeStageSprite)ol.spr).val != stage) {
-                                    ((TreeStageSprite)ol.spr).update(stage);
-                                }
+                        final int stage = rd.sdt.peekrbuf(0);
+                        if (stage >= 0 && stage < 100) {
+                            Overlay ol = findol(Sprite.GROWTH_STAGE_ID);
+                            if (ol == null) {
+                                addol(new Gob.Overlay(Sprite.GROWTH_STAGE_ID, new TreeStageSprite(stage)));
+                            } else if (((TreeStageSprite)ol.spr).val != stage) {
+                                ((TreeStageSprite)ol.spr).update(stage);
                             }
-                        } catch (ArrayIndexOutOfBoundsException e) { // ignored
                         }
                     }
                 }
             }
 
-            if (res != null && dangerousanimalrad.contains(res.name)) {
-                if (Config.showanimalrad) {
-                    if (!ols.contains(animalradius)) {
-                        GAttrib drw = getattr(Drawable.class);
-                        if (drw != null && drw instanceof Composite) {
-                            Composite cpst = (Composite) drw;
-                            if (cpst.nposes != null && cpst.nposes.size() > 0) {
-                                for (ResData resdata : cpst.nposes) {
-                                    Resource posres = resdata.res.get();
-                                    if (posres != null && !posres.name.endsWith("/knock") || posres == null) {
-                                        ols.add(animalradius);
-                                        break;
-                                    }
-                                }
-                            } else if (!cpst.nposesold){
-                                ols.add(animalradius);
-                            }
-                        }
-                    }
-                } else {
+            if (Config.showanimalrad && res != null && dangerousanimalrad.contains(res.name)) {
+                boolean hasradius = ols.contains(animalradius);
+                if ((knocked == null || knocked == Boolean.FALSE) && !hasradius)
+                    ols.add(animalradius);
+                else if (knocked == Boolean.TRUE && hasradius)
                     ols.remove(animalradius);
-                }
             }
 
             if (Config.showarchvector && res != null && res.name.equals("gfx/borka/body") && d instanceof Composite) {
@@ -605,13 +578,15 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
     private Object seq = null;
     public Object staticp() {
         if(seq == null) {
-            Object fs = new Static();
-            for(GAttrib ar : attr.values()) {
-                Object as = ar.staticp();
+            int rs = 0;
+            for(GAttrib attr : attr.values()) {
+                Object as = attr.staticp();
                 if(as == Rendered.CONSTANS) {
                 } else if(as instanceof Static) {
+                } else if(as == SemiStatic.class) {
+                    rs = Math.max(rs, 1);
                 } else {
-                    fs = null;
+                    rs = 2;
                     break;
                 }
             }
@@ -619,12 +594,18 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
                 Object os = ol.staticp();
                 if(os == Rendered.CONSTANS) {
                 } else if(os instanceof Static) {
+                } else if(os == SemiStatic.class) {
+                    rs = Math.max(rs, 1);
                 } else {
-                    fs = null;
+                    rs = 2;
                     break;
                 }
             }
-            seq = fs;
+            switch(rs) {
+                case 0: seq = new Static(); break;
+                case 1: seq = new SemiStatic(); break;
+                default: seq = null; break;
+            }
         }
         return((seq == DYNAMIC)?null:seq);
     }

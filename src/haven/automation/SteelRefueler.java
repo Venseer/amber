@@ -99,7 +99,8 @@ public class SteelRefueler extends Window implements GobSelectCallback {
                     // take fuel from stockpiles if we don't have enough in the inventory
                     int availableFuelCoal = gui.maininv.getItemPartialCount("Coal");
                     int availableFuelBlock = gui.maininv.getItemPartialCount("Block");
-                    if (availableFuelCoal < 9 && availableFuelBlock < 3)
+                    int availableFuelBranch = gui.maininv.getItemPartialCount("Branch");
+                    if (availableFuelCoal < 9 && availableFuelBlock < 3 && availableFuelBranch < 18)
                         getfuel();
 
                     // find one piece of fuel in the inventory
@@ -107,9 +108,17 @@ public class SteelRefueler extends Window implements GobSelectCallback {
                     if (fuel == null)
                         fuel = gui.maininv.getItemPartial("Block");
                     if (fuel == null)
+                        fuel = gui.maininv.getItemPartial("Branch");
+                    if (fuel == null)
                         continue;
 
-                    int fuelticks = fuel.item.getname().contains("Block") ? 27 : 11;
+                    int fuelticks;
+                    if (fuel.item.getname().contains("Block"))
+                        fuelticks = 27;
+                    else if (fuel.item.getname().contains("Coal"))
+                        fuelticks = 11;
+                    else
+                        fuelticks = 5; // branch
 
                     // navigate to crucible
                     gui.map.pfRightClick(c, -1, 3, 1, null);
@@ -220,7 +229,8 @@ public class SteelRefueler extends Window implements GobSelectCallback {
             // return if got enough fuel
             int availableFuelCoal = gui.maininv.getItemPartialCount("Coal");
             int availableFuelBlock = gui.maininv.getItemPartialCount("Block");
-            if (availableFuelCoal >= 9 && availableFuelBlock >= 3)
+            int availableFuelBranch = gui.maininv.getItemPartialCount("Branch");
+            if (availableFuelCoal >= 9 && availableFuelBlock >= 3 && availableFuelBranch >= 18)
                 return;
         }
     }
@@ -233,7 +243,7 @@ public class SteelRefueler extends Window implements GobSelectCallback {
                     crucibles.add(gob);
                     lblc.settext(crucibles.size() + "");
                 }
-            } else if (res.name.equals("gfx/terobjs/stockpile-coal") || res.name.equals("gfx/terobjs/stockpile-wblock")) {
+            } else if (res.name.equals("gfx/terobjs/stockpile-coal") || res.name.equals("gfx/terobjs/stockpile-wblock") || res.name.equals("gfx/terobjs/stockpile-branch")) {
                 if (!stockpiles.contains(gob)) {
                     stockpiles.add(gob);
                     lbls.settext(stockpiles.size() + "");

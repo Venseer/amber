@@ -35,9 +35,9 @@ public class GobPath extends Sprite {
     public void draw(GOut g) {
         if (lm == null)
             return;
-        Gob gob = (Gob) owner;
+      /*  Gob gob = (Gob) owner;
         Coord3f pc = gob.getc();
-        double x = lm.t.x - pc.x;
+        double x = lm.t - pc.x;
         double y = -lm.t.y + pc.y;
         double z = Math.sqrt(x * x + y * y) >= vd ? 0 : gob.glob.map.getcz(lm.t.x, lm.t.y) - pc.z;
         g.apply();
@@ -51,6 +51,6 @@ public class GobPath extends Sprite {
         gl.glVertex3f(0, 0, 0);
         gl.glVertex3f((float)x, (float)y, (float)z); // FIXME: lossy conversion
         gl.glEnd();
-        gl.glDisable(GL2.GL_LINE_SMOOTH);
+        gl.glDisable(GL2.GL_LINE_SMOOTH);*/
     }
 }

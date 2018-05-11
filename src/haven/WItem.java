@@ -26,22 +26,22 @@
 
 package haven;
 
+import haven.res.ui.tt.Wear;
+
 import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.image.BufferedImage;
 import java.net.URL;
 import java.util.*;
+import java.util.function.*;
 
 import static haven.Inventory.sqsz;
 
 public class WItem extends Widget implements DTarget {
     public static final Resource missing = Resource.local().loadwait("gfx/invobjs/missing");
-    private static final Resource studyalarmsfx = Resource.local().loadwait("sfx/study");
     public final GItem item;
-    private Resource cspr = null;
-    private Message csdt = Message.nil;
     public static final Color famountclr = new Color(24, 116, 205);
-    private static final Color qualitybg = new Color(20, 20, 20, 250);
+    private static final Color qualitybg = new Color(20, 20, 20, 255 - Config.qualitybgtransparency);
     public static final Color[] wearclr = new Color[]{
             new Color(233, 0, 14), new Color(218, 128, 87), new Color(246, 233, 87), new Color(145, 225, 60)
     };
@@ -141,16 +141,19 @@ public class WItem extends Widget implements DTarget {
 
     public volatile static int cacheseq = 0;
 
-    public abstract class AttrCache<T> {
+    public class AttrCache<T> {
+        private final Function<List<ItemInfo>, T> data;
         private List<ItemInfo> forinfo = null;
         public T save = null;
         private int forseq = -1;
+
+        public AttrCache(Function<List<ItemInfo>, T> data) {this.data = data;}
 
         public T get() {
             try {
                 List<ItemInfo> info = item.info();
                 if ((cacheseq != forseq) || (info != forinfo)) {
-                    save = find(info);
+                    save = data.apply(info);
                     forinfo = info;
                     forseq = cacheseq;
                 }
@@ -159,31 +162,30 @@ public class WItem extends Widget implements DTarget {
             }
             return (save);
         }
-
-        protected abstract T find(List<ItemInfo> info);
     }
 
-    public final AttrCache<Color> olcol = new AttrCache<Color>() {
-        protected Color find(List<ItemInfo> info) {
-            Color ret = null;
-            for (ItemInfo inf : info) {
-                if (inf instanceof GItem.ColorInfo) {
-                    Color c = ((GItem.ColorInfo) inf).olcol();
-                    if (c != null)
-                        ret = (ret == null) ? c : Utils.preblend(ret, c);
-                }
+    public final AttrCache<Color> olcol = new AttrCache<Color>(info -> {
+        Color ret = null;
+        for(ItemInfo inf : info) {
+            if(inf instanceof GItem.ColorInfo) {
+                Color c = ((GItem.ColorInfo)inf).olcol();
+                if(c != null)
+                    ret = (ret == null)?c:Utils.preblend(ret, c);
             }
-            return (ret);
         }
-    };
+        return(ret);
+    });
 
-    public final AttrCache<Tex> itemnum = new AttrCache<Tex>() {
-        protected Tex find(List<ItemInfo> info) {
-            GItem.NumberInfo ninf = ItemInfo.find(GItem.NumberInfo.class, info);
-            if (ninf == null) return (null);
-            return (new TexI(Utils.outline2(Text.render(Integer.toString(ninf.itemnum()), Color.WHITE).img, Utils.contrast(Color.WHITE))));
-        }
-    };
+    public final AttrCache<Tex> itemnum = new AttrCache<Tex>(info -> {
+        GItem.NumberInfo ninf = ItemInfo.find(GItem.NumberInfo.class, info);
+        if(ninf == null) return(null);
+        return(new TexI(Utils.outline2(Text.render(Integer.toString(ninf.itemnum()), Color.WHITE).img, Utils.contrast(Color.WHITE))));
+    });
+
+    public final AttrCache<Double> itemmeter = new AttrCache<Double>(info -> {
+        GItem.MeterInfo minf = ItemInfo.find(GItem.MeterInfo.class, info);
+        return((minf == null)?null:minf.meter());
+    });
 
     private GSprite lspr = null;
 
@@ -215,18 +217,19 @@ public class WItem extends Widget implements DTarget {
             if (item.num >= 0) {
                 g.atext(Integer.toString(item.num), sz, 1, 1, Text.numfnd);
             } else if (itemnum.get() != null) {
-                g.aimage(itemnum.get(), sz, 1, 1);
+                g.aimage(itemnum.get(), new Coord(sz.x, 0), 1, 0);
             }
-            if (item.meter > 0) {
+
+            Double meter = item.meter > 0 ? item.meter / 100.0 : itemmeter.get();
+            if (meter != null && meter > 0) {
                 if (Config.itemmeterbar) {
                     g.chcolor(220, 60, 60, 255);
-                    g.frect(Coord.z, new Coord((int) (sz.x / (100 / (double) item.meter)), 4));
+                    g.frect(Coord.z, new Coord((int) (sz.x / (100 / (meter * 100))), 4));
                     g.chcolor();
                 } else if (!Config.itempercentage) {
-                    double a = ((double) item.meter) / 100.0;
                     g.chcolor(255, 255, 255, 64);
                     Coord half = sz.div(2);
-                    g.prect(half, half.inv(), half, a * Math.PI * 2);
+                    g.prect(half, half.inv(), half, meter * Math.PI * 2);
                     g.chcolor();
                 }
             }
@@ -303,28 +306,21 @@ public class WItem extends Widget implements DTarget {
                 g.image(item.metertex, Coord.z);
             }
 
-            if (Config.showcontentsbars) {
-                ItemInfo.Contents cnt = item.getcontents();
-                if (cnt != null && cnt.content > 0)
-                    drawamountbar(g, cnt.content, cnt.isseeds);
-            }
+            ItemInfo.Contents cnt = item.getcontents();
+            if (cnt != null && cnt.content > 0)
+                drawamountbar(g, cnt.content, cnt.isseeds);
 
             if (Config.showwearbars) {
                 try {
                     for (ItemInfo info : item.info()) {
-                        if (info.getClass().getName().equals("Wear")) {
-                            double d = (Integer) info.getClass().getDeclaredField("d").get(info);
-                            double m = (Integer) info.getClass().getDeclaredField("m").get(info);
+                        if (info instanceof Wear) {
+                            double d = ((Wear) info).d;
+                            double m = ((Wear) info).m;
                             double p = (m - d) / m;
                             int h = (int) (p * (double) sz.y);
                             g.chcolor(wearclr[p == 1.0 ? 3 : (int) (p / 0.25)]);
                             g.frect(new Coord(sz.x - 3, sz.y - h), new Coord(3, h));
                             g.chcolor();
-                            // NOTE: apparently identically named class "Wear" with no namespace is used
-                            // for both the wear and armor class info... Y U DO DIS LOFTAR X(
-                            // We need to break here once we found first "Wear" (it will always come before the armor class.)
-                            // otherwise it would generate exception on second "Wear" class and we don't want to do that
-                            // in drawing routine.
                             break;
                         }
                     }
@@ -408,59 +404,5 @@ public class WItem extends Widget implements DTarget {
     public boolean iteminteract(Coord cc, Coord ul) {
         item.wdgmsg("itemact", ui.modflags());
         return (true);
-    }
-
-    public void destroy() {
-        super.destroy();
-        Curiosity ci = null;
-
-        if (parent instanceof Inventory && parent.parent instanceof Tabs.Tab) {
-            try {
-                ci = ItemInfo.find(Curiosity.class, item.info());
-                if (ci != null && item.meter >= 99) {
-                    Resource.Tooltip tt = item.resource().layer(Resource.Tooltip.class);
-                    if (tt != null)
-                        gameui().syslog.append(tt.t + " LP: " + ci.exp, Color.LIGHT_GRAY);
-
-                    if (Config.autostudy) {
-                        Window invwnd = gameui().getwnd("Inventory");
-                        Window cupboard = gameui().getwnd("Cupboard");
-                        Resource res = item.resource();
-                        if (res != null) {
-                            if (!replacecurio(invwnd, res) && cupboard != null)
-                                replacecurio(cupboard, res);
-                        }
-                    }
-                }
-            } catch (Loading l) {
-            }
-
-            if (Config.studyalarm && ci != null && item.meter >= 99)
-                Audio.play(studyalarmsfx, Config.studyalarmvol);
-        }
-    }
-
-    private boolean replacecurio(Window wnd, Resource res) {
-        try {
-            for (Widget invwdg = wnd.lchild; invwdg != null; invwdg = invwdg.prev) {
-                if (invwdg instanceof Inventory) {
-                    Inventory inv = (Inventory) invwdg;
-                    for (Widget witm = inv.lchild; witm != null; witm = witm.prev) {
-                        if (witm instanceof WItem) {
-                            GItem ngitm = ((WItem) witm).item;
-                            Resource nres = ngitm.resource();
-                            if (nres != null && nres.name.equals(res.name)) {
-                                ngitm.wdgmsg("take", witm.c);
-                                ((Inventory) parent).drop(Coord.z, c);
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
-                }
-            }
-        } catch (Exception e) { // ignored
-        }
-        return false;
     }
 }

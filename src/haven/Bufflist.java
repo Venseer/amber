@@ -34,6 +34,11 @@ public class Bufflist extends Widget {
     public final static Resource buffswim = Resource.local().loadwait("gfx/hud/buffs/toggles/swim");
     public final static Resource bufftrack = Resource.local().loadwait("gfx/hud/buffs/toggles/tracking");
     public final static Resource buffcrime = Resource.local().loadwait("gfx/hud/buffs/toggles/crime");
+    public final static Resource buffbrain = Resource.local().loadwait("gfx/hud/buffs/brain");
+
+    public Bufflist() {
+        super(new Coord(0, Buff.cframe.sz().y * 2 + margin));
+    }
 
     private void arrange(Widget imm) {
         int i = 0;
@@ -51,7 +56,7 @@ public class Bufflist extends Widget {
             if (c.x > br.x) br.x = c.x;
             if (c.y > br.y) br.y = c.y;
         }
-        resize(br.add(Buff.cframe.sz()));
+        resize(new Coord(br.x + Buff.cframe.sz().x, Buff.cframe.sz().y * 2 + margin));
     }
 
     public void addchild(Widget child, Object... args) {

@@ -12,10 +12,10 @@ public class MinimapWnd extends Widget {
     private static final Tex bl = Resource.loadtex("gfx/hud/wndmap/lg/bl");
     private static final Tex br = Resource.loadtex("gfx/hud/wndmap/lg/br");
     private static final Coord tlm = new Coord(3, 3), brm = new Coord(4, 4);
-    private final LocalMiniMap mmap;
+    public final LocalMiniMap mmap;
     private final MapView map;
     private IButton center, viewdist, grid;
-    private ToggleButton pclaim, vclaim, lock;
+    private ToggleButton pclaim, vclaim, realm, lock, mapwnd;
     private boolean minimized;
     private Coord szr;
     private boolean resizing;
@@ -27,6 +27,7 @@ public class MinimapWnd extends Widget {
     private final IButton cbtn;
     private Coord wsz, asz;
     private UI.Grab dm = null;
+    public MapWnd mapfile;
 
     public MinimapWnd(Coord sz, MapView _map) {
         cbtn = add(new IButton(cbtni[0], cbtni[1]));
@@ -40,6 +41,8 @@ public class MinimapWnd extends Widget {
             map.enol(0, 1);
         if (Utils.getprefb("showvclaim", false))
             map.enol(2, 3);
+        if (Utils.getprefb("showrealms", false))
+            map.enol(4, 5);
 
         pclaim = new ToggleButton("gfx/hud/wndmap/btns/claim", "gfx/hud/wndmap/btns/claim-d", map.visol(0)) {
             {
@@ -71,6 +74,34 @@ public class MinimapWnd extends Widget {
                 }
             }
         };
+        realm = new ToggleButton("gfx/hud/wndmap/btns/realm", "gfx/hud/wndmap/btns/realm-d", map.visol(4)) {
+            {
+                tooltip = Text.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Display realms"));
+            }
+
+            public void click() {
+                if ((map != null) && !map.visol(4)) {
+                    map.enol(4, 5);
+                    Utils.setprefb("showrealms", true);
+                } else {
+                    map.disol(4, 5);
+                    Utils.setprefb("showrealms", false);
+                }
+            }
+        };
+        mapwnd = new ToggleButton("gfx/hud/wndmap/btns/map", "gfx/hud/wndmap/btns/map", map.visol(4)) {
+            {
+                tooltip = Text.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Map"));
+            }
+
+            public void click() {
+                if (mapfile != null && mapfile.show(!mapfile.visible)) {
+                    mapfile.raise();
+                    gameui().fitwdg(mapfile);
+                }
+            }
+        };
+
         center = new IButton("gfx/hud/wndmap/btns/center", "", "", "") {
             {
                 tooltip = Text.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Center the map on player"));
@@ -114,10 +145,12 @@ public class MinimapWnd extends Widget {
         add(mmap, 1, 27);
         add(pclaim, 5, 3);
         add(vclaim, 29, 3);
-        add(center, 53, 3);
-        add(lock, 77, 3);
-        add(viewdist, 101, 3);
-        add(grid, 125, 3);
+        add(realm, 53, 3);
+        add(mapwnd, 77, 3);
+        add(center, 101, 3);
+        add(lock, 125, 3);
+        add(viewdist, 149, 3);
+        add(grid, 173, 3);
         pack();
     }
 
@@ -302,6 +335,8 @@ public class MinimapWnd extends Widget {
             mmap.hide();
             pclaim.hide();
             vclaim.hide();
+            realm.hide();
+            mapwnd.hide();
             center.hide();
             lock.hide();
             viewdist.hide();
@@ -310,6 +345,8 @@ public class MinimapWnd extends Widget {
             mmap.show();
             pclaim.show();
             vclaim.show();
+            realm.show();
+            mapwnd.show();
             center.show();
             lock.show();
             viewdist.show();

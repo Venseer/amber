@@ -26,6 +26,7 @@
 
 package haven;
 
+import java.awt.*;
 import java.util.*;
 
 public class Fightview extends Widget {
@@ -41,17 +42,19 @@ public class Fightview extends Widget {
     public Relation current = null;
     public Indir<Resource> blk, batk, iatk;
     public double atkcs, atkct;
-    public double off, def;
+    public Indir<Resource> lastact = null;
+    public long lastuse = 0;
     public int atkcd;
     private GiveButton curgive;
     private Avaview curava;
     private Button curpurs;
     public final Bufflist buffs = add(new Bufflist());
     private static final Gob.Overlay curol = new Gob.Overlay(new FightCurrentOpp());
-
     {
         buffs.hide();
     }
+    private static final Color combatLogMeClr = new Color(86, 153, 191);
+    private static final Color combatLogOpClr = new Color(234, 105, 105);
 
     public class Relation {
         public final long gobid;
@@ -62,8 +65,9 @@ public class Fightview extends Widget {
         {
             buffs.hide();
         }
-        public double off, def;
         public int ip, oip;
+        public Indir<Resource> lastact = null;
+        public long lastuse = 0;
 
         public Relation(long gobid) {
             this.gobid = gobid;
@@ -88,6 +92,41 @@ public class Fightview extends Widget {
             ui.destroy(ava);
             ui.destroy(give);
             ui.destroy(purs);
+        }
+
+        public void use(Indir<Resource> act) {
+            lastact = act;
+            lastuse = System.currentTimeMillis();
+            if (lastact != null && Config.logcombatactions) {
+                try {
+                    Resource res = lastact.get();
+                    Resource.Tooltip tt = res.layer(Resource.tooltip);
+                    if (tt == null) {
+                        gameui().syslog.append("Combat: WARNING! tooltip is missing for " + res.name + ". Notify Jorb/Loftar about this.", combatLogOpClr);
+                        return;
+                    }
+                    gameui().syslog.append(String.format("%d: %s, ip %d - %d", gobid, tt.t, ip, oip), combatLogOpClr);
+                } catch (Loading l) {
+                }
+            }
+        }
+    }
+
+    public void use(Indir<Resource> act) {
+        lastact = act;
+        lastuse = System.currentTimeMillis();
+        if (lastact != null && Config.logcombatactions) {
+            try {
+                Resource res = lastact.get();
+                Resource.Tooltip tt = res.layer(Resource.tooltip);
+                if (tt == null) {
+                    gameui().syslog.append("Combat: WARNING! tooltip is missing for " + res.name + ". Notify Jorb/Loftar about this.", combatLogMeClr);
+                    return;
+                }
+                String cd = Utils.fmt1DecPlace(atkct - System.currentTimeMillis() / 1000.0);
+                gameui().syslog.append(String.format("me: %s, ip %d - %d, cd %ss", tt.t, current.ip, current.oip, cd), combatLogMeClr);
+            } catch (Loading l) {
+            }
         }
     }
 
@@ -228,8 +267,6 @@ public class Fightview extends Widget {
             rel.give((Integer) args[1]);
             rel.ip = (Integer) args[2];
             rel.oip = (Integer) args[3];
-            rel.off = ((Number)args[4]).doubleValue();
-            rel.def = ((Number)args[5]).doubleValue();
             lsrel.addFirst(rel);
             ui.sess.glob.oc.isfight = true;
             return;
@@ -257,10 +294,12 @@ public class Fightview extends Widget {
             rel.ip = (Integer) args[2];
             rel.oip = (Integer) args[3];
             return;
-        } else if(msg == "updod") {
+        } else if(msg == "used") {
+            use((args[0] == null)?null:ui.sess.getres((Integer)args[0]));
+            return;
+        } else if(msg == "ruse") {
             Relation rel = getrel((Integer)args[0]);
-            rel.off = ((Number)args[1]).doubleValue();
-            rel.def = ((Number)args[2]).doubleValue();
+            rel.use((args[1] == null)?null:ui.sess.getres((Integer)args[1]));
             return;
         } else if (msg == "cur") {
             try {
@@ -283,10 +322,6 @@ public class Fightview extends Widget {
         } else if (msg == "atk") {
             batk = n2r((Integer) args[0]);
             iatk = n2r((Integer) args[1]);
-            return;
-        } else if (msg == "offdef") {
-            off = ((Number)args[0]).doubleValue();
-            def = ((Number)args[1]).doubleValue();
             return;
         }
         super.uimsg(msg, args);

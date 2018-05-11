@@ -38,7 +38,9 @@ public class GobArcheryVector extends Sprite {
 
         gl.glLineStipple(8, (short) 0xAAAA);
         gl.glEnable(GL2.GL_LINE_STIPPLE);
-        gl.glLineWidth(4.0F);
+        // AMD doesn't like lines wider than 2
+        // should really just use textures instead of lineStipple though...
+        gl.glLineWidth(HavenPanel.isATI ? 2.0F : 4.0F);
         gl.glEnable(GL2.GL_BLEND);
         gl.glBlendFunc(GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
         gl.glEnable(GL2.GL_LINE_SMOOTH);

@@ -70,16 +70,8 @@ public class UI {
 
     private class WidgetConsole extends Console {
         {
-            setcmd("q", new Command() {
-                public void run(Console cons, String[] args) {
-                    HackThread.tg().interrupt();
-                }
-            });
-            setcmd("lo", new Command() {
-                public void run(Console cons, String[] args) {
-                    sess.close();
-                }
-            });
+            setcmd("q", (cons1, args) -> HackThread.tg().interrupt());
+            setcmd("lo", (cons1, args) -> sess.close());
         }
 
         private void findcmds(Map<String, Command> map, Widget wdg) {
@@ -158,7 +150,7 @@ public class UI {
 
             if (type.equals("sm")) {
                 synchronized (fmAutoSelName) {
-                    if (fmAutoSelName != null && System.currentTimeMillis() - fmAutoTime < FM_AUTO_TIMEOUT) {
+                    if (System.currentTimeMillis() - fmAutoTime < FM_AUTO_TIMEOUT) {
                         Widget w = new WidgetDummy();
                         pwdg.addchild(w, pargs);
                         bind(w, id);
@@ -175,6 +167,45 @@ public class UI {
             }
 
             Widget wdg = pwdg.makechild(f, pargs, cargs);
+
+            if (wdg instanceof ISBox && pwdg instanceof Window && ((Window) pwdg).origcap.equals("Stockpile")) {
+                TextEntry entry = new TextEntry(40, "") {
+                    @Override
+                    public boolean keydown(KeyEvent e) {
+                        return !(e.getKeyCode() >= KeyEvent.VK_F1 && e.getKeyCode() <= KeyEvent.VK_F12);
+                    }
+
+                    @Override
+                    public boolean type(char c, KeyEvent ev) {
+                        if (c >= KeyEvent.VK_0 && c <= KeyEvent.VK_9 && buf.line.length() < 2 || c == '\b') {
+                            return buf.key(ev);
+                        } else if (c == '\n') {
+                            try {
+                                int count = Integer.parseInt(dtext());
+                                for (int i = 0; i < count; i++)
+                                    wdg.wdgmsg("xfer");
+                                return true;
+                            } catch (NumberFormatException e) {
+                            }
+                        }
+                        return false;
+                    }
+                };
+                Button btn = new Button(65, "Take") {
+                    @Override
+                    public void click() {
+                        try {
+                            String cs = entry.dtext();
+                            int count = cs.isEmpty() ? 1 : Integer.parseInt(cs);
+                            for (int i = 0; i < count; i++)
+                                wdg.wdgmsg("xfer");
+                        } catch (NumberFormatException e) {
+                        }
+                    }
+                };
+                pwdg.add(btn, new Coord(0, wdg.sz.y + 5));
+                pwdg.add(entry, new Coord(btn.sz.x + 5, wdg.sz.y + 5 + 2));
+            }
             bind(wdg, id);
 
             // drop everything except water containers if in area mining mode

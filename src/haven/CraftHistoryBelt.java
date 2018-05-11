@@ -48,23 +48,21 @@ public class CraftHistoryBelt extends Widget {
             if (button == 1 && belt[slot] != null) {
                 String[] ad = belt[slot].act().ad;
                 gameui().menu.wdgmsg("act", (Object[]) ad);
-            } else if (button == 3) {
-                if (belt[slot] == null) {
-                    if (ui.modshift) {
-                        if (vertical) {
-                            sz = hsz;
-                            vertical = false;
-                        } else {
-                            sz = vsz;
-                            vertical = true;
-                        }
-                        Utils.setprefb("histbelt_vertical", vertical);
+            } else if (button == 1 && belt[slot] == null) {
+                if (ui.modshift) {
+                    if (vertical) {
+                        sz = hsz;
+                        vertical = false;
                     } else {
-                        dragging = ui.grabmouse(this);
-                        dc = c;
+                        sz = vsz;
+                        vertical = true;
                     }
-                    return true;
+                    Utils.setprefb("histbelt_vertical", vertical);
+                } else {
+                    dragging = ui.grabmouse(this);
+                    dc = c;
                 }
+                return true;
             }
             return true;
         }

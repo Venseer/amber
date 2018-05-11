@@ -91,6 +91,7 @@ public class GobHitbox extends Sprite {
     private static final BBox bboxCalf = new BBox(new Coord(-9, -3), new Coord(9, 3));
     private static final BBox bboxLamb = new BBox(new Coord(-6, -2), new Coord(6, 2));
     private static final BBox bboxCattle  = new BBox(new Coord(-12, -4), new Coord(12, 4));
+    private static final BBox bboxHorse = new BBox(new Coord(-8, -4), new Coord(8, 4));
     private static final BBox bboxSmelter = new BBox(new Coord(-12, -12), new Coord(12, 20));
     private static final BBox bboxWallseg = new BBox(new Coord(-5, -6), new Coord(6, 5));
     private static final BBox bboxHwall = new BBox(new Coord(-1, 0), new Coord(0, 11));
@@ -120,6 +121,8 @@ public class GobHitbox extends Sprite {
             return bboxLamb;
         else if (name.equals("gfx/kritter/cattle/cattle"))
             return bboxCattle;
+        else if (name.startsWith("gfx/kritter/horse/"))
+            return bboxHorse;
 
         // rlink-ed gobs.
         // modifying RenderLink is a bad idea

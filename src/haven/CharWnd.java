@@ -38,6 +38,7 @@ import haven.resutil.FoodInfo;
 public class CharWnd extends Window {
     public static final RichText.Foundry ifnd = new RichText.Foundry(Resource.remote(), java.awt.font.TextAttribute.FAMILY, "SansSerif", java.awt.font.TextAttribute.SIZE, Config.fontsizeglobal).aa(true);
     public static final Text.Furnace catf = new BlurFurn(new TexFurn(new Text.Foundry(Text.sans, 20).aa(true), Window.ctex), 2, 2, new Color(96, 48, 0));
+    public static final Text.Furnace failf = new BlurFurn(new TexFurn(new Text.Foundry(Text.fraktur, 25).aa(true), Resource.loadimg("gfx/hud/fontred")), 3, 2, new Color(96, 48, 0));
     public static final Text.Foundry attrf = new Text.Foundry(Text.sans.deriveFont(Font.BOLD), Config.fontsizeattr).aa(true);
     public static final Text.Foundry numfnd = new Text.Foundry(Text.sans, 12);
     public static final Color debuff = new Color(255, 128, 128);
@@ -682,6 +683,12 @@ public class CharWnd extends Window {
             add(new Label("Experience cost:"), 2, 32);
             add(new Label("LP/hour"), 2, sz.y - 64);
             add(new Label("Learning points:"), 2, sz.y - 32);
+
+            if (Config.studybuff && ((Inventory)study).getFreeSpace() > 0) {
+                BuffToggle tgl = study.gameui().buffs.gettoggle("brain");
+                if (tgl == null)
+                    study.gameui().buffs.addchild(new BuffToggle("brain", Bufflist.buffbrain));
+            }
         }
 
         private void upd() {
@@ -900,34 +907,46 @@ public class CharWnd extends Window {
     }
 
     public static class Quest {
+        public static final int QST_PEND = 0, QST_DONE = 1, QST_FAIL = 2;
+        public static final Color[] stcol = {
+                new Color(255, 255, 64), new Color(64, 255, 64), new Color(255, 64, 64),
+        };
         public final int id;
         public Indir<Resource> res;
-        public boolean done;
+        public String title;
+        public int done;
         public int mtime;
         private Tex small;
         private final Text.UText<?> rnm = new Text.UText<String>(attrf) {
             public String value() {
                 try {
-                    return (res.get().layer(Resource.tooltip).t);
+                    return(title());
                 } catch (Loading l) {
                     return ("...");
                 }
             }
         };
 
-        private Quest(int id, Indir<Resource> res, boolean done, int mtime) {
+        private Quest(int id, Indir<Resource> res, String title, int done, int mtime) {
             this.id = id;
             this.res = res;
+            this.title = Resource.getLocString(Resource.BUNDLE_LABEL, title);
             this.done = done;
             this.mtime = mtime;
         }
 
+        public String title() {
+            if(title != null)
+                return(title);
+            return(res.get().layer(Resource.tooltip).t);
+        }
+
         public static class Condition {
             public final String desc;
-            public boolean done;
+            public int done;
             public String status;
 
-            public Condition(String desc, boolean done, String status) {
+            public Condition(String desc, int done, String status) {
                 this.desc = Resource.getLocString(Resource.BUNDLE_LABEL, desc);
                 this.done = done;
                 this.status = Resource.getLocString(Resource.BUNDLE_LABEL, status);
@@ -935,11 +954,12 @@ public class CharWnd extends Window {
         }
 
         private static final Tex qcmp = catf.render("Quest completed").tex();
+        private static final Tex qfail = failf.render("Quest failed").tex();
 
         public void done(GameUI parent) {
             parent.add(new Widget() {
                 double a = 0.0;
-                Tex img, title;
+                Tex img, title, msg;
 
                 public void draw(GOut g) {
                     if (img != null) {
@@ -947,31 +967,32 @@ public class CharWnd extends Window {
                             g.chcolor(255, 255, 255, (int) (255 * Utils.smoothstep(a / 0.2)));
                         else if (a > 0.8)
                             g.chcolor(255, 255, 255, (int) (255 * Utils.smoothstep(1.0 - ((a - 0.8) / 0.2))));
-                /*
-                g.image(img, new Coord(0, (Math.max(img.sz().y, title.sz().y) - img.sz().y) / 2));
-			    g.image(title, new Coord(img.sz().x + 25, (Math.max(img.sz().y, title.sz().y) - title.sz().y) / 2));
-			    g.image(qcmp, new Coord((sz.x - qcmp.sz().x) / 2, Math.max(img.sz().y, title.sz().y) + 25));
-			    */
+                        /*
+                        g.image(img, new Coord(0, (Math.max(img.sz().y, title.sz().y) - img.sz().y) / 2));
+                        g.image(title, new Coord(img.sz().x + 25, (Math.max(img.sz().y, title.sz().y) - title.sz().y) / 2));
+                        g.image(msg, new Coord((sz.x - qcmsgmp.sz().x) / 2, Math.max(img.sz().y, title.sz().y) + 25));
+                        */
                         int y = 0;
                         g.image(img, new Coord((sz.x - img.sz().x) / 2, y));
                         y += img.sz().y + 15;
                         g.image(title, new Coord((sz.x - title.sz().x) / 2, y));
                         y += title.sz().y + 15;
-                        g.image(qcmp, new Coord((sz.x - qcmp.sz().x) / 2, y));
+                        g.image(msg, new Coord((sz.x - msg.sz().x) / 2, y));
                     }
                 }
 
                 public void tick(double dt) {
                     if (img == null) {
                         try {
-                            title = catf.render(res.get().layer(Resource.tooltip).t).tex();
+                            title = (done == QST_DONE?catf:failf).render(title()).tex();
                             img = res.get().layer(Resource.imgc).tex();
-                /*
-                resize(new Coord(Math.max(img.sz().x + 25 + title.sz().x, qcmp.sz().x),
-						 Math.max(img.sz().y, title.sz().y) + 25 + qcmp.sz().y));
-				*/
-                            resize(new Coord(Math.max(Math.max(img.sz().x, title.sz().x), qcmp.sz().x),
-                                    img.sz().y + 15 + title.sz().y + 15 + qcmp.sz().y));
+                            msg = (done == QST_DONE)?qcmp:qfail;
+                            /*
+                            resize(new Coord(Math.max(img.sz().x + 25 + title.sz().x, msg.sz().x),
+                                     Math.max(img.sz().y, title.sz().y) + 25 + msg.sz().y));
+                            */
+                            resize(new Coord(Math.max(Math.max(img.sz().x, title.sz().x), msg.sz().x),
+                                    img.sz().y + 15 + title.sz().y + 15 + msg.sz().y));
                             presize();
                         } catch (Loading l) {
                             return;
@@ -991,18 +1012,24 @@ public class CharWnd extends Window {
             });
         }
 
-        public static class Box extends LoadingTextBox implements Info {
+        public static class Box extends Widget implements Info {
             public final int id;
             public final Indir<Resource> res;
             public Condition[] cond = {};
+            public final String title;
             private QView cqv;
 
-            public Box(int id, Indir<Resource> res) {
-                super(Coord.z, "", ifnd);
-                bg = null;
+            public Box(int id, Indir<Resource> res, String title) {
+                super(Coord.z);
                 this.id = id;
                 this.res = res;
-                refresh();
+                this.title = Resource.getLocString(Resource.BUNDLE_LABEL, title);
+            }
+
+            public String title() {
+                if(title != null)
+                    return(title);
+                return(res.get().layer(Resource.tooltip).t);
             }
 
             protected void added() {
@@ -1010,23 +1037,18 @@ public class CharWnd extends Window {
             }
 
             public void refresh() {
-                settext(new Indir<String>() {
-                    public String get() {
-                        return (rendertext());
-                    }
-                });
             }
 
             public String rendertext() {
                 StringBuilder buf = new StringBuilder();
                 Resource res = this.res.get();
                 buf.append("$img[" + res.name + "]\n\n");
-                buf.append("$b{$font[serif,16]{" + res.layer(Resource.tooltip).t + "}}\n\n\n");
+                buf.append("$b{$font[serif,16]{" + title() + "}}\n\n\n");
                 buf.append(res.layer(Resource.pagina).text);
                 buf.append("\n");
                 for (Condition cond : this.cond) {
-                    buf.append(cond.done ? "$col[64,255,64]{" : "$col[255,255,64]{");
-                    buf.append(" \u2022 ");
+                    buf.append(RichText.Parser.col2a(stcol[cond.done]));
+                    buf.append("{ \u2022 ");
                     buf.append(cond.desc);
                     if (cond.status != null) {
                         buf.append(' ');
@@ -1053,12 +1075,11 @@ public class CharWnd extends Window {
                         String desc = (String) args[a++];
                         int st = (Integer) args[a++];
                         String status = (String) args[a++];
-                        boolean done = (st != 0);
                         Condition cond = findcond(desc);
                         if (cond != null) {
                             boolean ch = false;
-                            if (done != cond.done) {
-                                cond.done = done;
+                            if(st != cond.done) {
+                                cond.done = st;
                                 ch = true;
                             }
                             if (!Utils.eq(status, cond.status)) {
@@ -1068,7 +1089,7 @@ public class CharWnd extends Window {
                             if (ch && (cqv != null))
                                 cqv.update(cond);
                         } else {
-                            cond = new Condition(desc, done, status);
+                            cond = new Condition(desc, st, status);
                         }
                         ncond.add(cond);
                     }
@@ -1085,10 +1106,6 @@ public class CharWnd extends Window {
                 super.destroy();
                 if (cqv != null)
                     cqv.reqdestroy();
-            }
-
-            public int questid() {
-                return (id);
             }
 
             static final Text.Furnace qtfnd = new BlurFurn(new Text.Foundry(Text.serif.deriveFont(java.awt.Font.BOLD, 16)).aa(true), 2, 1, Color.BLACK);
@@ -1151,7 +1168,7 @@ public class CharWnd extends Window {
                 public void tick(double dt) {
                     if (rtitle == null) {
                         try {
-                            rtitle = qtfnd.render(res.get().layer(Resource.tooltip).t).tex();
+                            rtitle = qtfnd.render(title()).tex();
                             resize();
                         } catch (Loading l) {
                         }
@@ -1165,7 +1182,7 @@ public class CharWnd extends Window {
                 }
 
                 private Text ct(Condition c) {
-                    return (qcfnd.render(" \u2022 " + c.desc + ((c.status != null) ? (" " + c.status) : ""), c.done ? new Color(64, 255, 64) : new Color(255, 255, 64)));
+                    return(qcfnd.render(" \u2022 " + c.desc + ((c.status != null)?(" " + c.status):""), stcol[c.done]));
                 }
 
                 void update() {
@@ -1195,7 +1212,7 @@ public class CharWnd extends Window {
                 }
 
                 void update(Condition c) {
-                    glow = new TexI(rasterimg(blurmask2(ct(c).img.getRaster(), 3, 2, c.done ? new Color(64, 255, 64) : new Color(255, 255, 64))));
+                    glow = new TexI(rasterimg(blurmask2(ct(c).img.getRaster(), 3, 2, stcol[c.done])));
                     for (int i = 0; i < ccond.length; i++) {
                         if (ccond[i] == c) {
                             glowon = rcond[i];
@@ -1206,8 +1223,67 @@ public class CharWnd extends Window {
                 }
             }
 
+            public int questid() {
+                return(id);
+            }
+
             public Widget qview() {
                 return (cqv = new QView());
+            }
+        }
+
+        public static class DefaultBox extends Box {
+            private Widget current;
+            private boolean refresh = true;
+            public List<Pair<String, String>> options = Collections.emptyList();
+
+            public DefaultBox(int id, Indir<Resource> res, String title) {
+                super(id, res, title);
+            }
+
+            public void draw(GOut g) {
+                refresh: if(refresh) {
+                    Scrollport newch = new Scrollport(sz);
+                    RichText text;
+                    try {
+                        text = ifnd.render(rendertext(), newch.cont.sz.x - 20);
+                    } catch(Loading l) {
+                        break refresh;
+                    }
+                    Widget prev;
+                    int y = 10;
+                    newch.addchild(prev = new Img(text.tex()), new Coord(10, y));
+                    y += prev.sz.y + 10;
+                    for(Pair<String, String> opt : options) {
+                        newch.addchild(prev = new Button(newch.cont.sz.x - 20, opt.b, false) {
+                            public void click() {
+                                DefaultBox.this.wdgmsg("opt", opt.a);
+                            }
+                        }, new Coord(10, y));
+                        y += prev.sz.y + 5;
+                    }
+                    if(current != null)
+                        current.destroy();
+                    current = add(newch, Coord.z);
+                    refresh = false;
+                }
+                super.draw(g);
+            }
+
+            public void refresh() {
+                refresh = true;
+            }
+
+            public void uimsg(String msg, Object... args) {
+                if(msg == "opts") {
+                    List<Pair<String, String>> opts = new ArrayList<>();
+                    for(int i = 0; i < args.length; i += 2)
+                        opts.add(new Pair<>((String)args[i], (String)args[i + 1]));
+                    this.options = opts;
+                    refresh();
+                } else {
+                    super.uimsg(msg, args);
+                }
             }
         }
 
@@ -1216,7 +1292,8 @@ public class CharWnd extends Window {
             public Widget create(Widget parent, Object[] args) {
                 int id = (Integer) args[0];
                 Indir<Resource> res = parent.ui.sess.getres((Integer) args[1]);
-                return (new Box(id, res));
+                String title = (args.length > 2)?(String)args[2]:null;
+                return(new DefaultBox(id, res, title));
             }
         }
 
@@ -1613,7 +1690,7 @@ public class CharWnd extends Window {
         {
             int x = 0, y = 0;
 
-            sattr = tabs.addStudy();
+            sattr = tabs.add();
             sattr.add(new Img(catf.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Abilities")).tex()), new Coord(x - 2, y));
             y += 35;
             skill = new ArrayList<SAttr>();
@@ -1934,8 +2011,6 @@ public class CharWnd extends Window {
             Frame.around(sattr, Collections.singletonList(inf));
         } else if (place == "fmg") {
             fgt.add(child, 0, 0);
-            if (child instanceof FightWnd)
-                ((FightWnd) child).loadschools();
         } else if (place == "wound") {
             this.wound = (Wound.Info) child;
             woundbox.add(child, Coord.z);
@@ -1975,7 +2050,6 @@ public class CharWnd extends Window {
             feps.update(args);
         } else if (nm == "glut") {
             glut.update(args);
-        } else if (nm == "glut") {
         } else if (nm == "ftrig") {
             feps.trig(ui.sess.getres((Integer) args[0]));
         } else if (nm == "lvl") {
@@ -2026,36 +2100,41 @@ public class CharWnd extends Window {
                 }
             }
         } else if (nm == "quests") {
-            for (int i = 0; i < args.length; i += 4) {
-                int id = (Integer) args[i];
-                Indir<Resource> res = (args[i + 1] == null) ? null : ui.sess.getres((Integer) args[i + 1]);
-                if (res != null) {
-                    boolean done = ((Integer) args[i + 2]) != 0;
-                    int mtime = (Integer) args[i + 3];
+            for(int i = 0; i < args.length;) {
+                int id = (Integer)args[i++];
+                Integer resid = (Integer)args[i++];
+                Indir<Resource> res = (resid == null)?null:ui.sess.getres(resid);
+                if(res != null) {
+                    int st = (Integer)args[i++];
+                    int mtime = (Integer)args[i++];
+                    String title = null;
+                    if((i < args.length) && (args[i] instanceof String))
+                        title = (String)args[i++];
                     QuestList cl = cqst;
                     Quest q = cqst.get(id);
-                    if (q == null)
+                    if(q == null)
                         q = (cl = dqst).get(id);
-                    if (q == null) {
+                    if(q == null) {
                         cl = null;
-                        q = new Quest(id, res, done, mtime);
+                        q = new Quest(id, res, title, st, mtime);
                     } else {
-                        boolean fdone = q.done;
+                        int fst = q.done;
                         q.res = res;
-                        q.done = done;
+                        q.done = st;
                         q.mtime = mtime;
-                        if (!fdone && done)
+                        if((fst == Quest.QST_PEND) && (st != Quest.QST_PEND))
                             q.done(getparent(GameUI.class));
                     }
-                    QuestList nl = q.done ? dqst : cqst;
-                    if (nl != cl) {
-                        if (cl != null)
+                    QuestList nl = (q.done == Quest.QST_PEND)?cqst:dqst;
+                    if(nl != cl) {
+                        if(cl != null)
                             cl.remove(q);
                         nl.add(q);
                     }
                     nl.loading = true;
                 } else {
-                    wounds.remove(id);
+                    cqst.remove(id);
+                    dqst.remove(id);
                 }
             }
         } else {

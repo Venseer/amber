@@ -38,6 +38,7 @@ import java.lang.ref.*;
 import java.lang.reflect.*;
 import java.util.prefs.*;
 import java.util.*;
+import java.util.function.*;
 import java.awt.Graphics;
 import java.awt.Color;
 import java.awt.image.*;
@@ -227,7 +228,7 @@ public class Utils {
         try {
             String jsonstr = Utils.getpref(prefname, null);
             if (jsonstr == null)
-                return null;
+                return def;
             JSONArray ja = new JSONArray(jsonstr);
             String[] ra = new String[ja.length()];
             for (int i = 0; i < ja.length(); i++)
@@ -246,6 +247,42 @@ public class Utils {
             String jsonarr = "";
             for (String s : val)
                 jsonarr += "\"" + s + "\",";
+            if (jsonarr.length() > 0)
+                jsonarr = jsonarr.substring(0, jsonarr.length() - 1);
+            Utils.setpref(prefname, "[" + jsonarr + "]");
+        } catch (SecurityException e) {
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    static void loadprefchklist(String prefname, Map<String, CheckListboxItem> data) {
+        try {
+            String jsonstr = Utils.getpref(prefname, null);
+            if (jsonstr == null)
+                return;
+            JSONArray ja = new JSONArray(jsonstr);
+            for (int i = 0; i < ja.length(); i++) {
+                CheckListboxItem itm = data.get(ja.getString(i));
+                if (itm != null)
+                    itm.selected = true;
+            }
+        } catch (SecurityException e) {
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    static void setprefchklst(String prefname, Map<String, CheckListboxItem> val) {
+        try {
+            String jsonarr = "";
+            Iterator it = val.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry entry = (Map.Entry)it.next();
+                CheckListboxItem itm = (CheckListboxItem)entry.getValue();
+                if (itm.selected)
+                    jsonarr += "\"" + entry.getKey() + "\",";
+            }
             if (jsonarr.length() > 0)
                 jsonarr = jsonarr.substring(0, jsonarr.length() - 1);
             Utils.setpref(prefname, "[" + jsonarr + "]");
@@ -1201,6 +1238,12 @@ public class Utils {
         return (ret);
     }
 
+    public static <T, E extends T> T[] extend(T[] src, E[] ne) {
+        T[] ret = extend(src, 0, src.length + ne.length);
+        System.arraycopy(ne, 0, ret, src.length, ne.length);
+        return (ret);
+    }
+
     public static int[] extend(int[] src, int nl) {
         int[] dst = new int[nl];
         System.arraycopy(src, 0, dst, 0, Math.min(src.length, dst.length));
@@ -1229,6 +1272,34 @@ public class Utils {
         Iterator<T> i = c.iterator();
         if (!i.hasNext()) return (null);
         return (i.next());
+    }
+
+    public static <T> T take(Iterable<T> c) {
+	Iterator<T> i = c.iterator();
+	if(!i.hasNext()) return(null);
+	T ret = i.next();
+	i.remove();
+	return(ret);
+    }
+
+    public static <T> int index(T[] arr, T el) {
+	for(int i = 0; i < arr.length; i++) {
+	    if(Objects.equals(arr[i], el))
+		return(i);
+	}
+	return(-1);
+    }
+
+    public static boolean strcheck(String str, IntPredicate p) {
+        for (int i = 0; i < str.length(); i++) {
+            if (!p.test(str.charAt(i)))
+                return (false);
+        }
+        return (true);
+    }
+
+    public static <T> T or(T val, Supplier<T> els) {
+	return((val != null)?val:els.get());
     }
 
     public static <T> T construct(Constructor<T> cons, Object... args) {
@@ -1328,7 +1399,28 @@ public class Utils {
             return null;
         }
     }
-    
+
+    public static class MapBuilder<K, V> {
+        private final Map<K, V> bk;
+
+        public MapBuilder(Map<K, V> bk) {
+            this.bk = bk;
+        }
+
+        public MapBuilder<K, V> put(K k, V v) {
+            bk.put(k, v);
+            return(this);
+        }
+
+        public Map<K, V> map() {
+            return(Collections.unmodifiableMap(bk));
+        }
+    }
+
+    public static <K, V> MapBuilder<K, V> map() {
+        return (new MapBuilder<K, V>(new HashMap<K, V>()));
+    }
+
     public static final Comparator<Object> idcmd = new Comparator<Object>() {
         int eid = 0;
         final Map<Ref, Long> emerg = new HashMap<Ref, Long>();
@@ -1397,30 +1489,17 @@ public class Utils {
     };
 
     static {
-        Console.setscmd("die", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                throw (new Error("Triggered death"));
-            }
-        });
-        Console.setscmd("threads", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                Utils.dumptg(null, cons.out);
-            }
-        });
-        Console.setscmd("gc", new Console.Command() {
-            public void run(Console cons, String[] args) {
-                System.gc();
-            }
-        });
+        Console.setscmd("threads", (cons, args) -> Utils.dumptg(null, cons.out));
+        Console.setscmd("gc", (cons, args) -> System.gc());
     }
 
     // NOTE: following fmt*DecPlace methods will not work with values having large integer part
-    static String fmt1DecPlace(double value) {
+    public static String fmt1DecPlace(double value) {
         double rvalue = (double) Math.round(value * 10) / 10;
         return (rvalue % 1 == 0) ? Integer.toString((int)rvalue) : Double.toString(rvalue);
     }
 
-    static String fmt3DecPlace(double value) {
+    public static String fmt3DecPlace(double value) {
         double rvalue = (double) Math.round(value * 1000) / 1000;
         return (rvalue % 1 == 0) ? Integer.toString((int)rvalue) : Double.toString(rvalue);
     }

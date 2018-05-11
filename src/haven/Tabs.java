@@ -66,44 +66,6 @@ public class Tabs {
         return (parent.add(new Tab(), c));
     }
 
-    public Tab addStudy() {
-        return (parent.add(new Tab() {
-            @Override
-            public boolean mousedown(Coord c, int button) {
-                if (Config.studylock && c.x > 260 && c.x < 260 + 133 && c.y > 40 && c.y < 40 + 133)
-                    return false;
-                return super.mousedown(c, button);
-            }
-            @Override
-            public void wdgmsg(Widget sender, String msg, Object... args) {
-                if(Config.studylock && msg.equals("invxf")) {
-                    return;
-                } else if (Config.studylock && msg.equals("drop")) {
-                    Coord c = (Coord) args[0];
-                    for (Widget invwdg = this.lchild; invwdg != null; invwdg = invwdg.prev) {
-                        if (invwdg instanceof Inventory) {
-                            Inventory inv = (Inventory) invwdg;
-                            for (Widget witm = inv.lchild; witm != null; witm = witm.prev) {
-                                if (witm instanceof WItem) {
-                                    WItem itm = (WItem) witm;
-                                    for (int x = itm.c.x; x < itm.c.x + itm.sz.x; x += Inventory.sqsz.x) {
-                                        for (int y = itm.c.y; y < itm.c.y + itm.sz.y; y += Inventory.sqsz.y) {
-                                            if (x / Inventory.sqsz.x == c.x && y / Inventory.sqsz.y == c.y)
-                                                return;
-                                        }
-                                    }
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-
-                super.wdgmsg(sender, msg, args);
-            }
-        }, c));
-    }
-
     public class TabButton extends Button {
         public final Tab tab;
 

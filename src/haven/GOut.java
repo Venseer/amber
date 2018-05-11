@@ -463,6 +463,7 @@ public class GOut {
         ftexrect(ul, sz, s, 0, 0, 1, 1);
     }
 
+    // NOTE: this is terribly slow and should not be used in critical methods.
     public void fellipse(Coord c, Coord r, double a1, double a2) {
         st.set(cur2d);
         apply();
@@ -483,6 +484,38 @@ public class GOut {
 
     public void fellipse(Coord c, Coord r) {
         fellipse(c, r, 0, 360);
+    }
+
+    public void fcircle(int x, int y, double rad, final int points) {
+        st.set(cur2d);
+        apply();
+
+        int circumference = points - 1;
+
+        float cx = x + tx.x;
+        float cy = y + tx.y;
+
+        int vi = 0;
+        float vertices[] = new float[points * 2];
+
+        vertices[vi++] = cx;
+        vertices[vi++] = cy;
+
+        for (int i = 0; i < circumference; i++) {
+            float percent = (i / (float) (circumference - 1));
+            float radians = (float) (percent * 2 * Math.PI);
+            vertices[vi++] = (float) (cx + rad * Math.cos(radians));
+            vertices[vi++] = (float) (cy + rad * Math.sin(radians));
+        }
+
+        FloatBuffer vbuf = Utils.mkfbuf(vertices.length);
+        vbuf.put(vertices);
+        vbuf.position(0);
+
+        gl.glVertexPointer(2, GL.GL_FLOAT, 0, vbuf);
+        gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
+        gl.glDrawArrays(GL2.GL_TRIANGLE_FAN, 0, points);
+        gl.glDisableClientState(GL2.GL_VERTEX_ARRAY);
     }
 
     public void rect(Coord ul, Coord sz) {
@@ -613,8 +646,9 @@ public class GOut {
             public void run(GL2 gl) {
                 byte[] buf = new byte[4];
                 gl.glReadPixels(c.x + tx.x, root.sz.y - c.y - tx.y, 1, 1, GL.GL_RGBA, GL2.GL_UNSIGNED_BYTE, ByteBuffer.wrap(buf));
+                Color result = new Color(((int)buf[0]) & 0xff, ((int)buf[1]) & 0xff, ((int)buf[2]) & 0xff, ((int)buf[3]) & 0xff);
                 checkerr(gl);
-                cb.done(new Color(((int) buf[0]) & 0xff, ((int) buf[1]) & 0xff, ((int) buf[2]) & 0xff));
+                cb.done(result);
             }
         });
     }
