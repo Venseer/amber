@@ -27,12 +27,12 @@
 package haven.error;
 
 public interface ErrorStatus {
-    public boolean goterror(Throwable t);
+    public boolean goterror(Report t);
 
     public void done(String ctype, String info);
 
     public static class Simple implements ErrorStatus {
-        public boolean goterror(Throwable t) {
+        public boolean goterror(Report t) {
             System.err.println("Caught error: " + t);
             return (true);
         }

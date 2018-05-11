@@ -26,6 +26,8 @@
 
 package haven;
 
+import haven.res.ui.tt.q.qbuff.QBuff;
+
 import java.util.*;
 
 public class Inventory extends Widget implements DTarget {
@@ -37,8 +39,8 @@ public class Inventory extends Widget implements DTarget {
 
     @RName("inv")
     public static class $_ implements Factory {
-        public Widget create(Widget parent, Object[] args) {
-            return (parent instanceof CharWnd ? new InventoryStudy((Coord) args[0]) : new Inventory((Coord) args[0]));
+        public Widget create(UI ui, Object[] args) {
+            return new Inventory((Coord) args[0]);
         }
     }
 
@@ -119,19 +121,17 @@ public class Inventory extends Widget implements DTarget {
             Window kiln = gameui().getwnd("Kiln");
             if (stockpile == null || smelter != null || kiln != null) {
                 List<WItem> items = getIdenticalItems((GItem) args[0]);
-                Collections.sort(items, new Comparator<WItem>() {
-                    public int compare(WItem a, WItem b) {
-                        GItem.Quality aq = a.item.quality();
-                        GItem.Quality bq = b.item.quality();
-                        if (aq == null || bq == null)
-                            return 0;
-                        else if (aq.q == bq.q)
-                            return 0;
-                        else if (aq.q > bq.q)
-                            return msg.endsWith("asc") ? 1 : -1;
-                        else
-                            return msg.endsWith("asc") ? -1 : 1;
-                    }
+                Collections.sort(items, (a, b) -> {
+                    QBuff aq = a.item.quality();
+                    QBuff bq = b.item.quality();
+                    if (aq == null || bq == null)
+                        return 0;
+                    else if (aq.q == bq.q)
+                        return 0;
+                    else if (aq.q > bq.q)
+                        return msg.endsWith("asc") ? 1 : -1;
+                    else
+                        return msg.endsWith("asc") ? -1 : 1;
                 });
                 for (WItem item : items)
                     item.item.wdgmsg("transfer", Coord.z);
@@ -157,17 +157,20 @@ public class Inventory extends Widget implements DTarget {
 
     public List<WItem> getIdenticalItems(GItem item) {
         List<WItem> items = new ArrayList<WItem>();
-        String name = item.spr().getname();
-        String resname = item.resource().name;
-        for (Widget wdg = child; wdg != null; wdg = wdg.next) {
+        GSprite sprite = item.spr();
+        if (sprite != null) {
+            String name = sprite.getname();
+            String resname = item.resource().name;
+            for (Widget wdg = child; wdg != null; wdg = wdg.next) {
                 if (wdg instanceof WItem) {
-                    GSprite sprite = ((WItem) wdg).item.spr();
+                    sprite = ((WItem) wdg).item.spr();
                     if (sprite != null) {
                         Resource res = ((WItem) wdg).item.resource();
                         if (res != null && res.name.equals(resname) && (name == null || name.equals(sprite.getname())))
                             items.add((WItem) wdg);
                     }
                 }
+            }
         }
         return items;
     }

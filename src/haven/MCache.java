@@ -26,8 +26,6 @@
 
 package haven;
 
-import haven.Resource.Tileset;
-
 import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
 import java.util.*;
@@ -569,7 +567,7 @@ public class MCache {
                 if (res == null)
                     return (null);
                 try {
-                    cset = res.layer(Resource.tileset);
+                    cset = res.layer(Tileset.class);
                 } catch (Loading e) {
                     throw (new LoadingMap(e));
                 }

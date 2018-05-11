@@ -53,7 +53,7 @@ public abstract class ErrorGui extends JDialog implements ErrorStatus {
             add(new JPanel() {{
                 setLayout(new FlowLayout());
                 setAlignmentX(0);
-                add(cbbtn = new JButton("Copy To Clipboard") {{
+                add(cbbtn = new JButton("Copy to Clipboard") {{
                     addActionListener(new ActionListener() {
                         public void actionPerformed(ActionEvent ev) {
                             StringSelection exc = new StringSelection(exbox.getText());
@@ -102,18 +102,21 @@ public abstract class ErrorGui extends JDialog implements ErrorStatus {
         setLocationRelativeTo(parent);
     }
 
-    public boolean goterror(Throwable t) {
+    public boolean goterror(Report r) {
         reporter = Thread.currentThread();
         java.io.StringWriter w = new java.io.StringWriter();
-        t.printStackTrace(new java.io.PrintWriter(w));
+        r.t.printStackTrace(new java.io.PrintWriter(w));
         final String tr = w.toString();
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                exbox.setText(Config.version + ":" + Config.gitrev + "\n\n" + tr);
-                pack();
-                exbox.setCaretPosition(0);
-                setVisible(true);
-            }
+        SwingUtilities.invokeLater(() -> {
+            String details = String.format("%s.%s\n%s, %s\n%s\n\n%s",
+                    Config.version, Config.gitrev.substring(0, 8),
+                    r.props.get("os"), r.props.get("java"),
+                    r.props.get("gpu"),
+                    tr);
+            exbox.setText(details);
+            pack();
+            exbox.setCaretPosition(0);
+            setVisible(true);
         });
         return (true);
     }

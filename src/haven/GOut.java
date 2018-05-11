@@ -32,6 +32,7 @@ import javax.media.opengl.*;
 import java.nio.*;
 
 public class GOut {
+    public final static boolean glerror = false;
     public final BGL gl;
     public final GLConfig gc;
     public Coord ul, sz, tx;
@@ -148,13 +149,16 @@ public class GOut {
     }
 
     public static void checkerr(GL gl) {
-        int err = gl.glGetError();
-        if (err != 0)
-            throw (glexcfor(err));
+        if (glerror) {
+            int err = gl.glGetError();
+            if (err != 0)
+                throw (glexcfor(err));
+        }
     }
 
     public static void checkerr(BGL gl) {
-        gl.bglCheckErr();
+        if (glerror)
+            gl.bglCheckErr();
     }
 
     private void checkerr() {
@@ -313,16 +317,8 @@ public class GOut {
         checkerr();
     }
 
-    public void atextstroked(String text, Coord c, Color color, Color stroke) {
-        Text t = Text.renderstroked(text, color, stroke);
-        Tex T = t.tex();
-        image(T, c);
-        T.dispose();
-        checkerr();
-    }
-
-    public void atextstroked(String text, Coord c, double ax, double ay, Color color, Color stroke) {
-        Text t = Text.renderstroked(text, color, stroke);
+    public void atextstroked(String text, Coord c, double ax, double ay, Color color, Color stroke, Text.Foundry foundry) {
+        Text t = Text.renderstroked(text, color, stroke, foundry);
         Tex T = t.tex();
         Coord sz = t.sz();
         image(T, c.add((int) ((double) sz.x * -ax), (int) ((double) sz.y * -ay)));
@@ -330,23 +326,9 @@ public class GOut {
         checkerr();
     }
 
-    public void atextstroked(String text, Coord c, Color color, Color stroke, Text.Foundry foundry) {
-        Text t = Text.renderstroked(text, color, stroke, foundry);
-        Tex T = t.tex();
-        image(T, c);
-        T.dispose();
-        checkerr();
-    }
-
-    public void atextstroked(String text, int y, Color color, Color stroke, Text.Foundry foundry) {
-        Text t = Text.renderstroked(text, color, stroke, foundry);
-        Tex T = t.tex();
-        image(T, new Coord(sz.x / 2 - t.sz().x / 2, y));
-        T.dispose();
-        checkerr();
-    }
-
     public void poly(Coord... c) {
+        if (TexGL.disableall)
+            return;
         st.set(cur2d);
         apply();
         gl.glBegin(GL2.GL_POLYGON);
@@ -372,6 +354,8 @@ public class GOut {
     }
 
     public void polyline(float w, Coord... c) {
+        if (TexGL.disableall)
+            return;
         st.set(cur2d);
         apply();
         gl.glLineWidth(w);
@@ -383,6 +367,8 @@ public class GOut {
     }
 
     public void frect(Coord ul, Coord sz) {
+        if (TexGL.disableall)
+            return;
         ul = tx.add(ul);
         Coord br = ul.add(sz);
         if (ul.x < this.ul.x) ul.x = this.ul.x;
@@ -487,6 +473,8 @@ public class GOut {
     }
 
     public void fcircle(int x, int y, double rad, final int points) {
+        if (TexGL.disableall)
+            return;
         st.set(cur2d);
         apply();
 

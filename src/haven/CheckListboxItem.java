@@ -5,7 +5,7 @@ public class CheckListboxItem implements Comparable<CheckListboxItem> {
     public boolean selected;
 
     public CheckListboxItem(String name) {
-        this.name = Resource.getLocString(Resource.BUNDLE_LABEL, name);
+        this.name = Resource.getLocString(Resource.BUNDLE_INGREDIENT, name);
     }
 
     public CheckListboxItem(String name, String locBundle) {

@@ -51,7 +51,10 @@ public class ResDrawable extends Drawable {
     public void init() {
         if (spr != null)
             return;
-        spr = Sprite.create(gob, res.get(), sdt.clone());
+        Resource res = this.res.get();
+        spr = Sprite.create(gob, res, sdt.clone());
+        if (gob.type == null)
+            gob.determineType(res.name);
     }
 
     public void setup(RenderList rl) {

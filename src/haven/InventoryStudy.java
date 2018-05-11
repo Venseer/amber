@@ -7,6 +7,13 @@ public class InventoryStudy extends Inventory {
     private Tex[] histtex = null;
     private static final Color histclr = new Color(238, 238, 238, 160);
 
+    @RName("inv-study")
+    public static class $_ implements Factory {
+        public Widget create(UI ui, Object[] args) {
+            return new InventoryStudy((Coord) args[0]);
+        }
+    }
+
     public InventoryStudy(Coord sz) {
         super(sz);
     }
@@ -94,8 +101,10 @@ public class InventoryStudy extends Inventory {
                     int i = y * 4 + x;
                     try {
                         Resource res = itm.item.getres();
-                        Tex tex = res.layer(Resource.imgc).tex();
-                        Coord dim = tex.dim;
+                        Resource.Image layer = res.layer(Resource.imgc);
+                        if (layer == null)
+                            continue;
+                        Coord dim = layer.tex().dim;
 
                         int clearx = dim.x > 32 ? dim.x / 32: 1;
                         int cleary = dim.y > 32 ? dim.y / 32: 1;
@@ -117,7 +126,7 @@ public class InventoryStudy extends Inventory {
         }
 
         if (Config.studybuff && getFreeSpace() == 0) {
-            BuffToggle tgl = gameui().buffs.gettoggle("brain");
+            Buff tgl = gameui().buffs.gettoggle("brain");
             if (tgl != null)
                 tgl.reqdestroy();
         }
@@ -131,7 +140,7 @@ public class InventoryStudy extends Inventory {
         GItem item = ((WItem) w).item;
         try {
             haven.resutil.Curiosity ci = ItemInfo.find(haven.resutil.Curiosity.class, item.info());
-            if (ci != null && item.meter >= 99) {
+            if (ci != null && ((WItem) w).itemmeter.get() > 0.99) {
                 Resource.Tooltip tt = item.resource().layer(Resource.Tooltip.class);
                 if (tt != null)
                     gameui().syslog.append(tt.t + " LP: " + ci.exp, Color.LIGHT_GRAY);
@@ -153,9 +162,9 @@ public class InventoryStudy extends Inventory {
         }
 
         if (Config.studybuff && getFreeSpace() > 0) {
-            BuffToggle tgl = gameui().buffs.gettoggle("brain");
+            Buff tgl = gameui().buffs.gettoggle("brain");
             if (tgl == null)
-                gameui().buffs.addchild(new BuffToggle("brain", Bufflist.buffbrain));
+                gameui().buffs.addchild(new Buff(Bufflist.buffbrain.indir()));
         }
     }
 

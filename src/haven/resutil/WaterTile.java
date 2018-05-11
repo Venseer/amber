@@ -33,7 +33,6 @@ import haven.glsl.*;
 
 import static haven.glsl.Cons.*;
 
-import haven.Resource.Tile;
 import haven.MapMesh.Scan;
 import haven.Surface.Vertex;
 import haven.Surface.MeshVertex;
@@ -199,20 +198,19 @@ public class WaterTile extends Tiler {
         private BetterSurface() {
         }
 
-        private ShaderMacro[] shaders = {
-                new ShaderMacro() {
-                    final AutoVarying skyc = new AutoVarying(Type.VEC3) {
-                        protected Expression root(VertexContext vctx) {
-                            return (mul(icam.ref(), reflect(MiscLib.vertedir(vctx).depref(), vctx.eyen.depref())));
-                        }
-                    };
+        private ShaderMacro shader = new ShaderMacro() {
+            final AutoVarying skyc = new AutoVarying(Type.VEC3) {
+                protected Expression root(VertexContext vctx) {
+                    return (mul(icam.ref(), reflect(MiscLib.vertedir(vctx).depref(), vctx.eyen.depref())));
+                }
+            };
 
-                    public void modify(final ProgramContext prog) {
-                        MiscLib.fragedir(prog.fctx);
-                        final ValBlock.Value nmod = prog.fctx.uniform.new Value(Type.VEC3) {
-                            public Expression root() {
+            public void modify(final ProgramContext prog) {
+                MiscLib.fragedir(prog.fctx);
+                final ValBlock.Value nmod = prog.fctx.uniform.new Value(Type.VEC3) {
+                    public Expression root() {
                 /*
-                return(mul(sub(mix(pick(texture2D(snrm.ref(),
+				return(mul(sub(mix(pick(texture2D(snrm.ref(),
 								  add(mul(pick(MiscLib.fragmapv.ref(), "st"), vec2(l(0.01), l(0.012))),
 								      mul(Cons.mod(MiscLib.time.ref(), l(2.0)), vec2(l(0.025), l(0.035))))),
 							"rgb"),
@@ -223,24 +221,24 @@ public class WaterTile extends Tiler {
 						   abs(sub(Cons.mod(MiscLib.time.ref(), l(2.0)), l(1.0)))),
 					       l(0.5)), vec3(l(1.0 / 16), l(1.0 / 16), l(1.0))));
 				*/
-                                return (mul(sub(mix(add(pick(texture2D(snrm.ref(),
-                                                                        add(mul(pick(MiscLib.fragmapv.ref(), "st"), vec2(l(0.01), l(0.012))),
-                                                                                mul(MiscLib.time.ref(), vec2(l(0.025), l(0.035))))),
-                                                                "rgb"),
-                                                        pick(texture2D(snrm.ref(),
-                                                                        add(mul(pick(MiscLib.fragmapv.ref(), "st"), vec2(l(0.019), l(0.018))),
-                                                                                mul(MiscLib.time.ref(), vec2(l(-0.035), l(-0.025))))),
-                                                                "rgb")),
-                                                add(pick(texture2D(snrm.ref(),
-                                                                        add(mul(pick(MiscLib.fragmapv.ref(), "st"), vec2(l(0.01), l(0.012))),
-                                                                                add(mul(MiscLib.time.ref(), vec2(l(0.025), l(0.035))), vec2(l(0.5), l(0.5))))),
-                                                                "rgb"),
-                                                        pick(texture2D(snrm.ref(),
-                                                                        add(mul(pick(MiscLib.fragmapv.ref(), "st"), vec2(l(0.019), l(0.018))),
-                                                                                add(mul(MiscLib.time.ref(), vec2(l(-0.035), l(-0.025))), vec2(l(0.5), l(0.5))))),
-                                                                "rgb")),
-                                                abs(sub(Cons.mod(MiscLib.time.ref(), l(2.0)), l(1.0)))),
-                                        l(0.5 * 2)), vec3(l(1.0 / 16), l(1.0 / 16), l(1.0))));
+                        return (mul(sub(mix(add(pick(texture2D(snrm.ref(),
+                                add(mul(pick(MiscLib.fragmapv.ref(), "st"), vec2(l(0.01), l(0.012))),
+                                        mul(MiscLib.time.ref(), vec2(l(0.025), l(0.035))))),
+                                "rgb"),
+                                pick(texture2D(snrm.ref(),
+                                        add(mul(pick(MiscLib.fragmapv.ref(), "st"), vec2(l(0.019), l(0.018))),
+                                                mul(MiscLib.time.ref(), vec2(l(-0.035), l(-0.025))))),
+                                        "rgb")),
+                                add(pick(texture2D(snrm.ref(),
+                                        add(mul(pick(MiscLib.fragmapv.ref(), "st"), vec2(l(0.01), l(0.012))),
+                                                add(mul(MiscLib.time.ref(), vec2(l(0.025), l(0.035))), vec2(l(0.5), l(0.5))))),
+                                        "rgb"),
+                                        pick(texture2D(snrm.ref(),
+                                                add(mul(pick(MiscLib.fragmapv.ref(), "st"), vec2(l(0.019), l(0.018))),
+                                                        add(mul(MiscLib.time.ref(), vec2(l(-0.035), l(-0.025))), vec2(l(0.5), l(0.5))))),
+                                                "rgb")),
+                                abs(sub(Cons.mod(MiscLib.time.ref(), l(2.0)), l(1.0)))),
+                                l(0.5 * 2)), vec3(l(1.0 / 16), l(1.0 / 16), l(1.0))));
 				/*
 				return(mul(sub(add(pick(texture2D(snrm.ref(),
 								  add(mul(pick(MiscLib.fragmapv.ref(), "st"), vec2(l(0.01), l(0.012))),
@@ -258,25 +256,21 @@ public class WaterTile extends Tiler {
 						    "rgb"),
 					       l(0.5)), vec3(l(1.0 / 32), l(1.0 / 32), l(1.0))));
 				*/
-                            }
-                        };
-                        nmod.force();
-                        MiscLib.frageyen(prog.fctx).mod(new Macro1<Expression>() {
-                            public Expression expand(Expression in) {
-                                Expression m = nmod.ref();
-                                return (add(mul(pick(m, "x"), vec3(l(1.0), l(0.0), l(0.0))),
-                                        mul(pick(m, "y"), vec3(l(0.0), l(1.0), l(0.0))),
-                                        mul(pick(m, "z"), in)));
-                            }
-                        }, -10);
-                        prog.fctx.fragcol.mod(new Macro1<Expression>() {
-                            public Expression expand(Expression in) {
-                                return (mul(in, textureCube(ssky.ref(), neg(mul(icam.ref(), reflect(MiscLib.fragedir(prog.fctx).depref(), MiscLib.frageyen(prog.fctx).depref())))),
-                                        l(0.4)));
-                            }
-                        }, 0);
                     }
-                }
+                };
+                nmod.force();
+                MiscLib.frageyen(prog.fctx).mod(in -> {
+                    Expression m = nmod.ref();
+                    return (add(mul(pick(m, "x"), vec3(l(1.0), l(0.0), l(0.0))),
+                            mul(pick(m, "y"), vec3(l(0.0), l(1.0), l(0.0))),
+                            mul(pick(m, "z"), in)));
+                }, -10);
+                prog.fctx.fragcol.mod(in -> mul(in, textureCube(ssky.ref(),
+                        neg(mul(icam.ref(), reflect(MiscLib.fragedir(prog.fctx).depref(),
+                                MiscLib.frageyen(prog.fctx).depref())))),
+                        l(0.4))
+                        , 0);
+            }
         };
 
         public void reapply(GOut g) {
@@ -286,8 +280,8 @@ public class WaterTile extends Tiler {
             gl.glUniformMatrix3fv(g.st.prog.uniform(icam), 1, false, PView.camxf(g).transpose().trim3(), 0);
         }
 
-        public ShaderMacro[] shaders() {
-            return (shaders);
+        public ShaderMacro shader() {
+            return (shader);
         }
 
         public void apply(GOut g) {
@@ -333,8 +327,8 @@ public class WaterTile extends Tiler {
     public static final MeshBuf.LayerID<MeshBuf.Vec1Layer> depthlayer = new MeshBuf.V1LayerID(BottomFog.depth);
 
     public static class BottomFog extends GLState.StandAlone {
-        public static final double maxdepth = 8; /* XXX: These should be parameterized. */
-        public static final Color fogcolor = new Color(0, 16, 48);
+        public static final double maxdepth = 25;
+        public static final Color fogcolor = new Color(13, 38, 25);
         public static final Expression mfogcolor = mul(col3(fogcolor), pick(fref(idx(ProgramContext.gl_LightSource.ref(), MapView.amblight.ref()), "diffuse"), "rgb"));
         public static Function rgbmix = new Function.Def(Type.VEC4) {{
             Expression a = param(PDir.IN, Type.VEC4).ref();
@@ -349,16 +343,8 @@ public class WaterTile extends Tiler {
             }
         };
 
-        private final ShaderMacro shaders[] = {
-                new ShaderMacro() {
-                    public void modify(ProgramContext prog) {
-                        prog.fctx.fragcol.mod(new Macro1<Expression>() {
-                            public Expression expand(Expression in) {
-                                return (rgbmix.call(in, mfogcolor, min(div(fragd.ref(), l(maxdepth)), l(1.0))));
-                            }
-                        }, 1000);
-                    }
-                }
+        private final ShaderMacro shader = prog -> {
+            prog.fctx.fragcol.mod(in -> rgbmix.call(in, mfogcolor, min(div(fragd.ref(), l(maxdepth)), l(1.0))), 1000);
         };
 
         private BottomFog() {
@@ -371,8 +357,8 @@ public class WaterTile extends Tiler {
         public void unapply(GOut g) {
         }
 
-        public ShaderMacro[] shaders() {
-            return (shaders);
+        public ShaderMacro shader() {
+            return (shader);
         }
 
         public void prep(Buffer buf) {
@@ -400,16 +386,8 @@ public class WaterTile extends Tiler {
             }
         };
 
-        final ShaderMacro[] shaders = {
-                new ShaderMacro() {
-                    public void modify(ProgramContext prog) {
-                        prog.fctx.fragcol.mod(new Macro1<Expression>() {
-                            public Expression expand(Expression in) {
-                                return (BottomFog.rgbmix.call(in, BottomFog.mfogcolor, clamp(div(fragd.ref(), l(BottomFog.maxdepth)), l(0.0), l(1.0))));
-                            }
-                        }, 1000);
-                    }
-                }
+        final ShaderMacro shader = prog -> {
+            prog.fctx.fragcol.mod(in -> BottomFog.rgbmix.call(in, BottomFog.mfogcolor, clamp(div(fragd.ref(), l(BottomFog.maxdepth)), l(0.0), l(1.0))), 1000);
         };
 
         public void apply(GOut g) {
@@ -418,14 +396,14 @@ public class WaterTile extends Tiler {
         public void unapply(GOut g) {
         }
 
-        public ShaderMacro[] shaders() {
-            return (shaders);
+        public ShaderMacro shader() {
+            return (shader);
         }
     };
 
     @ResName("water")
     public static class Fac implements Factory {
-        public Tiler create(int id, Resource.Tileset set) {
+        public Tiler create(int id, Tileset set) {
             int a = 0;
             int depth = (Integer) set.ta[a++];
             Tiler.MCons bottom = new GroundTile(id, set);
@@ -434,7 +412,7 @@ public class WaterTile extends Tiler {
                 String p = (String) desc[0];
                 if (p.equals("bottom") /* Backwards compatibility */ || p.equals("gnd") || p.equals("trn")) {
                     Resource bres = set.getres().pool.load((String) desc[1], (Integer) desc[2]).get();
-                    Resource.Tileset ts = bres.layer(Resource.tileset);
+                    Tileset ts = bres.layer(Tileset.class);
                     Tiler b = ts.tfac().create(id, ts);
                     bottom = (Tiler.MCons) b;
                 }
@@ -450,7 +428,7 @@ public class WaterTile extends Tiler {
     }
 
     @Deprecated
-    public WaterTile(int id, Resource.Tileset set, int depth) {
+    public WaterTile(int id, Tileset set, int depth) {
         this(id, new GroundTile(0, set), depth);
     }
 

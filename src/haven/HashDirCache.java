@@ -30,6 +30,7 @@ import java.io.*;
 import java.net.URI;
 import java.nio.channels.FileLock;
 import java.nio.channels.FileLockInterruptionException;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Iterator;
@@ -274,7 +275,10 @@ public class HashDirCache implements ResCache {
 
             public void close() throws IOException {
                 fp.close();
-                Files.move(tmp.toPath(), path.toPath(), StandardCopyOption.ATOMIC_MOVE);
+                try {
+                    Files.move(tmp.toPath(), path.toPath(), StandardCopyOption.ATOMIC_MOVE);
+                } catch (AccessDeniedException e) { // ignored
+                }
             }
         });
     }
@@ -300,6 +304,13 @@ public class HashDirCache implements ResCache {
                 fp.close();
             }
         });
+    }
+
+    public void remove(String name) throws IOException {
+        File path = lookup(name, false);
+        if (path == null)
+            throw (new FileNotFoundException(name));
+        path.delete();
     }
 
     public String toString() {
@@ -349,6 +360,25 @@ public class HashDirCache implements ResCache {
                     if (n < 0)
                         break;
                     System.out.write(buf, 0, n);
+                }
+                break;
+            case "purge":
+                for (Iterator<String> i = cache.list(); i.hasNext(); ) {
+                    String nm = i.next();
+                    try {
+                        cache.remove(nm);
+                    } catch (FileNotFoundException e) {
+                        System.err.printf("%s: not found\n", nm);
+                    }
+                }
+                break;
+            case "rm":
+                for (int i = 2; i < args.length; i++) {
+                    try {
+                        cache.remove(args[i]);
+                    } catch (FileNotFoundException e) {
+                        System.err.printf("%s: not found\n", args[i]);
+                    }
                 }
                 break;
             default:

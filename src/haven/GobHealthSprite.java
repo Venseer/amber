@@ -4,14 +4,11 @@ import java.awt.*;
 
 
 public class GobHealthSprite extends Sprite {
-    private static final Text.Foundry gobhpf = new Text.Foundry(Text.sans.deriveFont(Font.BOLD), 12).aa(true);
-    private static final Tex hlt0 = Text.renderstroked("25%", new Color(255, 227, 168), Color.BLACK, gobhpf).tex();
-    private static final Tex hlt1 = Text.renderstroked("50%", new Color(255, 227, 168), Color.BLACK, gobhpf).tex();
-    private static final Tex hlt2 = Text.renderstroked("75%", new Color(255, 227, 168), Color.BLACK, gobhpf).tex();
+    private static final Tex hlt0 = Text.renderstroked("25%", new Color(255, 227, 168), Color.BLACK, Text.num12boldFnd).tex();
+    private static final Tex hlt1 = Text.renderstroked("50%", new Color(255, 227, 168), Color.BLACK, Text.num12boldFnd).tex();
+    private static final Tex hlt2 = Text.renderstroked("75%", new Color(255, 227, 168), Color.BLACK, Text.num12boldFnd).tex();
     public int val;
     private Tex tex;
-    private static Matrix4f cam = new Matrix4f();
-    private static Matrix4f wxf = new Matrix4f();
     private static Matrix4f mv = new Matrix4f();
     private Projection proj;
     private Coord wndsz;
@@ -24,9 +21,11 @@ public class GobHealthSprite extends Sprite {
     }
 
     public void draw(GOut g) {
-        mv.load(cam.load(camp.fin(Matrix4f.id))).mul1(wxf.load(loc.fin(Matrix4f.id)));
-        Coord3f s = proj.toscreen(mv.mul4(Coord3f.o), wndsz);
-        g.image(tex, new Coord((int) s.x - 15, (int) s.y - 20));
+        float[] c = mv.load(camp.fin(Matrix4f.id)).mul1(loc.fin(Matrix4f.id)).homoc();
+        Coord sc = proj.get2dCoord(c, wndsz);
+        sc.x -= 15;
+        sc.y -= 20;
+        g.image(tex, sc);
     }
 
     public boolean setup(RenderList rl) {

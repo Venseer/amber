@@ -50,48 +50,44 @@ public class BumpMap extends GLState {
         this.tex = tex;
     }
 
-    private static final ShaderMacro[] shaders = {
-            new ShaderMacro() {
-                final AutoVarying tanc = new AutoVarying(VEC3) {
-                    protected Expression root(VertexContext vctx) {
-                        return (vctx.nxf(tan.ref()));
-                    }
-                };
-                final AutoVarying bitc = new AutoVarying(VEC3) {
-                    protected Expression root(VertexContext vctx) {
-                        return (vctx.nxf(bit.ref()));
-                    }
-                };
+    private static final ShaderMacro shader = new ShaderMacro() {
+        final AutoVarying tanc = new AutoVarying(VEC3) {
+            protected Expression root(VertexContext vctx) {
+                return (vctx.nxf(tan.ref()));
+            }
+        };
+        final AutoVarying bitc = new AutoVarying(VEC3) {
+            protected Expression root(VertexContext vctx) {
+                return (vctx.nxf(bit.ref()));
+            }
+        };
 
-                public void modify(final ProgramContext prog) {
-                    final ValBlock.Value nmod = prog.fctx.uniform.new Value(VEC3) {
-                        public Expression root() {
-                            return (mul(sub(pick(texture2D(ctex.ref(), Tex2D.texcoord(prog.fctx).ref()), "rgb"),
-                                    l(0.5)), l(2.0)));
-                        }
-                    };
-                    nmod.force();
-                    MiscLib.frageyen(prog.fctx).mod(new Macro1<Expression>() {
-                        public Expression expand(Expression in) {
-                            Expression m = nmod.ref();
-                            return (add(mul(pick(m, "s"), tanc.ref()),
-                                    mul(pick(m, "t"), bitc.ref()),
-                                    mul(pick(m, "p"), in)));
-                        }
-                    }, -100);
+        public void modify(final ProgramContext prog) {
+            final ValBlock.Value nmod = prog.fctx.uniform.new Value(VEC3) {
+                public Expression root() {
+                    return (mul(sub(pick(texture2D(ctex.ref(), Tex2D.texcoord(prog.fctx).ref()), "rgb"),
+                            l(0.5)), l(2.0)));
+                }
+            };
+            nmod.force();
+            MiscLib.frageyen(prog.fctx).mod(in -> {
+                Expression m = nmod.ref();
+                return (add(mul(pick(m, "s"), tanc.ref()),
+                        mul(pick(m, "t"), bitc.ref()),
+                        mul(pick(m, "p"), in)));
+            }, -100);
         /*
-        prog.fctx.fragcol.mod(new Macro1<Expression>() {
+		prog.fctx.fragcol.mod(new Macro1<Expression>() {
 			public Expression expand(Expression in) {
 			    return(mix(in, vec4(nmod.ref(), l(1.0)), l(0.5)));
 			}
 		    }, 1000);
 		*/
-                }
-            }
+        }
     };
 
-    public ShaderMacro[] shaders() {
-        return (shaders);
+    public ShaderMacro shader() {
+        return (shader);
     }
 
     public void reapply(GOut g) {
@@ -146,41 +142,30 @@ public class BumpMap extends GLState {
         }
     }
 
-    @VertexBuf.ResName("tan")
+    @VertexBuf.ResName("tan2")
     public static class Tangents extends VertexBuf.Vec3Array implements MorphedMesh.MorphArray {
-        public Tangents(FloatBuffer data) {
-            super(data, tan);
-        }
-
-        public Tangents(Resource res, Message buf, int nv) {
-            this(VertexBuf.loadbuf(Utils.wfbuf(nv * 3), buf));
-        }
-
-        public MorphedMesh.MorphType morphtype() {
-            return (MorphedMesh.MorphType.DIR);
-        }
-
-        public Tangents dup() {
-            return (new Tangents(Utils.bufcp(data)));
+        public Tangents(FloatBuffer data) {super(data, tan);}
+        public Tangents(Resource res, Message buf, int nv) {this(VertexBuf.loadbuf2(Utils.wfbuf(nv * 3), buf));}
+        public MorphedMesh.MorphType morphtype() {return(MorphedMesh.MorphType.DIR);}
+        public Tangents dup() {return(new Tangents(Utils.bufcp(data)));}
+    }
+    @VertexBuf.ResName("bit2")
+    public static class BiTangents extends VertexBuf.Vec3Array implements MorphedMesh.MorphArray {
+        public BiTangents(FloatBuffer data) {super(data, bit);}
+        public BiTangents(Resource res, Message buf, int nv) {this(VertexBuf.loadbuf2(Utils.wfbuf(nv * 3), buf));}
+        public MorphedMesh.MorphType morphtype() {return(MorphedMesh.MorphType.DIR);}
+        public BiTangents dup() {return(new BiTangents(Utils.bufcp(data)));}
+    }
+    @VertexBuf.ResName("tan")
+    public static class TanDecode implements VertexBuf.ArrayCons {
+        public void cons(Collection<VertexBuf.AttribArray> dst, Resource res, Message buf, int nv) {
+            dst.add(new Tangents(VertexBuf.loadbuf(Utils.wfbuf(nv * 3), buf)));
         }
     }
-
     @VertexBuf.ResName("bit")
-    public static class BiTangents extends VertexBuf.Vec3Array implements MorphedMesh.MorphArray {
-        public BiTangents(FloatBuffer data) {
-            super(data, bit);
-        }
-
-        public BiTangents(Resource res, Message buf, int nv) {
-            this(VertexBuf.loadbuf(Utils.wfbuf(nv * 3), buf));
-        }
-
-        public MorphedMesh.MorphType morphtype() {
-            return (MorphedMesh.MorphType.DIR);
-        }
-
-        public BiTangents dup() {
-            return (new BiTangents(Utils.bufcp(data)));
+    public static class BitDecode implements VertexBuf.ArrayCons {
+        public void cons(Collection<VertexBuf.AttribArray> dst, Resource res, Message buf, int nv) {
+            dst.add(new BiTangents(VertexBuf.loadbuf(Utils.wfbuf(nv * 3), buf)));
         }
     }
 }

@@ -352,6 +352,64 @@ public class Composited implements Rendered, MapView.Clickable {
         }
     }
 
+    public static class Desc {
+        public Indir<Resource> base;
+        public List<MD> mod = new ArrayList<>();
+        public List<ED> equ = new ArrayList<>();
+
+        public Desc() {
+        }
+
+        public Desc(Indir<Resource> base) {
+            this.base = base;
+        }
+
+        public static Desc decode(Session sess, Object[] args) {
+            Desc ret = new Desc();
+            ret.base = sess.getres((Integer) args[0]);
+            Object[] ma = (Object[]) args[1];
+            for (int i = 0; i < ma.length; i += 2) {
+                List<ResData> tex = new ArrayList<ResData>();
+                Indir<Resource> mod = sess.getres((Integer) ma[i]);
+                Object[] ta = (Object[]) ma[i + 1];
+                for (int o = 0; o < ta.length; o++) {
+                    Indir<Resource> tr = sess.getres((Integer) ta[o]);
+                    Message sdt = Message.nil;
+                    if ((ta.length > o + 1) && (ta[o + 1] instanceof byte[]))
+                        sdt = new MessageBuf((byte[]) ta[++o]);
+                    tex.add(new ResData(tr, sdt));
+                }
+                ret.mod.add(new MD(mod, tex));
+            }
+            Object[] ea = (Object[]) args[2];
+            for (int i = 0; i < ea.length; i++) {
+                Object[] qa = (Object[]) ea[i];
+                int n = 0;
+                int t = (Integer) qa[n++];
+                String at = (String) qa[n++];
+                Indir<Resource> res = sess.getres((Integer) qa[n++]);
+                Message sdt = Message.nil;
+                if (qa[n] instanceof byte[])
+                    sdt = new MessageBuf((byte[]) qa[n++]);
+                Coord3f off = new Coord3f(((Number) qa[n + 0]).floatValue(), ((Number) qa[n + 1]).floatValue(), ((Number) qa[n + 2]).floatValue());
+                ret.equ.add(new ED(t, at, new ResData(res, sdt), off));
+            }
+            return (ret);
+        }
+
+        public String toString() {
+            return (String.format("desc(%s, %s, %s)", base, mod, equ));
+        }
+    }
+
+    private final Material.Owner matowner = new Material.Owner() {
+        public <T> T context(Class<T> cl) {
+            if(eqowner == null)
+                throw(new NoContext(cl));
+            return(eqowner.context(cl));
+        }
+    };
+
     private void nmod(boolean nocatch) {
         for (Iterator<MD> i = nmod.iterator(); i.hasNext(); ) {
             MD md = i.next();
@@ -369,7 +427,7 @@ public class Composited implements Rendered, MapView.Clickable {
                 }
                 for (Iterator<ResData> o = md.tex.iterator(); o.hasNext(); ) {
                     ResData res = o.next();
-                    md.real.addlay(Material.fromres((eqowner == null) ? null : eqowner.glob(), res.res.get(), new MessageBuf(res.sdt)));
+                    md.real.addlay(Material.fromres(matowner, res.res.get(), new MessageBuf(res.sdt)));
                     o.remove();
                 }
                 i.remove();
@@ -437,7 +495,37 @@ public class Composited implements Rendered, MapView.Clickable {
         changes(false);
     }
 
-    private static class CompositeClick extends ClickInfo {
+    public Object[] clickargs(ClickInfo inf) {
+        Rendered[] st = inf.array();
+        for (int g = 0; g < st.length; g++) {
+            if (st[g] instanceof Gob) {
+                Gob gob = (Gob) st[g];
+                Object[] ret = {0, (int) gob.id, gob.rc.floor(OCache.posres), 0, 0};
+                int id = 0;
+                for (int i = g - 1; i >= 0; i--) {
+                    if (st[i] instanceof Model) {
+                        Model mod = (Model) st[i];
+                        if (mod.id >= 0)
+                            id = 0x01000000 | ((mod.id & 0xff) << 8);
+                    } else if (st[i] instanceof Equ) {
+                        Equ equ = (Equ) st[i];
+                        if (equ.id >= 0)
+                            id = 0x02000000 | ((equ.id & 0xff) << 16);
+                    } else if (st[i] instanceof FastMesh.ResourceMesh) {
+                        FastMesh.ResourceMesh rm = (FastMesh.ResourceMesh) st[i];
+                        if ((id & 0xff000000) == 0x02000000)
+                            id = (id & 0xffff0000) | (rm.id & 0xffff);
+                    }
+                }
+                ret[4] = id;
+                inf.gob = gob;
+                return (ret);
+            }
+        }
+        return (new Object[0]);
+    }
+
+    /*private static class CompositeClick extends ClickInfo {
         CompositeClick(ClickInfo prev, Integer id) {
             super(prev, id);
         }
@@ -464,6 +552,7 @@ public class Composited implements Rendered, MapView.Clickable {
     public ClickInfo clickinfo(Rendered self, ClickInfo prev) {
         return (new CompositeClick(prev, null));
     }
+    */
 
     public boolean setup(RenderList rl) {
         changes();

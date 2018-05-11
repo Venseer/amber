@@ -36,6 +36,7 @@ import java.util.*;
 import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.prefs.BackingStoreException;
 import java.util.stream.Collectors;
 
 public class OptWnd extends Window {
@@ -93,7 +94,7 @@ public class OptWnd extends Window {
 
             public CPanel(GLSettings gcf) {
                 this.cf = gcf;
-                final WidgetVerticalAppender appender = new WidgetVerticalAppender(this);
+                final WidgetVerticalAppender appender = new WidgetVerticalAppender(withScrollport(this, new Coord(620, 350)));
                 appender.setVerticalMargin(VERTICAL_MARGIN);
                 appender.setHorizontalMargin(HORIZONTAL_MARGIN);
                 appender.add(new CheckBox("Per-fragment lighting") {
@@ -263,17 +264,6 @@ public class OptWnd extends Window {
                         a = val;
                     }
                 });
-                appender.add(new CheckBox("Simple foragables (req. logout)") {
-                    {
-                        a = Config.simpleforage;
-                    }
-
-                    public void set(boolean val) {
-                        Utils.setprefb("simpleforage", val);
-                        Config.simpleforage = val;
-                        a = val;
-                    }
-                });
                 appender.add(new CheckBox("Hide crops") {
                     {
                         a = Config.hidecrops;
@@ -297,8 +287,8 @@ public class OptWnd extends Window {
                     }
                 });
 
-                add(new Label("Disable animations (req. restart):"), new Coord(440, 0));
-                CheckListbox disanimlist = new CheckListbox(180, 8) {
+                appender.add(new Label("Disable animations (req. restart):"));
+                CheckListbox disanimlist = new CheckListbox(320, Math.min(8, Config.disableanim.values().size()), 18 + Config.fontadd) {
                     @Override
                     protected void itemclick(CheckListboxItem itm, int button) {
                         super.itemclick(itm, button);
@@ -307,7 +297,7 @@ public class OptWnd extends Window {
                 };
                 for (CheckListboxItem itm : Config.disableanim.values())
                     disanimlist.items.add(itm);
-                add(disanimlist, new Coord(440, 15));
+                appender.add(disanimlist);
 
                 pack();
             }
@@ -401,7 +391,7 @@ public class OptWnd extends Window {
     }
 
     private void initAudioFirstColumn() {
-        final WidgetVerticalAppender appender = new WidgetVerticalAppender(audio);
+        final WidgetVerticalAppender appender = new WidgetVerticalAppender(withScrollport(audio, new Coord(620, 350)));
         appender.setVerticalMargin(0);
         appender.add(new Label("Master audio volume"));
         appender.setVerticalMargin(VERTICAL_AUDIO_MARGIN);
@@ -520,7 +510,7 @@ public class OptWnd extends Window {
     }
 
     private void initDisplayFirstColumn() {
-        final WidgetVerticalAppender appender = new WidgetVerticalAppender(display);
+        final WidgetVerticalAppender appender = new WidgetVerticalAppender(withScrollport(display, new Coord(620, 350)));
         appender.setVerticalMargin(VERTICAL_MARGIN);
         appender.add(new CheckBox("Display kin names") {
             {
@@ -533,7 +523,7 @@ public class OptWnd extends Window {
                 a = val;
             }
         });
-        appender.add(new CheckBox("Display item completion as progress bar") {
+        appender.add(new CheckBox("Display item completion progress bar") {
             {
                 a = Config.itemmeterbar;
             }
@@ -541,17 +531,6 @@ public class OptWnd extends Window {
             public void set(boolean val) {
                 Utils.setprefb("itemmeterbar", val);
                 Config.itemmeterbar = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Display item completion as percentage") {
-            {
-                a = Config.itempercentage;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("itempercentage", val);
-                Config.itempercentage = val;
                 a = val;
             }
         });
@@ -607,28 +586,6 @@ public class OptWnd extends Window {
                 a = val;
             }
         });
-        appender.add(new CheckBox("Show study remaining time") {
-            {
-                a = Config.showstudylefttime;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("showstudylefttime", val);
-                Config.showstudylefttime = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Show wear bars") {
-            {
-                a = Config.showwearbars;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("showwearbars", val);
-                Config.showwearbars = val;
-                a = val;
-            }
-        });
         appender.add(new CheckBox("Show animal radius") {
             {
                 a = Config.showanimalrad;
@@ -648,6 +605,17 @@ public class OptWnd extends Window {
             public void set(boolean val) {
                 Utils.setprefb("showdframestatus", val);
                 Config.showdframestatus = val;
+                a = val;
+            }
+        });
+        appender.add(new CheckBox("Highlight finished garden pots") {
+            {
+                a = Config.highlightpots;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("highlightpots", val);
+                Config.highlightpots = val;
                 a = val;
             }
         });
@@ -684,6 +652,17 @@ public class OptWnd extends Window {
                 a = val;
             }
         });
+        appender.add(new CheckBox("Miniature trees (req. logout)") {
+            {
+                a = Config.bonsai;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("bonsai", val);
+                Config.bonsai = val;
+                a = val;
+            }
+        });
     }
 
     private void initMap() {
@@ -697,7 +676,7 @@ public class OptWnd extends Window {
     }
 
     private void initGeneral() {
-        final WidgetVerticalAppender appender = new WidgetVerticalAppender(general);
+        final WidgetVerticalAppender appender = new WidgetVerticalAppender(withScrollport(general, new Coord(620, 350)));
 
         appender.setVerticalMargin(VERTICAL_MARGIN);
         appender.setHorizontalMargin(HORIZONTAL_MARGIN);
@@ -820,14 +799,47 @@ public class OptWnd extends Window {
                 a = val;
             }
         });
-        appender.add(new CheckBox("Auto-miner: drop mined ore") {
+        appender.add(new CheckBox("Drop mined stones") {
             {
-                a = Config.dropore;
+                a = Config.dropMinedStones;
             }
 
             public void set(boolean val) {
-                Utils.setprefb("dropore", val);
-                Config.dropore = val;
+                Utils.setprefb("dropMinedStones", val);
+                Config.dropMinedStones = val;
+                a = val;
+            }
+        });
+        appender.add(new CheckBox("Drop mined ore") {
+            {
+                a = Config.dropMinedOre;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("dropMinedOre", val);
+                Config.dropMinedOre = val;
+                a = val;
+            }
+        });
+        appender.add(new CheckBox("Drop mined silver/gold ore") {
+            {
+                a = Config.dropMinedOrePrecious;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("dropMinedOrePrecious", val);
+                Config.dropMinedOrePrecious = val;
+                a = val;
+            }
+        });
+        appender.add(new CheckBox("Drop mined cat gold, petrified seashells, strange crystals") {
+            {
+                a = Config.dropMinedCurios;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("dropMinedCurios", val);
+                Config.dropMinedCurios = val;
                 a = val;
             }
         });
@@ -836,12 +848,12 @@ public class OptWnd extends Window {
     }
 
     private void initCombat() {
-        final WidgetVerticalAppender appender = new WidgetVerticalAppender(combat);
+        final WidgetVerticalAppender appender = new WidgetVerticalAppender(withScrollport(combat, new Coord(620, 350)));
 
         appender.setVerticalMargin(VERTICAL_MARGIN);
         appender.setHorizontalMargin(HORIZONTAL_MARGIN);
 
-        appender.add(new CheckBox("Display damage received by opponents") {
+        appender.add(new CheckBox("Display damage") {
             {
                 a = Config.showdmgop;
             }
@@ -849,17 +861,6 @@ public class OptWnd extends Window {
             public void set(boolean val) {
                 Utils.setprefb("showdmgop", val);
                 Config.showdmgop = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Display damage received by me") {
-            {
-                a = Config.showdmgmy;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("showdmgmy", val);
-                Config.showdmgmy = val;
                 a = val;
             }
         });
@@ -896,17 +897,6 @@ public class OptWnd extends Window {
                 a = val;
             }
         });
-        /*appender.add(new CheckBox("Show attack cooldown delta") {
-            {
-                a = Config.showcddelta;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("showcddelta", val);
-                Config.showcddelta = val;
-                a = val;
-            }
-        });*/
         appender.add(new CheckBox("Log combat actions to system log") {
             {
                 a = Config.logcombatactions;
@@ -951,6 +941,17 @@ public class OptWnd extends Window {
                 a = val;
             }
         });
+        appender.add(new CheckBox("Aggro players in proximity to the mouse cursor") {
+            {
+                a = Config.proximityaggro;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("proximityaggro", val);
+                Config.combshowkeys = val;
+                a = val;
+            }
+        });
         appender.addRow(new Label("Combat key bindings:"), combatkeysDropdown());
 
         combat.add(new PButton(200, "Back", 27, main), new Coord(210, 360));
@@ -958,7 +959,7 @@ public class OptWnd extends Window {
     }
 
     private void initControl() {
-        final WidgetVerticalAppender appender = new WidgetVerticalAppender(control);
+        final WidgetVerticalAppender appender = new WidgetVerticalAppender(withScrollport(control, new Coord(620, 350)));
 
         appender.setVerticalMargin(VERTICAL_MARGIN);
         appender.setHorizontalMargin(HORIZONTAL_MARGIN);
@@ -1030,6 +1031,17 @@ public class OptWnd extends Window {
                 a = val;
             }
         });
+        appender.add(new CheckBox("Disable dropping items over anywhere (overridable with Ctrl)") {
+            {
+                a = Config.nodropping_all;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("nodropping_all", val);
+                Config.nodropping_all = val;
+                a = val;
+            }
+        });
         appender.add(new CheckBox("Enable full zoom-out in Ortho cam") {
             {
                 a = Config.enableorthofullzoom;
@@ -1058,7 +1070,7 @@ public class OptWnd extends Window {
     }
 
     private void initUis() {
-        final WidgetVerticalAppender appender = new WidgetVerticalAppender(uis);
+        final WidgetVerticalAppender appender = new WidgetVerticalAppender(withScrollport(uis, new Coord(620, 310)));
 
         appender.setVerticalMargin(VERTICAL_MARGIN);
         appender.setHorizontalMargin(HORIZONTAL_MARGIN);
@@ -1084,6 +1096,17 @@ public class OptWnd extends Window {
                     }
                 } catch (ClassCastException e) { // in case we are at the login screen
                 }
+            }
+        });
+        appender.add(new CheckBox("Alternative equipment belt window") {
+            {
+                a = Config.quickbelt;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("quickbelt", val);
+                Config.quickbelt = val;
+                a = val;
             }
         });
         appender.add(new CheckBox("Show F-key toolbar") {
@@ -1115,24 +1138,6 @@ public class OptWnd extends Window {
             public void set(boolean val) {
                 Utils.setprefb("showinvonlogin", val);
                 Config.showinvonlogin = val;
-                a = val;
-            }
-        });
-        appender.add(new CheckBox("Hide quests panel") {
-            {
-                a = Config.noquests;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("noquests", val);
-                Config.noquests = val;
-                try {
-                    if (val)
-                        gameui().questpanel.hide();
-                    else
-                        gameui().questpanel.show();
-                } catch (NullPointerException npe) { // ignored
-                }
                 a = val;
             }
         });
@@ -1168,11 +1173,6 @@ public class OptWnd extends Window {
                 a = val;
             }
         });
-        //appender.addRow(new Label("Interface font size (req. restart):"), makeFontSizeGlobalDropdown());
-        //appender.addRow(new Label("Button font size (req. restart):"), makeFontSizeButtonDropdown());
-        //appender.addRow(new Label("Window title font size (req. restart):"), makeFontSizeWndCapDropdown());
-        appender.addRow(new Label("Chat font size (req. restart):"), makeFontSizeChatDropdown());
-
         appender.addRow(new Label("Tree bounding box color (6-digit HEX):"),
                 new TextEntry(85, Config.treeboxclr) {
                     @Override
@@ -1192,12 +1192,60 @@ public class OptWnd extends Window {
                     }
                 }
         );
+        appender.addRow(new Label("Chat font size (req. restart):"), makeFontSizeChatDropdown());
+        appender.add(new CheckBox("Font antialiasing") {
+            {
+                a = Config.fontaa;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("fontaa", val);
+                Config.fontaa = val;
+                a = val;
+            }
+        });
+        appender.addRow(new CheckBox("Custom interface font (req. restart):") {
+            {
+                a = Config.usefont;
+            }
+
+            public void set(boolean val) {
+                Utils.setprefb("usefont", val);
+                Config.usefont = val;
+                a = val;
+            }
+        }, makeFontsDropdown());
+
+        final Label fontAdd = new Label("");
+        appender.addRow(
+                new Label("Increase font size by (req. restart):"),
+                new HSlider(160, 0, 3, Config.fontadd) {
+                    public void added() {
+                        updateLabel();
+                    }
+                    public void changed() {
+                        Utils.setprefi("fontadd", val);
+                        Config.fontadd = val;
+                        updateLabel();
+                    }
+                    private void updateLabel() {
+                        fontAdd.settext(String.format("%d", val));
+                    }
+                },
+                fontAdd
+        );
 
         Button resetWndBtn = new Button(220, "Reset Windows (req. logout)") {
             @Override
             public void click() {
-                for (String wndcap : Window.persistentwnds)
-                    Utils.delpref(wndcap + "_c");
+                try {
+                    for (String key : Utils.prefs().keys()) {
+                        if (key.endsWith("_c")) {
+                            Utils.delpref(key);
+                        }
+                    }
+                } catch (BackingStoreException e) {
+                }
                 Utils.delpref("mmapc");
                 Utils.delpref("mmapwndsz");
                 Utils.delpref("mmapsz");
@@ -1205,7 +1253,6 @@ public class OptWnd extends Window {
                 Utils.delpref("chatsz");
                 Utils.delpref("chatvis");
                 Utils.delpref("menu-visible");
-                Utils.delpref("fbelt_c");
                 Utils.delpref("fbelt_vertical");
             }
         };
@@ -1215,7 +1262,7 @@ public class OptWnd extends Window {
     }
 
     private void initQuality() {
-        final WidgetVerticalAppender appender = new WidgetVerticalAppender(quality);
+        final WidgetVerticalAppender appender = new WidgetVerticalAppender(withScrollport(quality, new Coord(620, 350)));
         appender.setVerticalMargin(VERTICAL_MARGIN);
         appender.setHorizontalMargin(HORIZONTAL_MARGIN);
         appender.add(new CheckBox("Show item quality") {
@@ -1264,24 +1311,12 @@ public class OptWnd extends Window {
         quality.pack();
     }
 
-
     private void initFlowermenus() {
-        final WidgetVerticalAppender appender = new WidgetVerticalAppender(flowermenus);
+        final WidgetVerticalAppender appender = new WidgetVerticalAppender(withScrollport(flowermenus, new Coord(620, 350)));
 
         appender.setVerticalMargin(VERTICAL_MARGIN);
         appender.setHorizontalMargin(HORIZONTAL_MARGIN);
 
-        appender.add(new CheckBox("Open object menus without delay") {
-            {
-                a = Config.instantflowermenu;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("instantflowermenu", val);
-                Config.instantflowermenu = val;
-                a = val;
-            }
-        });
         appender.add(new CheckBox("Automatically pick all clustered mussels (auto 'Pick' needs to be enabled)") {
             {
                 a = Config.autopickmussels;
@@ -1295,7 +1330,7 @@ public class OptWnd extends Window {
         });
         appender.add(new Label("Automatic selecton:"));
 
-        CheckListbox flowerlist = new CheckListbox(140, 15) {
+        CheckListbox flowerlist = new CheckListbox(140, 17) {
             @Override
             protected void itemclick(CheckListboxItem itm, int button) {
                 super.itemclick(itm, button);
@@ -1306,14 +1341,14 @@ public class OptWnd extends Window {
         Utils.loadprefchklist("flowersel", Config.flowermenus);
         for (CheckListboxItem itm : Config.flowermenus.values())
             flowerlist.items.add(itm);
-        flowermenus.add(flowerlist, new Coord(0, 70));
+        flowermenus.add(flowerlist, new Coord(0, 50));
 
         flowermenus.add(new PButton(200, "Back", 27, main), new Coord(210, 360));
         flowermenus.pack();
     }
 
     private void initSoundAlarms() {
-        final WidgetVerticalAppender appender = new WidgetVerticalAppender(soundalarms);
+        final WidgetVerticalAppender appender = new WidgetVerticalAppender(withScrollport(soundalarms, new Coord(620, 350)));
 
         appender.setVerticalMargin(VERTICAL_MARGIN);
         appender.setHorizontalMargin(HORIZONTAL_MARGIN);
@@ -1418,31 +1453,6 @@ public class OptWnd extends Window {
                 Utils.setprefd("studyalarmvol", vol);
             }
         });
-        appender.setVerticalMargin(0);
-        appender.add(new CheckBox("Alarm on rare curios (bluebells, glimmers, ...)") {
-            {
-                a = Config.alarmonforagables;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("alarmonforagables", val);
-                Config.alarmonforagables = val;
-                a = val;
-            }
-        });
-        appender.setVerticalMargin(VERTICAL_AUDIO_MARGIN);
-        appender.add(new HSlider(200, 0, 1000, 0) {
-            protected void attach(UI ui) {
-                super.attach(ui);
-                val = (int) (Config.alarmonforagablesvol * 1000);
-            }
-
-            public void changed() {
-                double vol = val / 1000.0;
-                Config.alarmonforagablesvol = vol;
-                Utils.setprefd("alarmonforagablesvol", vol);
-            }
-        });
         appender.add(new CheckBox("Alarm on trolls") {
             {
                 a = Config.alarmtroll;
@@ -1493,56 +1503,6 @@ public class OptWnd extends Window {
             }
         });
         appender.setVerticalMargin(0);
-        appender.add(new CheckBox("Alarm on bears & lynx") {
-            {
-                a = Config.alarmbears;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("alarmbears", val);
-                Config.alarmbears = val;
-                a = val;
-            }
-        });
-        appender.setVerticalMargin(VERTICAL_AUDIO_MARGIN);
-        appender.add(new HSlider(200, 0, 1000, 0) {
-            protected void attach(UI ui) {
-                super.attach(ui);
-                val = (int) (Config.alarmbearsvol * 1000);
-            }
-
-            public void changed() {
-                double vol = val / 1000.0;
-                Config.alarmbearsvol = vol;
-                Utils.setprefd("alarmbearsvol", vol);
-            }
-        });
-        appender.setVerticalMargin(0);
-        appender.add(new CheckBox("Alarm on mammoths") {
-            {
-                a = Config.alarmmammoth;
-            }
-
-            public void set(boolean val) {
-                Utils.setprefb("alarmmammoth", val);
-                Config.alarmmammoth = val;
-                a = val;
-            }
-        });
-        appender.setVerticalMargin(VERTICAL_AUDIO_MARGIN);
-        appender.add(new HSlider(200, 0, 1000, 0) {
-            protected void attach(UI ui) {
-                super.attach(ui);
-                val = (int) (Config.alarmmammothvol * 1000);
-            }
-
-            public void changed() {
-                double vol = val / 1000.0;
-                Config.alarmmammothvol = vol;
-                Utils.setprefd("alarmmammothvol", vol);
-            }
-        });
-        appender.setVerticalMargin(0);
         appender.add(new CheckBox("Alarm on localized resources") {
             {
                 a = Config.alarmlocres;
@@ -1567,6 +1527,31 @@ public class OptWnd extends Window {
                 Utils.setprefd("alarmlocresvol", vol);
             }
         });
+
+        soundalarms.add(new Label("Alarm on"), new Coord(470, 0));
+        CheckListbox itemslist = new CheckListbox(145, 18) {
+            @Override
+            protected void itemclick(CheckListboxItem itm, int button) {
+                super.itemclick(itm, button);
+                Utils.setprefchklst("alarmitems", Config.alarmitems);
+            }
+        };
+        for (CheckListboxItem itm : Config.alarmitems.values())
+            itemslist.items.add(itm);
+        soundalarms.add(itemslist, new Coord(470, 15));
+        soundalarms.add(new HSlider(145, 0, 1000, 0) {
+            protected void attach(UI ui) {
+                super.attach(ui);
+                val = (int) (Config.alarmonforagablesvol * 1000);
+            }
+
+            public void changed() {
+                double vol = val / 1000.0;
+                Config.alarmonforagablesvol = vol;
+                Utils.setprefd("alarmonforagablesvol", vol);
+            }
+        }, new Coord(470, 340));
+
         soundalarms.add(new PButton(200, "Back", 27, main), new Coord(210, 360));
         soundalarms.pack();
     }
@@ -1603,6 +1588,38 @@ public class OptWnd extends Window {
         };
     }
 
+    @SuppressWarnings("unchecked")
+    private Dropbox<String> makeFontsDropdown() {
+        final List<String> fonts = Arrays.asList(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
+        return new Dropbox<String>(8, fonts) {
+            {
+                super.change(Config.font);
+            }
+
+            @Override
+            protected String listitem(int i) {
+                return fonts.get(i);
+            }
+
+            @Override
+            protected int listitems() {
+                return fonts.size();
+            }
+
+            @Override
+            protected void drawitem(GOut g, String item, int i) {
+                g.text(item, Coord.z);
+            }
+
+            @Override
+            public void change(String item) {
+                super.change(item);
+                Config.font = item;
+                Utils.setpref("font", item);
+            }
+        };
+    }
+
     private List<Locale> enumerateLanguages() {
         Set<Locale> languages = new HashSet<>();
         languages.add(new Locale("en"));
@@ -1633,7 +1650,8 @@ public class OptWnd extends Window {
 
     private static final Pair[] combatkeys = new Pair[]{
             new Pair<>("[1-5] and [shift + 1-5]", 0),
-            new Pair<>("[1-5] and [F1-F5]", 1)
+            new Pair<>("[1-5] and [F1-F5]", 1),
+            new Pair<>("[F1-F10]", 2)
     };
 
     @SuppressWarnings("unchecked")
@@ -1699,6 +1717,11 @@ public class OptWnd extends Window {
         };
     }
 
+    static private Scrollport.Scrollcont withScrollport(Widget widget, Coord sz) {
+        final Scrollport scroll = new Scrollport(sz);
+        widget.add(scroll, new Coord(0, 0));
+        return scroll.cont;
+    }
 
     public OptWnd() {
         this(true);

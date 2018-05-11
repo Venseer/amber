@@ -28,6 +28,7 @@ package haven;
 
 import haven.automation.ErrorSysMsgCallback;
 import haven.automation.PickForageable;
+import haven.livestock.LivestockManager;
 import haven.resutil.FoodInfo;
 
 import java.awt.*;
@@ -39,10 +40,9 @@ import java.util.List;
 import static haven.Inventory.invsq;
 
 public class GameUI extends ConsoleHost implements Console.Directory {
-    public static final Text.Foundry msgfoundry = new Text.Foundry(Text.dfont, Config.fontsizeglobal * 14 / 11);
-    public static final Text.Foundry progressf = new Text.Foundry(Text.sans.deriveFont(Font.BOLD), 12).aa(true);
+    public static final Text.Foundry msgfoundry = new Text.Foundry(Text.dfont, Text.cfg.msg);
     private static final int blpw = 142;
-    public final String chrid;
+    public final String chrid, genus;
     public final long plid;
     private final Hidepanel ulpanel, umpanel, urpanel, brpanel, menupanel;
     public Avaview portrait;
@@ -52,7 +52,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
     public Fightview fv;
     private List<Widget> meters = new LinkedList<Widget>();
     private Text lastmsg;
-    private long msgtime;
+    private double msgtime;
     public Window invwnd, equwnd, makewnd;
     public Inventory maininv;
     public CharWnd chrwdg;
@@ -76,19 +76,20 @@ public class GameUI extends ConsoleHost implements Console.Directory {
     public Bufflist buffs;
     public MinimapWnd minimapWnd;
     public LocalMiniMap mmap;
-    public TimersWnd timerswnd;
+    public haven.timers.TimersWnd timerswnd;
     public QuickSlotsWdg quickslots;
     public StatusWdg statuswindow;
     public AlignPanel questpanel;
-    private boolean updhanddestroyed = false;
     public static boolean swimon = false;
     public static boolean crimeon = false;
     public static boolean trackon = false;
+    public static boolean partyperm = false;
     public boolean crimeautotgld = false;
     public boolean trackautotgld = false;
     public FBelt fbelt;
     public CraftHistoryBelt histbelt;
     private ErrorSysMsgCallback errmsgcb;
+    public LivestockManager livestockwnd;
 
     public abstract class Belt extends Widget {
         public Belt(Coord sz) {
@@ -101,10 +102,10 @@ public class GameUI extends ConsoleHost implements Console.Directory {
                 if (mvc.isect(Coord.z, map.sz)) {
                     map.delay(map.new Hittest(mvc) {
                         protected void hit(Coord pc, Coord2d mc, MapView.ClickInfo inf) {
-                            if (inf == null)
-                                GameUI.this.wdgmsg("belt", slot, 1, ui.modflags(), mc.floor(OCache.posres));
-                            else
-                                GameUI.this.wdgmsg("belt", slot, 1, ui.modflags(), mc.floor(OCache.posres), (int) inf.gob.id, inf.gob.rc.floor(OCache.posres));
+                            Object[] args = {slot, 1, ui.modflags(), mc.floor(OCache.posres)};
+                            if (inf != null)
+                                args = Utils.extend(args, MapView.gobclickargs(inf));
+                            GameUI.this.wdgmsg("belt", args);
                         }
 
                         protected void nohit(Coord pc) {
@@ -118,16 +119,20 @@ public class GameUI extends ConsoleHost implements Console.Directory {
 
     @RName("gameui")
     public static class $_ implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             String chrid = (String) args[0];
             int plid = (Integer) args[1];
-            return (new GameUI(chrid, plid));
+            String genus = "";
+            if(args.length > 2)
+                genus = (String)args[2];
+            return (new GameUI(chrid, plid, genus));
         }
     }
 
-    public GameUI(String chrid, long plid) {
+    public GameUI(String chrid, long plid, String genus) {
         this.chrid = chrid;
         this.plid = plid;
+        this.genus = genus;
         setcanfocus(true);
         setfocusctl(true);
         chat = add(new ChatUI(0, 0));
@@ -184,9 +189,13 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         zerg = add(new Zergwnd(), 187, 50);
         zerg.hide();
 
-        timerswnd = new TimersWnd(this);
+        timerswnd = new haven.timers.TimersWnd(this);
         timerswnd.hide();
         add(timerswnd, new Coord(HavenPanel.w / 2 - timerswnd.sz.x / 2, 100));
+
+        livestockwnd = new LivestockManager();
+        livestockwnd.hide();
+        add(livestockwnd, new Coord(HavenPanel.w / 2 - timerswnd.sz.x / 2, 100));
 
         quickslots = new QuickSlotsWdg();
         if (!Config.quickslots)
@@ -207,7 +216,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         }
 
         fbelt = new FBelt(chrid, Utils.getprefb("fbelt_vertical", true));
-        fbelt.load();
+        fbelt.loadLocal();
         add(fbelt, Utils.getprefc("fbelt_c", new Coord(20, 200)));
         if (!Config.fbelt)
             fbelt.hide();
@@ -441,17 +450,90 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         if ((hand.isEmpty() && (vhand != null)) || ((vhand != null) && !hand.contains(vhand.item))) {
             ui.destroy(vhand);
             vhand = null;
-            if (ui.modshift && ui.keycode == Config.zkey && map.lastItemactGob != null)
-                updhanddestroyed = true;
         }
         if (!hand.isEmpty() && (vhand == null)) {
             DraggedItem fi = hand.iterator().next();
             vhand = add(new ItemDrag(fi.dc, fi.item));
-            if (ui.modshift && ui.keycode == Config.zkey && updhanddestroyed) {
+            if (map.lastItemactClickArgs != null)
                 map.iteminteractreplay();
-                updhanddestroyed = false;
+        }
+    }
+
+    private String mapfilename() {
+        StringBuilder buf = new StringBuilder();
+        buf.append(genus);
+        String chrid = Utils.getpref("mapfile/" + this.chrid, "");
+        if (!chrid.equals("")) {
+            if (buf.length() > 0) buf.append('/');
+            buf.append(chrid);
+        }
+        return (buf.toString());
+    }
+
+    public Coord optplacement(Widget child, Coord org) {
+        Set<Window> closed = new HashSet<>();
+        Set<Coord> open = new HashSet<>();
+        open.add(org);
+        Coord opt = null;
+        double optscore = Double.NEGATIVE_INFINITY;
+        Coord plc = null;
+        {
+            Gob pl = map.player();
+            if (pl != null)
+                plc = pl.sc;
+        }
+        Area parea = Area.sized(Coord.z, sz);
+        while (!open.isEmpty()) {
+            Coord cur = Utils.take(open);
+            double score = 0;
+            Area tarea = Area.sized(cur, child.sz);
+            if (parea.isects(tarea)) {
+                double outside = 1.0 - (((double) parea.overlap(tarea).area()) / ((double) tarea.area()));
+                if ((outside > 0.75) && !cur.equals(org))
+                    continue;
+                score -= Math.pow(outside, 2) * 100;
+            } else {
+                if (!cur.equals(org))
+                    continue;
+                score -= 100;
+            }
+            {
+                boolean any = false;
+                for (Widget wdg = this.child; wdg != null; wdg = wdg.next) {
+                    if (!(wdg instanceof Window))
+                        continue;
+                    Window wnd = (Window) wdg;
+                    if (!wnd.visible)
+                        continue;
+                    Area warea = wnd.parentarea(this);
+                    if (warea.isects(tarea)) {
+                        any = true;
+                        score -= ((double) warea.overlap(tarea).area()) / ((double) tarea.area());
+                        if (!closed.contains(wnd)) {
+                            open.add(new Coord(wnd.c.x - child.sz.x, cur.y));
+                            open.add(new Coord(cur.x, wnd.c.y - child.sz.y));
+                            open.add(new Coord(wnd.c.x + wnd.sz.x, cur.y));
+                            open.add(new Coord(cur.x, wnd.c.y + wnd.sz.y));
+                            closed.add(wnd);
+                        }
+                    }
+                }
+                if (!any)
+                    score += 10;
+            }
+            if (plc != null) {
+                if (tarea.contains(plc))
+                    score -= 100;
+                else
+                    score -= (1 - Math.pow(tarea.closest(plc).dist(plc) / sz.dist(Coord.z), 2)) * 1.5;
+            }
+            score -= (cur.dist(org) / sz.dist(Coord.z)) * 0.75;
+            if (score > optscore) {
+                optscore = score;
+                opt = cur;
             }
         }
+        return (opt);
     }
 
     public void addchild(Widget child, Object... args) {
@@ -468,7 +550,9 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             }
             minimapWnd = minimap();
             mmap = minimapWnd.mmap;
-            if(mmap.save != null) {
+            if(ResCache.global != null) {
+                MapFile file = MapFile.load(ResCache.global, mapfilename());
+                mmap.save(file);
                 mapfile = new MapWnd(mmap.save, map, new Coord(700, 500), "Map");
                 mapfile.hide();
                 add(mapfile, 50, 50);
@@ -476,16 +560,20 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             }
 
             if (trackon) {
-                buffs.addchild(new BuffToggle("track", Bufflist.bufftrack));
-                errornosfx("Tracking is now turned on.");
+                buffs.addchild(new Buff(Bufflist.bufftrack.indir()));
+                msgnosfx(Resource.getLocString(Resource.BUNDLE_MSG, "Tracking is now turned on."));
             }
             if (crimeon) {
-                buffs.addchild(new BuffToggle("crime", Bufflist.buffcrime));
-                errornosfx("Criminal acts are now turned on.");
+                buffs.addchild(new Buff(Bufflist.buffcrime.indir()));
+                msgnosfx(Resource.getLocString(Resource.BUNDLE_MSG, "Criminal acts are now turned on."));
             }
             if (swimon) {
-                buffs.addchild(new BuffToggle("swim", Bufflist.buffswim));
-                errornosfx("Swimming is now turned on.");
+                buffs.addchild(new Buff(Bufflist.buffswim.indir()));
+                msgnosfx(Resource.getLocString(Resource.BUNDLE_MSG, "Swimming is now turned on."));
+            }
+            if (partyperm) {
+                buffs.addchild(new Buff(Bufflist.partyperm.indir()));
+                msgnosfx(Resource.getLocString(Resource.BUNDLE_MSG, "Party permissions are now turned on."));
             }
         } else if (place == "menu") {
             menu = (MenuGrid)brpanel.add(child, 20, 34);
@@ -577,12 +665,22 @@ public class GameUI extends ConsoleHost implements Console.Directory {
                     destroy();
                 }
             };
-            if (Config.noquests)
-                questpanel.hide();
-
             add(questpanel);
         } else if (place == "misc") {
-            add(child, (Coord) args[1]);
+            Coord c;
+            if(args[1] instanceof Coord) {
+                c = (Coord)args[1];
+            } else if(args[1] instanceof Coord2d) {
+                c = ((Coord2d)args[1]).mul(new Coord2d(this.sz.sub(child.sz))).round();
+                c = optplacement(child, c);
+            } else if(args[1] instanceof String) {
+                c = relpos((String)args[1], child, (args.length > 2) ? ((Object[])args[2]) : new Object[] {}, 0);
+            } else {
+                throw(new UI.UIException("Illegal gameui child", place, args));
+            }
+            add(child, c);
+        } else if(place == "abt") {
+            add(child, Coord.z);
         } else {
             throw (new UI.UIException("Illegal gameui child", place, args));
         }
@@ -631,10 +729,11 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             curprogf = fr;
             curprogb = bf;
         }
-        g.aimage(curprog, new Coord(sz.x / 2, (sz.y * 4) / 10), 0.5, 0.5);
+        Coord hgc = new Coord(sz.x / 2, (sz.y * 4) / 10);
+        g.aimage(curprog, hgc, 0.5, 0.5);
 
         if (Config.showprogressperc)
-            g.atextstroked((int) (prog * 100) + "%", (sz.y * 4) / 10 - curprog.sz().y / 2 + 1, Color.WHITE, Color.BLACK, progressf);
+            g.atextstroked((int) (prog * 100) + "%", hgc, 0.5, 2.5, Color.WHITE, Color.BLACK, Text.num12boldFnd);
     }
 
     public void draw(GOut g) {
@@ -650,7 +749,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         if (cmdline != null) {
             drawcmd(g, new Coord(blpw + 10, by -= 20));
         } else if (lastmsg != null) {
-            if ((System.currentTimeMillis() - msgtime) > 3000) {
+            if ((Utils.rtime() - msgtime) > 3.0) {
                 lastmsg = null;
             } else {
                 g.chcolor(0, 0, 0, 192);
@@ -666,59 +765,62 @@ public class GameUI extends ConsoleHost implements Console.Directory {
 
     public void tick(double dt) {
         super.tick(dt);
-        if (!afk && (System.currentTimeMillis() - ui.lastevent > 300000)) {
+        double idle = Utils.rtime() - ui.lastevent;
+        if (!afk && (idle > 300)) {
             afk = true;
             wdgmsg("afk");
-        } else if (afk && (System.currentTimeMillis() - ui.lastevent < 300000)) {
+        } else if (afk && (idle <= 300)) {
             afk = false;
         }
     }
 
-    private void togglebuff(String err, String name, Resource res) {
+    private void togglebuff(String err, Resource res) {
+        String name = res.basename();
         if (err.endsWith("on.") && buffs.gettoggle(name) == null) {
-            buffs.addchild(new BuffToggle(name, res));
+            buffs.addchild(new Buff(res.indir()));
             if (name.equals("swim"))
                 swimon = true;
             else if (name.equals("crime"))
                 crimeon = true;
-            else if (name.equals("track"))
+            else if (name.equals("tracking"))
                 trackon = true;
         } else if (err.endsWith("off.")) {
-            BuffToggle tgl = buffs.gettoggle(name);
+            Buff tgl = buffs.gettoggle(name);
             if (tgl != null)
                 tgl.reqdestroy();
             if (name.equals("swim"))
-                swimon = true;
+                swimon = false;
             else if (name.equals("crime"))
                 crimeon = false;
-            else if (name.equals("track"))
+            else if (name.equals("tracking"))
                 trackon = false;
         }
     }
 
     public void uimsg(String msg, Object... args) {
         if (msg == "err") {
-            String err = (String) args[0];
-            if (err.startsWith("Swimming is now turned")) {
-                togglebuff(err, "swim", Bufflist.buffswim);
-            } else if (err.startsWith("Tracking is now turned")) {
-                togglebuff(err, "track", Bufflist.bufftrack);
+            error((String) args[0]);
+        } else if (msg == "msg") {
+            String text = (String) args[0];
+            if (text.startsWith("Swimming is now turned")) {
+                togglebuff(text, Bufflist.buffswim);
+            } else if (text.startsWith("Tracking is now turned")) {
+                togglebuff(text, Bufflist.bufftrack);
                 if (trackautotgld) {
-                    errornosfx(err);
+                    msgnosfx(text);
                     trackautotgld = false;
                     return;
                 }
-            } else if (err.startsWith("Criminal acts are now turned")) {
-                togglebuff(err, "crime", Bufflist.buffcrime);
+            } else if (text.startsWith("Criminal acts are now turned")) {
+                togglebuff(text, Bufflist.buffcrime);
                 if (crimeautotgld) {
-                    errornosfx(err);
+                    msgnosfx(text);
                     crimeautotgld = false;
                     return;
                 }
+            } else if (text.startsWith("Party permissions are now")) {
+                togglebuff(text, Bufflist.partyperm);
             }
-            error(err);
-        } else if (msg == "msg") {
-            String text = (String) args[0];
             msg(text);
         } else if (msg == "prog") {
             if (args.length > 0)
@@ -729,8 +831,12 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             int slot = (Integer) args[0];
             if (args.length < 2) {
                 belt[slot] = null;
+                if (fbelt != null)
+                    fbelt.delete(slot);
             } else {
                 belt[slot] = ui.sess.getres((Integer) args[1]);
+                if (fbelt != null)
+                    fbelt.add(slot, belt[slot]);
             }
         } else if (msg == "polowner") {
             int id = (Integer)args[0];
@@ -886,9 +992,9 @@ public class GameUI extends ConsoleHost implements Console.Directory {
         if (key == ':') {
             entercmd();
             return (true);
-        } else if (ev.isShiftDown() && ev.getKeyCode() == KeyEvent.VK_DELETE) {
-            toggleui();
-            return (true);
+        } else if((Config.screenurl != null) && (Character.toUpperCase(key) == 'S') && ((ev.getModifiersEx() & (KeyEvent.META_DOWN_MASK | KeyEvent.ALT_DOWN_MASK)) != 0)) {
+            Screenshooter.take(this, Config.screenurl);
+            return(true);
         } else if (key == 3) {
             if (chat.visible && !chat.hasfocus) {
                 setfocus(chat);
@@ -901,6 +1007,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
                 }
             }
             Utils.setprefb("chatvis", chat.targeth != 0);
+            return true;
         } else if ((key == 27) && (map != null) && !map.hasfocus) {
             setfocus(map);
             return (true);
@@ -929,7 +1036,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             quickslots.drop(QuickSlotsWdg.rc, Coord.z);
             quickslots.simulateclick(QuickSlotsWdg.rc);
             return true;
-        } else if (ev.isAltDown() && ev.getKeyCode() == KeyEvent.VK_S) {
+        } else if (ev.isControlDown() && ev.getKeyCode() == KeyEvent.VK_S) {
             HavenPanel.needtotakescreenshot = true;
             return true;
         } else if (ev.isControlDown() && ev.getKeyCode() == KeyEvent.VK_H) {
@@ -992,27 +1099,15 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             Thread t = new Thread(new PickForageable(this), "PickForageable");
             t.start();
             return true;
+        } else if (ev.isControlDown() && ev.getKeyCode() == KeyEvent.VK_U) {
+            TexGL.disableall = !TexGL.disableall;
+            return true;
         }
         return (super.globtype(key, ev));
     }
 
     public boolean mousedown(Coord c, int button) {
         return (super.mousedown(c, button));
-    }
-
-    private boolean uishowing = true;
-
-    // TODO: toggle chat, betls, and minimap visibility as well
-    public void toggleui() {
-        Hidepanel[] panels = {brpanel, ulpanel, umpanel, urpanel, menupanel};
-        uishowing = !uishowing;
-        if (uishowing) {
-            for (Hidepanel p : panels)
-                p.mshow(true);
-        } else {
-            for (Hidepanel p : panels)
-                p.mshow(false);
-        }
     }
 
     public void resize(Coord sz) {
@@ -1034,7 +1129,7 @@ public class GameUI extends ConsoleHost implements Console.Directory {
     }
 
     public void msg(String msg, Color color, Color logcol) {
-        msgtime = System.currentTimeMillis();
+        msgtime = Utils.rtime();
         msg = Resource.getLocString(Resource.BUNDLE_MSG, msg);
         lastmsg = msgfoundry.render(msg, color);
         syslog.append(msg, logcol);
@@ -1049,20 +1144,20 @@ public class GameUI extends ConsoleHost implements Console.Directory {
     private static final Resource errsfx = Resource.local().loadwait("sfx/error");
     private static final Resource msgsfx = Resource.local().loadwait("sfx/msg");
 
-    private long lasterrsfx = 0;
+    private double lasterrsfx = 0;
     public void error(String msg) {
         msg(msg, new Color(192, 0, 0), new Color(255, 0, 0));
         if (errmsgcb != null)
             errmsgcb.notifyErrMsg(msg);
-        long now = System.currentTimeMillis();
-        if(now - lasterrsfx > 100) {
+        double now = Utils.rtime();
+        if(now - lasterrsfx > 0.1) {
             Audio.play(errsfx);
             lasterrsfx = now;
         }
     }
 
-    public void errornosfx(String msg) {
-        msg(msg, new Color(192, 0, 0), new Color(255, 0, 0));
+    public void msgnosfx(String msg) {
+        msg(msg, new Color(255, 255, 254), Color.WHITE);
     }
 
     private static final String charterMsg = "The name of this charterstone is \"";
@@ -1213,12 +1308,16 @@ public class GameUI extends ConsoleHost implements Console.Directory {
                 Coord c = beltc(i);
                 g.image(invsq, beltc(i));
                 try {
-                    if (belt[slot] != null)
-                        g.image(belt[slot].get().layer(Resource.imgc).tex(), c.add(1, 1));
+                    if (belt[slot] != null) {
+                        Resource.Image img = belt[slot].get().layer(Resource.imgc);
+                        if (img == null)
+                            throw (new NullPointerException("No image in " + belt[slot].get().name));
+                        g.image(img.tex(), c.add(1, 1));
+                    }
                 } catch (Loading e) {
                 }
-                g.chcolor(156, 180, 158, 255);
-                FastText.aprintf(g, c.add(invsq.sz().sub(2, 0)), 1, 1, "%d", (i + 1) % 10);
+                g.chcolor(FBelt.keysClr);
+                FastText.aprint(g, new Coord(c.x + invsq.sz().x - 2, c.y + invsq.sz().y), 1, 1, "" + (i + 1));
                 g.chcolor();
             }
             super.draw(g);
@@ -1292,7 +1391,20 @@ public class GameUI extends ConsoleHost implements Console.Directory {
             System.arraycopy(args, 1, ad, 0, ad.length);
             wdgmsg("act", ad);
         });
-        cmdmap.put("tool", (cons, args) -> add(gettype(args[1]).create(GameUI.this, new Object[0]), 200, 200));
+        cmdmap.put("chrmap", new Console.Command() {
+            public void run(Console cons, String[] args) {
+                Utils.setpref("mapfile/" + chrid, args[1]);
+            }
+        });
+        cmdmap.put("tool", new Console.Command() {
+            public void run(Console cons, String[] args) {
+                try {
+                    add(gettype(args[1]).create(ui, new Object[0]), 200, 200);
+                } catch(RuntimeException e) {
+                    e.printStackTrace(Debug.log);
+                }
+            }
+        });
         cmdmap.put("help", (cons, args) -> {
             cons.out.println("Available console commands:");
             cons.findcmds().forEach((s, cmd) -> cons.out.println(s));

@@ -55,20 +55,21 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
 
     private final Collection<ResAttr.Cell<?>> rdata = new LinkedList<ResAttr.Cell<?>>();
     private final Collection<ResAttr.Load> lrdata = new LinkedList<ResAttr.Load>();
-    private int cropstgmaxval = 0;
+    public int cropstgmaxval = 0;
     private Overlay gobpath = null;
     private Overlay bowvector = null;
     private static final Material.Colors dframeEmpty = new Material.Colors(new Color(87, 204, 73, 255));
     private static final Material.Colors dframeDone = new Material.Colors(new Color(209, 42, 42, 255));
+    private static final Material.Colors potDOne = new Material.Colors(new Color(0, 0, 0, 255));
     private static final Gob.Overlay animalradius = new Gob.Overlay(new BPRadSprite(100.0F, -10.0F, BPRadSprite.smatDanger));
     public Boolean knocked = null;  // knocked will be null if pose update request hasn't been received yet
     public Type type = null;
 
     public enum Type {
-        OTHER(0), DFRAME(1), TREE(2), BUSH(3), BOULDER(4), PLAYER(5), SIEGE_MACHINE(6), MAMMOTH(7), BAT(8), OLDTRUNK(9),
+        OTHER(0), DFRAME(1), TREE(2), BUSH(3), BOULDER(4), PLAYER(5), SIEGE_MACHINE(6), MAMMOTH(7), BAT(8), OLDTRUNK(9), GARDENPOT(10), MUSSEL(11), LOC_RESOURCE(12), FU_YE_CURIO(13), SEAL(14), EAGLE(15),
         PLANT(16), MULTISTAGE_PLANT(17),
-        MOB(32), BEAR(34), LYNX(35), TROLL(38), WALRUS(39),
-        WOODEN_SUPPORT(64), STONE_SUPPORT(65), TROUGH(66), BEEHIVE(67);
+        MOB(32), BEAR(34), LYNX(35), WILDGOAT(36), TROLL(38), WALRUS(39),
+        WOODEN_SUPPORT(64), STONE_SUPPORT(65), METAL_SUPPORT(66), TROUGH(67), BEEHIVE(68);
 
         public final int value;
 
@@ -162,7 +163,7 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
                 this.clsid = clsid;
             }
 
-            void set(ResAttr attr) {
+            public void set(ResAttr attr) {
                 if (this.attr != null)
                     this.attr.dispose();
                 this.attr = clsid.cast(attr);
@@ -437,16 +438,7 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
     public void draw(GOut g) {
     }
 
-    private void determineType() {
-        Resource res = null;
-        try {
-            res = getres();
-        } catch (Loading l) {
-        }
-        if (res == null)
-            return;
-        String name = res.name;
-
+    public void determineType(String name) {
         if (name.startsWith("gfx/terobjs/trees") && !name.endsWith("log") && !name.endsWith("oldtrunk"))
             type = Type.TREE;
         else if (name.endsWith("oldtrunk"))
@@ -469,24 +461,40 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
             type = Type.LYNX;
         else if (name.endsWith("/walrus"))
             type = Type.WALRUS;
+        else if (name.endsWith("/greyseal"))
+            type = Type.SEAL;
         else if (name.endsWith("/mammoth"))
             type = Type.MAMMOTH;
         else if (name.endsWith("/troll"))
             type = Type.TROLL;
         else if (name.endsWith("/bat"))
             type = Type.BAT;
-        else if (name.endsWith("/boar") || name.endsWith("/badger") || name.endsWith("/wolverine"))
+        else if (name.endsWith("/boar") || name.endsWith("/badger") || name.endsWith("/wolverine") || name.endsWith("/adder"))
             type = Type.MOB;
         else if (name.endsWith("/minesupport") || name.endsWith("/ladder"))
             type = Type.WOODEN_SUPPORT;
         else if (name.endsWith("/column"))
             type = Type.STONE_SUPPORT;
+        else if (name.endsWith("/minebeam"))
+            type = Type.METAL_SUPPORT;
         else if (name.endsWith("/trough"))
             type = Type.TROUGH;
         else if (name.endsWith("/beehive"))
             type = Type.BEEHIVE;
         else if (name.endsWith("/dframe"))
             type = Type.DFRAME;
+        else if (name.endsWith("/gardenpot"))
+            type = Type.GARDENPOT;
+        else if (name.endsWith("/mussels"))
+            type = Type.MUSSEL;
+        else if (name.endsWith("/goldeneagle"))
+            type = Type.EAGLE;
+        else if (name.endsWith("/wildgoat"))
+            type = Type.WILDGOAT;
+        else if (Config.alarmitems.containsKey(name) && Config.alarmitems.get(name).selected)
+            type = Type.FU_YE_CURIO;
+        else if (Config.locres.contains(name))
+            type = Type.LOC_RESOURCE;
         else
             type = Type.OTHER;
     }
@@ -505,9 +513,6 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
 
         if (MapView.markedGobs.contains(id))
             rl.prepc(MapView.markedFx);
-
-        if (type == null)
-            determineType();
 
         if (Config.showdframestatus && type == Type.DFRAME) {
             boolean done = true;
@@ -534,6 +539,9 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
                 rl.prepc(dframeEmpty);
         }
 
+        if (Config.highlightpots && type == Type.GARDENPOT && ols.size() == 2)
+            rl.prepc(potDOne);
+
         GobHighlight highlight = getattr(GobHighlight.class);
         if (highlight != null) {
             if (highlight.cycle <= 0)
@@ -544,7 +552,7 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
 
         Drawable d = getattr(Drawable.class);
         if (d != null) {
-            if (Config.hidegobs && type == Type.TREE) {
+            if (Config.hidegobs && (type == Type.TREE || type == Type.BUSH)) {
                 GobHitbox.BBox bbox = GobHitbox.getBBox(this, true);
                 if (bbox != null) {
                     rl.add(new Overlay(new GobHitbox(this, bbox.a, bbox.b, true)), null);
@@ -561,31 +569,21 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
 
             if (Config.showplantgrowstage) {
                 if (Type.PLANT.has(type)) {
-                    Resource res = null;
-                    try {
-                        res = getres();
-                    } catch (Loading l) {
-                    }
-                    if (res != null) {
-                        GAttrib rd = getattr(ResDrawable.class);
-                        if (rd != null) {
-                            int stage = ((ResDrawable) rd).sdt.peekrbuf(0);
-                            if (cropstgmaxval == 0) {
-                                for (FastMesh.MeshRes layer : res.layers(FastMesh.MeshRes.class)) {
-                                    int stg = layer.id / 10;
-                                    if (stg > cropstgmaxval)
-                                        cropstgmaxval = stg;
-                                }
-                            }
-                            Overlay ol = findol(Sprite.GROWTH_STAGE_ID);
-                            if (ol == null && (stage == cropstgmaxval || stage > 0 && stage < 6)) {
-                                addol(new Gob.Overlay(Sprite.GROWTH_STAGE_ID, new PlantStageSprite(stage, cropstgmaxval, type == Type.MULTISTAGE_PLANT)));
-                            } else if (stage <= 0 || (stage != cropstgmaxval && stage >= 6)) {
-                                ols.remove(ol);
-                            } else if (((PlantStageSprite) ol.spr).stg != stage) {
-                                ((PlantStageSprite) ol.spr).update(stage, cropstgmaxval);
-                            }
+                    int stage = getattr(ResDrawable.class).sdt.peekrbuf(0);
+                    if (cropstgmaxval == 0) {
+                        for (FastMesh.MeshRes layer : getres().layers(FastMesh.MeshRes.class)) {
+                            int stg = layer.id / 10;
+                            if (stg > cropstgmaxval)
+                                cropstgmaxval = stg;
                         }
+                    }
+                    Overlay ol = findol(Sprite.GROWTH_STAGE_ID);
+                    if (ol == null && (stage == cropstgmaxval || stage > 0 && stage < 6)) {
+                        addol(new Gob.Overlay(Sprite.GROWTH_STAGE_ID, new PlantStageSprite(stage, cropstgmaxval, type == Type.MULTISTAGE_PLANT)));
+                    } else if (stage <= 0 || (stage != cropstgmaxval && stage >= 6)) {
+                        ols.remove(ol);
+                    } else if (((PlantStageSprite) ol.spr).stg != stage) {
+                        ((PlantStageSprite) ol.spr).update(stage, cropstgmaxval);
                     }
                 }
 
@@ -702,9 +700,13 @@ public class Gob implements Sprite.Owner, Skeleton.ModOwner, Rendered {
         return (null);
     }
 
-    public Glob glob() {
-        return (glob);
-    }
+    private static final ClassResolver<Gob> ctxr = new ClassResolver<Gob>()
+            .add(Glob.class, g -> g.glob)
+            .add(Session.class, g -> g.glob.sess);
+    public <T> T context(Class<T> cl) {return(ctxr.context(cl, this));}
+
+    @Deprecated
+    public Glob glob() {return(context(Glob.class));}
 
     /* Because generic functions are too nice a thing for Java. */
     public double getv() {

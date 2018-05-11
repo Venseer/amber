@@ -35,7 +35,6 @@ import haven.MapFile.Marker;
 import haven.MapFile.PMarker;
 import haven.MapFile.SMarker;
 import haven.MapFileWidget.*;
-import haven.MapFileWidget.Location;
 import haven.BuddyWnd.GroupSelector;
 
 import static haven.MCache.tilesz;
@@ -59,7 +58,7 @@ public class MapWnd extends Window {
     private int markerseq = -1;
     private boolean domark = false;
     private final Collection<Runnable> deferred = new LinkedList<>();
-    private static final Tex plx = Text.renderstroked("\u2716",  Color.red, Color.BLACK, LocalMiniMap.bld12fnd).tex();
+    private static final Tex plx = Text.renderstroked("\u2716",  Color.red, Color.BLACK, Text.num12boldFnd).tex();
     private  Predicate<Marker> filter = (m -> true);
     private final static Comparator<Marker> namecmp = ((a, b) -> a.nm.compareTo(b.nm));
 
@@ -357,6 +356,7 @@ public class MapWnd extends Window {
                             mark.nm = text;
                             view.file.update(mark);
                             commit();
+                            change2(null);
                         }
                     });
                 }
@@ -420,11 +420,13 @@ public class MapWnd extends Window {
     }
 
     public boolean keydown(KeyEvent ev) {
+        if (super.keydown(ev))
+            return (true);
         if (ev.getKeyCode() == KeyEvent.VK_HOME) {
             recenter();
             return (true);
         }
-        return (super.keydown(ev));
+        return (false);
     }
 
     private UI.Grab drag;
@@ -464,7 +466,7 @@ public class MapWnd extends Window {
     public void markobj(long gobid, long oid, Indir<Resource> resid, String nm) {
         synchronized (deferred) {
             deferred.add(new Runnable() {
-                long f = 0;
+                double f = 0;
 
                 public void run() {
                     Resource res = resid.get();
@@ -475,12 +477,12 @@ public class MapWnd extends Window {
                             return;
                         rnm = tt.t;
                     }
-                    long now = System.currentTimeMillis();
+                    double now = Utils.rtime();
                     if (f == 0)
                         f = now;
                     Gob gob = ui.sess.glob.oc.getgob(gobid);
                     if (gob == null) {
-                        if (now - f < 1000)
+                        if (now - f < 1.0)
                             throw (new Loading());
                         return;
                     }

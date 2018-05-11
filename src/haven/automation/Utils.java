@@ -100,4 +100,32 @@ public class Utils {
             } while (gui.prog >= 0);
         }
     }
+
+    public static WItem findItemByPrefixInInv(Inventory inv, String resNamePrefix) {
+        for (Widget wdg = inv.child; wdg != null; wdg = wdg.next) {
+            if (wdg instanceof WItem) {
+                WItem witm = ((WItem) wdg);
+                try {
+                    if (witm.item.getres().name.startsWith(resNamePrefix))
+                        return witm;
+                } catch (Loading l) {
+                }
+            }
+        }
+        return null;
+    }
+
+    public static WItem findItemInInv(Inventory inv, String resName) {
+        for (Widget wdg = inv.child; wdg != null; wdg = wdg.next) {
+            if (wdg instanceof WItem) {
+                WItem witm = ((WItem) wdg);
+                try {
+                    if (witm.item.getres().name.equals(resName))
+                        return witm;
+                } catch (Loading l) {
+                }
+            }
+        }
+        return null;
+    }
 }

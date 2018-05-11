@@ -7,6 +7,7 @@ import haven.ItemInfo.SpriteOwner;
 import haven.Label;
 import haven.Resource.Image;
 import haven.Resource.Pagina;
+import haven.res.lib.tspec.Spec;
 import haven.res.ui.tt.q.qbuff.QBuff;
 
 import java.awt.*;
@@ -17,7 +18,7 @@ import java.util.Random;
 // ui/barterstand
 public class Shopbox extends Widget implements SpriteOwner, Owner {
     public static final Text any = Text.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Any"));
-    public static final Text qlbl = Text.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Quality:"), Color.LIGHT_GRAY);
+    public static final Text qlbl = Text.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Quality:"));
     public static final Tex bg = Resource.loadtex("ui/shopbox");
     public static final Coord itemc = new Coord(5, 5);
     public static final Coord buyc = new Coord(5, 66);
@@ -49,7 +50,7 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
     private Tex pricetip = null;
     private Random rnd = null;
 
-    public static Widget mkwidget(Widget var0, Object... var1) {
+    public static Widget mkwidget(UI ui, Object... var1) {
         boolean var2 = ((Integer) var1[0]).intValue() != 0;
         return new Shopbox(var2);
     }
@@ -132,16 +133,31 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
     public List<ItemInfo> info() {
         if (this.cinfo == null) {
             this.cinfo = ItemInfo.buildinfo(this, this.info);
-
-            for (ItemInfo info : cinfo) {
-                if (info instanceof QBuff) {
-                    QBuff qb = (QBuff)info;
-                    quality = Text.render((int) qb.q + "");
-                    break;
-                }
-            }
+            QBuff qb = quality();
+            if (qb != null)
+                quality = Text.render((int) qb.q + "");
         }
         return this.cinfo;
+    }
+
+    private QBuff getQBuff(List<ItemInfo> infolist) {
+        for (ItemInfo info : infolist) {
+            if (info instanceof QBuff)
+                return (QBuff) info;
+        }
+        return null;
+    }
+
+    private QBuff quality() {
+        try {
+            for (ItemInfo info : info()) {
+                if (info instanceof ItemInfo.Contents)
+                    return getQBuff(((ItemInfo.Contents) info).sub);
+            }
+            return getQBuff(info());
+        } catch (Loading l) {
+        }
+        return null;
     }
 
     public Object tooltip(Coord var1, Widget var2) {
@@ -177,6 +193,7 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
         }
     }
 
+    @Deprecated
     public Glob glob() {
         return this.ui.sess.glob;
     }
@@ -294,7 +311,7 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
                         }
                     }
 
-                    this.price = new Spec(new ResData(var4, (Message) var5), this.ui.sess.glob, (Object[]) var6);
+                    this.price = new Spec(new ResData(var4, (Message)var5), Spec.uictx(this.ui), (Object[])var6);
                 }
 
                 this.pricetip = null;
@@ -315,6 +332,11 @@ public class Shopbox extends Widget implements SpriteOwner, Owner {
                 super.uimsg(var1, var2);
             }
         }
+    }
+
+    @Override
+    public <C> C context(Class<C> var1) {
+        return Spec.uictx.context(var1, this.ui);
     }
 
     public abstract class AttrCache<T> {

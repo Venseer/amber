@@ -87,8 +87,8 @@ public class ActAudio extends GLState.Abstract {
             synchronized (clips) {
                 if (mixer != null) {
                     Audio.stop(volc);
-            /* XXX: More likely, cycling should be fixed so as
-             * to not go on cycling a discarded actaudio.
+		    /* XXX: More likely, cycling should be fixed so as
+		     * to not go on cycling a discarded actaudio.
 		    mixer = null;
 		    volc = null;
 		    */
@@ -142,9 +142,9 @@ public class ActAudio extends GLState.Abstract {
 
         public Ambience(Resource res, double bvol) {
             if (res.layer(Resource.audio, "amb") == null) {
-		/* This check is mostly just to make sure the resource
-		 * is loaded and doesn't throw Loading exception in
-		 * the setup routine. */
+                /* This check is mostly just to make sure the resource
+                 * is loaded and doesn't throw Loading exception in
+                 * the setup routine. */
                 throw (new RuntimeException("No ambient clip found in " + res));
             }
             this.res = res;
@@ -160,7 +160,7 @@ public class ActAudio extends GLState.Abstract {
             private final VolAdjust clip;
             private int n;
             private double vacc;
-            private double lastupd = System.currentTimeMillis() / 1000.0;
+            private double lastupd = Utils.rtime();
 
             public Glob(Resource res) {
                 this.res = res;
@@ -183,7 +183,7 @@ public class ActAudio extends GLState.Abstract {
             }
 
             public boolean cycle(ActAudio list) {
-                double now = System.currentTimeMillis() / 1000.0;
+                double now = Utils.rtime();
                 double td = Math.max(now - lastupd, 0.0);
                 if (vacc < clip.vol)
                     clip.vol = Math.max(clip.vol - (td * 0.5), 0.0);

@@ -34,7 +34,7 @@ public class Textlog extends Widget {
     static Tex texpap = Resource.loadtex("gfx/hud/texpap");
     static Tex schain = Resource.loadtex("gfx/hud/schain");
     static Tex sflarp = Resource.loadtex("gfx/hud/sflarp");
-    static RichText.Foundry fnd = new RichText.Foundry(TextAttribute.FAMILY, "SansSerif", TextAttribute.SIZE, 9, TextAttribute.FOREGROUND, Color.BLACK);
+    static RichText.Foundry fnd = new RichText.Foundry(TextAttribute.FAMILY, Text.cfg.font.get("sans"), TextAttribute.SIZE, 11, TextAttribute.FOREGROUND, Color.BLACK);
     List<Text> lines;
     int maxy, cury;
     int margin = 3;
@@ -42,7 +42,7 @@ public class Textlog extends Widget {
 
     @RName("log")
     public static class $_ implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             return (new Textlog((Coord) args[0]));
         }
     }

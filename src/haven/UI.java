@@ -33,6 +33,7 @@ import java.awt.event.InputEvent;
 
 public class UI {
     public RootWidget root;
+    public static int MOD_SHIFT = 1, MOD_CTRL = 2, MOD_META = 4, MOD_SUPER = 8;
     final private LinkedList<Grab> keygrab = new LinkedList<Grab>(), mousegrab = new LinkedList<Grab>();
     public Map<Integer, Widget> widgets = new TreeMap<Integer, Widget>();
     public Map<Widget, Integer> rwidgets = new HashMap<Widget, Integer>();
@@ -42,14 +43,15 @@ public class UI {
     public boolean modshift, modctrl, modmeta, modsuper;
     public int keycode;
     public Object lasttip;
-    long lastevent, lasttick;
+    double lastevent, lasttick;
     public Widget mouseon;
     public Console cons = new WidgetConsole();
     private Collection<AfterDraw> afterdraws = new LinkedList<AfterDraw>();
     public final ActAudio audio = new ActAudio();
+    public int beltWndId = -1;
 
     {
-        lastevent = lasttick = System.currentTimeMillis();
+        lastevent = lasttick = Utils.rtime();
     }
 
     public interface Receiver {
@@ -72,7 +74,6 @@ public class UI {
                 Config.zkey = args[1].toString().equals("z") ? KeyEvent.VK_Y : KeyEvent.VK_Z;
                 Utils.setprefi("zkey", Config.zkey);
             });
-            setcmd("charter", (cons1, args) -> CharterList.addCharter(args[1]));
         }
 
         private void findcmds(Map<String, Command> map, Widget wdg) {
@@ -128,8 +129,8 @@ public class UI {
     }
 
     public void tick() {
-        long now = System.currentTimeMillis();
-        root.tick((now - lasttick) / 1000.0);
+        double now = Utils.rtime();
+        root.tick(now - lasttick);
         lasttick = now;
     }
 
@@ -143,76 +144,127 @@ public class UI {
     }
 
     public void newwidget(int id, String type, int parent, Object[] pargs, Object... cargs) throws InterruptedException {
+        if (Config.quickbelt && type.equals("wnd") && cargs[1].equals("Belt")) {
+            // use custom belt window
+            type = "wnd-belt";
+            beltWndId = id;
+        } else if (type.equals("inv") && pargs[0].toString().equals("study")) {
+            // use custom study inventory
+            type = "inv-study";
+        }
+
         Widget.Factory f = Widget.gettype2(type);
-        synchronized (this) {
-            Widget pwdg = widgets.get(parent);
-            if (pwdg == null)
-                throw (new UIException("Null parent widget " + parent + " for " + id, type, cargs));
+        synchronized(this) {
+            if (parent == beltWndId)
+                f = Widget.gettype2("inv-belt");
 
-            Widget wdg = pwdg.makechild(f, pargs, cargs);
+            Widget wdg = f.create(this, cargs);
+            wdg.attach(this);
+            if (parent != 65535) {
+                Widget pwdg = widgets.get(parent);
+                if(pwdg == null)
+                    throw(new UIException("Null parent widget " + parent + " for " + id, type, cargs));
+                pwdg.addchild(wdg, pargs);
 
-            if (wdg instanceof ISBox && pwdg instanceof Window && ((Window) pwdg).origcap.equals("Stockpile")) {
-                TextEntry entry = new TextEntry(40, "") {
-                    @Override
-                    public boolean keydown(KeyEvent e) {
-                        return !(e.getKeyCode() >= KeyEvent.VK_F1 && e.getKeyCode() <= KeyEvent.VK_F12);
-                    }
-
-                    @Override
-                    public boolean type(char c, KeyEvent ev) {
-                        if (c >= KeyEvent.VK_0 && c <= KeyEvent.VK_9 && buf.line.length() < 2 || c == '\b') {
-                            return buf.key(ev);
-                        } else if (c == '\n') {
-                            try {
-                                int count = Integer.parseInt(dtext());
-                                for (int i = 0; i < count; i++)
-                                    wdg.wdgmsg("xfer");
-                                return true;
-                            } catch (NumberFormatException e) {
-                            }
+                if (pwdg instanceof Window) {
+                    // here be horrors... FIXME
+                    GameUI gui = null;
+                    for (Widget w : rwidgets.keySet()) {
+                        if (w instanceof GameUI) {
+                            gui = (GameUI) w;
+                            break;
                         }
-                        return false;
                     }
-                };
-                Button btn = new Button(65, "Take") {
-                    @Override
-                    public void click() {
+                    processWindowContent(parent, gui, (Window) pwdg, wdg);
+                }
+            } else {
+                if (wdg instanceof Window) {
+                    // here be horrors... FIXME
+                    GameUI gui = null;
+                    for (Widget w : rwidgets.keySet()) {
+                        if (w instanceof GameUI) {
+                            gui = (GameUI) w;
+                            break;
+                        }
+                    }
+                    processWindowCreation(id, gui, (Window) wdg);
+                }
+            }
+            bind(wdg, id);
+        }
+    }
+
+    public void addwidget(int id, int parent, Object[] pargs) {
+        synchronized(this) {
+            Widget wdg = widgets.get(id);
+            if(wdg == null)
+                throw(new UIException("Null child widget " + id + " added to " + parent, null, pargs));
+            Widget pwdg = widgets.get(parent);
+            if(pwdg == null)
+                throw(new UIException("Null parent widget " + parent + " for " + id, null, pargs));
+            pwdg.addchild(wdg, pargs);
+        }
+    }
+
+    private void processWindowContent(long wndid, GameUI gui, Window pwdg, Widget wdg) {
+        String cap = pwdg.origcap;
+        if (gui != null && gui.livestockwnd.pendingAnimal != null && gui.livestockwnd.pendingAnimal.wndid == wndid) {
+            if (wdg instanceof TextEntry)
+                gui.livestockwnd.applyName(wdg);
+            else if (wdg instanceof Label)
+                gui.livestockwnd.applyAttr(cap, wdg);
+            else if (wdg instanceof Avaview)
+                gui.livestockwnd.applyId(wdg);
+        } else if (wdg instanceof ISBox && cap.equals("Stockpile")) {
+            TextEntry entry = new TextEntry(40, "") {
+                @Override
+                public boolean keydown(KeyEvent e) {
+                    return !(e.getKeyCode() >= KeyEvent.VK_F1 && e.getKeyCode() <= KeyEvent.VK_F12);
+                }
+
+                @Override
+                public boolean type(char c, KeyEvent ev) {
+                    if (c >= KeyEvent.VK_0 && c <= KeyEvent.VK_9 && buf.line.length() < 2 || c == '\b') {
+                        return buf.key(ev);
+                    } else if (c == '\n') {
                         try {
-                            String cs = entry.dtext();
-                            int count = cs.isEmpty() ? 1 : Integer.parseInt(cs);
+                            int count = Integer.parseInt(dtext());
                             for (int i = 0; i < count; i++)
                                 wdg.wdgmsg("xfer");
+                            return true;
                         } catch (NumberFormatException e) {
                         }
                     }
-                };
-                pwdg.add(btn, new Coord(0, wdg.sz.y + 5));
-                pwdg.add(entry, new Coord(btn.sz.x + 5, wdg.sz.y + 5 + 2));
-            } else if (wdg instanceof Window && (((Window) wdg).origcap.equals("Charter Stone") || ((Window) wdg).origcap.equals("Sublime Portico"))) {
+                    return false;
+                }
+            };
+            Button btn = new Button(65, "Take") {
+                @Override
+                public void click() {
+                    try {
+                        String cs = entry.dtext();
+                        int count = cs.isEmpty() ? 1 : Integer.parseInt(cs);
+                        for (int i = 0; i < count; i++)
+                            wdg.wdgmsg("xfer");
+                    } catch (NumberFormatException e) {
+                    }
+                }
+            };
+            pwdg.add(btn, new Coord(0, wdg.sz.y + 5));
+            pwdg.add(entry, new Coord(btn.sz.x + 5, wdg.sz.y + 5 + 2));
+        }
+    }
+
+    private void processWindowCreation(long wdgid, GameUI gui, Window wdg) {
+        String cap = wdg.origcap;
+        if (cap.equals("Charter Stone") || cap.equals("Sublime Portico")) {
+            // show secrets list only for already built chartes/porticos
+            if (wdg.wsz.y >= 80) {
                 wdg.add(new CharterList(150, 5), new Coord(0, 50));
                 wdg.presize();
             }
-            bind(wdg, id);
-
-            // drop everything except water containers if in area mining mode
-            GameUI gui = pwdg.gameui();
-            if (Config.dropore && gui != null && gui.map != null && gui.map.areamine != null && wdg instanceof GItem) {
-                if (gui.maininv == pwdg) {
-                    final GItem itm = (GItem) wdg;
-                    Defer.later(new Defer.Callable<Void>() {
-                        public Void call() {
-                            try {
-                                String name = itm.resource().name;
-                                if (!name.endsWith("waterflask") && !name.endsWith("waterskin") && !name.endsWith("pebble-gold"))
-                                    itm.wdgmsg("drop", Coord.z);
-                            } catch (Loading e) {
-                                Defer.later(this);
-                            }
-                            return null;
-                        }
-                    });
-                }
-            }
+        } else if (gui != null && gui.livestockwnd != null && gui.livestockwnd.getAnimalPanel(cap) != null) {
+            gui.livestockwnd.initPendingAnimal(wdgid, cap);
         }
     }
 
@@ -284,14 +336,17 @@ public class UI {
 
     public void wdgmsg(Widget sender, String msg, Object... args) {
         int id;
-        synchronized (this) {
+        synchronized(this) {
             if (msg.endsWith("-identical"))
                 return;
-            if (!rwidgets.containsKey(sender))
-                throw (new UIException("Wdgmsg sender (" + sender.getClass().getName() + ") is not in rwidgets", msg, args));
+
+            if(!rwidgets.containsKey(sender)) {
+                System.err.printf("Wdgmsg sender (%s) is not in rwidgets, message is %s\n", sender.getClass().getName(), msg);
+                return;
+            }
             id = rwidgets.get(sender);
         }
-        if (rcvr != null)
+        if(rcvr != null)
             rcvr.rcvmsg(id, msg, args);
     }
 
@@ -351,7 +406,7 @@ public class UI {
     }
 
     private Coord wdgxlate(Coord c, Widget wdg) {
-        return (c.add(wdg.c.inv()).add(wdg.parent.rootpos().inv()));
+        return (c.sub(wdg.rootpos()));
     }
 
     public boolean dropthing(Widget w, Coord c, Object thing) {
@@ -405,11 +460,19 @@ public class UI {
         root.mousewheel(c, amount);
     }
 
+    public static int modflags(InputEvent ev) {
+        int mod = ev.getModifiersEx();
+        return((((mod & InputEvent.SHIFT_DOWN_MASK) != 0) ? MOD_SHIFT : 0) |
+                (((mod & InputEvent.CTRL_DOWN_MASK) != 0)  ? MOD_CTRL : 0) |
+                (((mod & (InputEvent.META_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) != 0) ? MOD_META : 0)
+                /* (((mod & InputEvent.SUPER_DOWN_MASK) != 0) ? MOD_SUPER : 0) */);
+    }
+
     public int modflags() {
-        return ((modshift ? 1 : 0) |
-                (modctrl ? 2 : 0) |
-                (modmeta ? 4 : 0) |
-                (modsuper ? 8 : 0));
+        return((modshift ? MOD_SHIFT : 0) |
+                (modctrl  ? MOD_CTRL  : 0) |
+                (modmeta  ? MOD_META  : 0) |
+                (modsuper ? MOD_SUPER : 0));
     }
 
     public void destroy() {

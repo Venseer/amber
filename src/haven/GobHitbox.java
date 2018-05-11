@@ -64,21 +64,15 @@ public class GobHitbox extends Sprite {
         }
     }
 
-    private static final BBox bboxLog = new BBox(new Coord(-10, -2), new Coord(10, 2));
     private static final BBox bboxCalf = new BBox(new Coord(-9, -3), new Coord(9, 3));
     private static final BBox bboxLamb = new BBox(new Coord(-6, -2), new Coord(6, 2));
+    private static final BBox bboxGoat = new BBox(new Coord(-6, -2), new Coord(6, 2));
+    private static final BBox bboxPig = new BBox(new Coord(-6, -3), new Coord(6, 3));
     private static final BBox bboxCattle  = new BBox(new Coord(-12, -4), new Coord(12, 4));
     private static final BBox bboxHorse = new BBox(new Coord(-8, -4), new Coord(8, 4));
     private static final BBox bboxSmelter = new BBox(new Coord(-12, -12), new Coord(12, 20));
     private static final BBox bboxWallseg = new BBox(new Coord(-5, -6), new Coord(6, 5));
     private static final BBox bboxHwall = new BBox(new Coord(-1, 0), new Coord(0, 11));
-    private static final BBox[] bboxBumlings = new BBox[]{
-            new BBox(new Coord(-1, -1), new Coord(1, 1)),
-            new BBox(new Coord(-2, -2), new Coord(2, 2)),
-            new BBox(new Coord(-3, -3), new Coord(3, 3)),
-            new BBox(new Coord(-4, -4), new Coord(4, 4)),
-            new BBox(new Coord(-5, -5), new Coord(5, 5))
-    };
 
     public static BBox getBBox(Gob gob, boolean fix) {
         Resource res = null;
@@ -91,7 +85,7 @@ public class GobHitbox extends Sprite {
 
         String name = res.name;
 
-        // calves, lambs, cattle
+        // calves, lambs, cattle, goat
         if (name.equals("gfx/kritter/cattle/calf"))
             return bboxCalf;
         else if (name.equals("gfx/kritter/sheep/lamb"))
@@ -100,17 +94,10 @@ public class GobHitbox extends Sprite {
             return bboxCattle;
         else if (name.startsWith("gfx/kritter/horse/"))
             return bboxHorse;
-
-        // rlink-ed gobs.
-        // modifying RenderLink is a bad idea
-        // and reflection is not good here. hence hardcoded everything.
-        if (name.endsWith("log") && name.startsWith("gfx/terobjs/trees"))
-            return bboxLog;
-        else if (name.startsWith("gfx/terobjs/bumlings/")) {
-            char i = name.charAt(name.length() - 1);
-            if (i >= '0' && i <= '9')
-                return bboxBumlings[i - '0'];
-        }
+        else if (name.startsWith("gfx/kritter/goat/"))
+            return bboxGoat;
+        else if (name.startsWith("gfx/kritter/pig/"))
+            return bboxPig;
 
         // dual state gobs
         if (name.endsWith("gate") && name.startsWith("gfx/terobjs/arch")) {
@@ -143,9 +130,15 @@ public class GobHitbox extends Sprite {
         }
 
         Resource.Neg neg = res.layer(Resource.Neg.class);
-        if (neg == null)
-            return null;
+        if (neg == null) {
+            for (RenderLink.Res link : res.layers(RenderLink.Res.class)) {
+                if (link.mesh != null) {
+                    neg = link.mesh.get().layer(Resource.Neg.class);
+                    break;
+                }
+            }
+        }
 
-        return new BBox(neg.ac, neg.bc);
+        return neg == null ? null : new BBox(neg.ac, neg.bc);
     }
 }

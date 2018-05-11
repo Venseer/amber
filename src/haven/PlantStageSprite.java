@@ -4,21 +4,18 @@ import java.awt.*;
 
 
 public class PlantStageSprite extends Sprite {
-    private static final Text.Foundry fndr = new Text.Foundry(Text.sans.deriveFont(Font.BOLD), 12).aa(true);
     private static final Color stagecolor = new Color(255, 227, 168);
-    private static final Tex stgmaxtex = Text.renderstroked("\u25CF", new Color(254, 100, 100), Color.BLACK, fndr).tex();
-    private static final Tex stghrvtex = Text.renderstroked("\u25CF", new Color(201, 180, 0), Color.BLACK, fndr).tex();
+    private static final Tex stgmaxtex = Text.renderstroked("\u25CF", new Color(254, 100, 100), Color.BLACK, Text.num12boldFnd).tex();
+    private static final Tex stghrvtex = Text.renderstroked("\u25CF", new Color(201, 180, 0), Color.BLACK, Text.num12boldFnd).tex();
     private static final Tex[] stgtex = new Tex[]{
-            Text.renderstroked("2", stagecolor, Color.BLACK, fndr).tex(),
-            Text.renderstroked("3", stagecolor, Color.BLACK, fndr).tex(),
-            Text.renderstroked("4", stagecolor, Color.BLACK, fndr).tex(),
-            Text.renderstroked("5", stagecolor, Color.BLACK, fndr).tex(),
-            Text.renderstroked("6", stagecolor, Color.BLACK, fndr).tex()
+            Text.renderstroked("2", stagecolor, Color.BLACK, Text.num12boldFnd).tex(),
+            Text.renderstroked("3", stagecolor, Color.BLACK, Text.num12boldFnd).tex(),
+            Text.renderstroked("4", stagecolor, Color.BLACK, Text.num12boldFnd).tex(),
+            Text.renderstroked("5", stagecolor, Color.BLACK, Text.num12boldFnd).tex(),
+            Text.renderstroked("6", stagecolor, Color.BLACK, Text.num12boldFnd).tex()
     };
     public int stg;
     private Tex tex;
-    private static Matrix4f cam = new Matrix4f();
-    private static Matrix4f wxf = new Matrix4f();
     private static Matrix4f mv = new Matrix4f();
     private Projection proj;
     private Coord wndsz;
@@ -33,9 +30,11 @@ public class PlantStageSprite extends Sprite {
     }
 
     public void draw(GOut g) {
-        mv.load(cam.load(camp.fin(Matrix4f.id))).mul1(wxf.load(loc.fin(Matrix4f.id)));
-        Coord3f s = proj.toscreen(mv.mul4(Coord3f.o), wndsz);
-        g.image(tex, new Coord((int) s.x - tex.sz().x/2, (int) s.y - 10));
+        float[] c = mv.load(camp.fin(Matrix4f.id)).mul1(loc.fin(Matrix4f.id)).homoc();
+        Coord sc = proj.get2dCoord(c, wndsz);
+        sc.x -= tex.sz().x/2;
+        sc.y -= 10;
+        g.image(tex, sc);
     }
 
     public boolean setup(RenderList rl) {

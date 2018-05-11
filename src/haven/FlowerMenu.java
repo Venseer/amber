@@ -32,7 +32,7 @@ import static java.lang.Math.PI;
 
 public class FlowerMenu extends Widget {
     public static final Color pink = new Color(255, 0, 128);
-    public static final Text.Foundry ptf = new Text.Foundry(Text.dfont, Config.fontsizeglobal * 12 / 11);
+    public static final Text.Foundry ptf = new Text.Foundry(Text.dfont, Text.cfg.flowerMenu);
     public static final IBox pbox = Window.wbox;
     public static final Tex pbg = Window.bg;
     public static final int ph = 30;
@@ -41,10 +41,11 @@ public class FlowerMenu extends Widget {
     private static String nextAutoSel;
     private static long nextAutoSelTimeout;
     public static String lastSel;
+    private boolean ignoreAutoSetting;
     
     @RName("sm")
     public static class $_ implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             String[] opts = new String[args.length];
             for (int i = 0; i < args.length; i++)
                 opts[i] = (String) args[i];
@@ -63,7 +64,7 @@ public class FlowerMenu extends Widget {
         public Petal(String name) {
             super(Coord.z);
             this.name = name;
-            text = ptf.render(Resource.getLocString(Resource.BUNDLE_FLOWER, name), name.startsWith("Travel ") ? Color.GREEN : Color.YELLOW);
+            text = ptf.render(Resource.getLocString(Resource.BUNDLE_FLOWER, name), Color.YELLOW);
             resize(text.sz().x + 25, ph);
         }
 
@@ -100,7 +101,7 @@ public class FlowerMenu extends Widget {
 
     public class Opening extends NormAnim {
         Opening() {
-            super(Config.instantflowermenu ? 0 : 0.15);
+            super(0);
         }
 
         public void ntick(double s) {
@@ -109,7 +110,7 @@ public class FlowerMenu extends Widget {
                 p.a = s;
                 if (s == 1.0) {
                     CheckListboxItem itm = Config.flowermenus.get(p.name);
-                    if (itm != null && itm.selected && !ui.modmeta ||
+                    if (itm != null && itm.selected && !ui.modmeta && (!ignoreAutoSetting || p.name.equals("Peer into")) ||
                             p.name.equals(nextAutoSel) && System.currentTimeMillis() - nextAutoSelTimeout < 2000) {
                         nextAutoSel = null;
                         choose(p);
@@ -150,7 +151,7 @@ public class FlowerMenu extends Widget {
 
     public class Cancel extends NormAnim {
         Cancel() {
-            super(Config.instantflowermenu ? 0 : 0.20);
+            super(0);
         }
 
         public void ntick(double s) {
@@ -183,6 +184,8 @@ public class FlowerMenu extends Widget {
         for (int i = 0; i < options.length; i++) {
             add(opts[i] = new Petal(options[i]));
             opts[i].num = i;
+            if (options[i].equals("Study") || options[i].equals("Turn"))    // eatable curios & spitroasting
+                ignoreAutoSetting = true;
         }
     }
 

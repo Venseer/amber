@@ -243,9 +243,9 @@ public abstract class Tiler {
             } else if (Tiler.class.isAssignableFrom(cl)) {
                 Class<? extends Tiler> tcl = cl.asSubclass(Tiler.class);
                 try {
-                    final Constructor<? extends Tiler> cons = tcl.getConstructor(Integer.TYPE, Resource.Tileset.class);
+                    final Constructor<? extends Tiler> cons = tcl.getConstructor(Integer.TYPE, Tileset.class);
                     return (new Factory() {
-                        public Tiler create(int id, Resource.Tileset set) {
+                        public Tiler create(int id, Tileset set) {
                             return (Utils.construct(cons, id, set));
                         }
                     });
@@ -259,7 +259,7 @@ public abstract class Tiler {
 
     @Resource.PublishedCode(name = "tile", instancer = FactMaker.class)
     public static interface Factory {
-        public Tiler create(int id, Resource.Tileset set);
+        public Tiler create(int id, Tileset set);
     }
 
     @dolda.jglob.Discoverable

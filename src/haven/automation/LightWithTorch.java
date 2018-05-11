@@ -57,19 +57,17 @@ public class LightWithTorch implements Runnable {
                     nortorch = false;
             }
 
-            if (noltorch && nortorch) {
-                gui.error("No lit torch is equipped.");
-                return;
-            }
+            // take torch from equipment, otherwise assume it's already in the hand
+            if (!noltorch || !nortorch) {
+                WItem w = e.quickslots[noltorch ? 7 : 6];
+                w.mousedown(new Coord(w.sz.x / 2, w.sz.y / 2), 1);
 
-            WItem w = e.quickslots[noltorch ? 7 : 6];
-            w.mousedown(new Coord(w.sz.x / 2, w.sz.y / 2), 1);
-
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ie) {
-                e.wdgmsg("drop", noltorch ? 7 : 6);
-                return;
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ie) {
+                    e.wdgmsg("drop", noltorch ? 7 : 6);
+                    return;
+                }
             }
 
             gui.map.wdgmsg("itemact", Coord.z, gob.rc.floor(posres), 0, 0, (int) gob.id, gob.rc.floor(posres), 0, -1);

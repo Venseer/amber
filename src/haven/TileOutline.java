@@ -52,7 +52,7 @@ public class TileOutline implements Rendered {
         try {
             this.ul = ul;
             this.location = Location.xlate(new Coord3f((float) (ul.x * tilesz.x), (float) (-ul.y * tilesz.y), 0.0F));
-            swapBuffers();
+            curIndex = (curIndex + 1) % 2; // swap buffers
             Coord c = new Coord();
             Coord size = ul.add(MCache.cutsz.mul(5));
             for (c.y = ul.y; c.y < size.y; c.y++)
@@ -67,23 +67,19 @@ public class TileOutline implements Rendered {
     }
 
     private void addLineStrip(Coord3f... vertices) {
-        FloatBuffer vbuf = getCurrentBuffer();
         try {
+            FloatBuffer vbuf = getCurrentBuffer();
             for (int i = 0; i < vertices.length - 1; i++) {
                 Coord3f a = vertices[i];
                 Coord3f b = vertices[i + 1];
                 vbuf.put(a.x).put(a.y).put(a.z);
                 vbuf.put(b.x).put(b.y).put(b.z);
             }
-        } catch (BufferOverflowException e) { // ignored
+        } catch (BufferOverflowException boe) {
         }
     }
 
     private FloatBuffer getCurrentBuffer() {
         return vertexBuffers[curIndex];
-    }
-
-    private void swapBuffers() {
-        curIndex = (curIndex + 1) % 2;
     }
 }

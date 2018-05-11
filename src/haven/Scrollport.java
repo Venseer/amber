@@ -29,15 +29,20 @@ package haven;
 public class Scrollport extends Widget {
     public final Scrollbar bar;
     public final Scrollcont cont;
+    private int step;
 
     @RName("scr")
     public static class $_ implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             return (new Scrollport((Coord) args[0]));
         }
     }
 
     public Scrollport(Coord sz) {
+        this(sz, 23);
+    }
+
+    public Scrollport(Coord sz, int step) {
         super(sz);
         bar = adda(new Scrollbar(sz.y, 0, 0) {
             public void changed() {
@@ -46,9 +51,10 @@ public class Scrollport extends Widget {
         }, sz.x, 0, 1, 0);
         cont = add(new Scrollcont(sz.sub(bar.sz.x, 0)) {
             public void update() {
-                bar.max = Math.max(0, csz().y + 10 - sz.y);
+                bar.max = Math.max(0, contentsz().y - sz.y);
             }
         }, Coord.z);
+        this.step = step;
     }
 
     public static class Scrollcont extends Widget {
@@ -58,23 +64,13 @@ public class Scrollport extends Widget {
             super(sz);
         }
 
-        public Coord csz() {
-            Coord mx = new Coord();
-            for (Widget ch = child; ch != null; ch = ch.next) {
-                if (ch.c.x + ch.sz.x > mx.x)
-                    mx.x = ch.c.x + ch.sz.x;
-                if (ch.c.y + ch.sz.y > mx.y)
-                    mx.y = ch.c.y + ch.sz.y;
-            }
-            return (mx);
-        }
-
         public void update() {
         }
 
-        public void addchild(Widget child, Object... args) {
-            super.addchild(child, args);
+        public <T extends Widget> T add(T child) {
+            super.add(child);
             update();
+            return(child);
         }
 
         public Coord xlate(Coord c, boolean in) {
@@ -100,7 +96,7 @@ public class Scrollport extends Widget {
     }
 
     public boolean mousewheel(Coord c, int amount) {
-        bar.ch(amount * 15);
+        bar.ch(amount * step);
         return (true);
     }
 
@@ -111,6 +107,7 @@ public class Scrollport extends Widget {
     public void resize(Coord nsz) {
         super.resize(nsz);
         bar.c = new Coord(sz.x - bar.sz.x, 0);
+        bar.resize(nsz.y);
         cont.resize(sz.sub(bar.sz.x, 0));
     }
 

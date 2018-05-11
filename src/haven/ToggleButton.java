@@ -4,7 +4,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 
 
-public class ToggleButton extends SSWidget {
+public class ToggleButton extends SIWidget {
     BufferedImage up, down;
     boolean pressed;
     UI.Grab d = null;
@@ -18,14 +18,13 @@ public class ToggleButton extends SSWidget {
     public ToggleButton(String up, String down, boolean pressed) {
         this(Resource.loadimg(up), Resource.loadimg(down));
         this.pressed = pressed;
-        render();
+        redraw();
     }
 
-    public void render() {
-        clear();
-        Graphics g = graphics();
+    public void draw(BufferedImage buf) {
+        Graphics g = buf.getGraphics();
         g.drawImage(pressed ? down : up, 0, 0, null);
-        update();
+        g.dispose();
     }
 
     public boolean checkhit(Coord c) {
@@ -47,7 +46,7 @@ public class ToggleButton extends SSWidget {
             return false;
         d = ui.grabmouse(this);
         pressed = !pressed;
-        render();
+        redraw();
         click();
         return true;
     }

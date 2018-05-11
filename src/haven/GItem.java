@@ -27,12 +27,12 @@
 package haven;
 
 import haven.res.ui.tt.q.qbuff.QBuff;
-import haven.resutil.Curiosity;
 
 import java.awt.Color;
 import java.util.*;
+import java.awt.image.BufferedImage;
 
-import static haven.Text.numfnd;
+import static haven.Text.num10Fnd;
 
 public class GItem extends AWidget implements ItemInfo.SpriteOwner, GSprite.Owner {
     public Indir<Resource> res;
@@ -42,32 +42,17 @@ public class GItem extends AWidget implements ItemInfo.SpriteOwner, GSprite.Owne
     private GSprite spr;
     private Object[] rawinfo;
     private List<ItemInfo> info = Collections.emptyList();
-    private Quality quality;
+    private QBuff quality;
     public Tex metertex;
-    private double studytime = 0.0;
-    public Tex timelefttex;
-
-    public static class Quality {
-        public double q;
-        public Tex qtex, qwtex;
-        public boolean curio;
-
-        public Quality(double q, boolean curio) {
-            this.q = q;
-            this.curio = curio;
-            if (q != 0) {
-                qtex = Text.renderstroked(Utils.fmt1DecPlace(q), Color.WHITE, Color.BLACK, numfnd).tex();
-                qwtex = Text.renderstroked(Math.round(q) + "", Color.WHITE, Color.BLACK, numfnd).tex();
-            }
-        }
-    }
+    public double studytime = 0.0;
+    private boolean postProcessed = false;
 
     @RName("item")
     public static class $_ implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             int res = (Integer) args[0];
             Message sdt = (args.length > 1) ? new MessageBuf((byte[]) args[1]) : Message.nil;
-            return (new GItem(parent.ui.sess.getres(res), sdt));
+            return (new GItem(ui.sess.getres(res), sdt));
         }
     }
 
@@ -75,8 +60,46 @@ public class GItem extends AWidget implements ItemInfo.SpriteOwner, GSprite.Owne
         public Color olcol();
     }
 
-    public interface NumberInfo {
+    public interface OverlayInfo<T> {
+        public T overlay();
+        public void drawoverlay(GOut g, T data);
+    }
+
+    public static class InfoOverlay<T> {
+        public final OverlayInfo<T> inf;
+        public final T data;
+
+        public InfoOverlay(OverlayInfo<T> inf) {
+            this.inf = inf;
+            this.data = inf.overlay();
+        }
+
+        public void draw(GOut g) {
+            inf.drawoverlay(g, data);
+        }
+
+        public static <S> InfoOverlay<S> create(OverlayInfo<S> inf) {
+            return(new InfoOverlay<S>(inf));
+        }
+    }
+
+    public interface NumberInfo extends OverlayInfo<Tex> {
         public int itemnum();
+        public default Color numcolor() {
+            return(Color.WHITE);
+        }
+
+        public default Tex overlay() {
+            return(new TexI(GItem.NumberInfo.numrender(itemnum(), numcolor())));
+        }
+
+        public default void drawoverlay(GOut g, Tex tex) {
+            g.aimage(tex, new Coord(g.sz.x, 0), 1, 0);
+        }
+
+        public static BufferedImage numrender(int num, Color col) {
+            return Text.renderstroked(num + "", col, Color.BLACK).img;
+        }
     }
 
     public interface MeterInfo {
@@ -118,22 +141,6 @@ public class GItem extends AWidget implements ItemInfo.SpriteOwner, GSprite.Owne
         }
     }
 
-    public boolean updatetimelefttex() {
-        if (studytime == 0.0) {
-            Curiosity ci = ItemInfo.find(Curiosity.class,  info());
-            if (ci == null || ci.time < 1)
-                return false;
-            studytime = ci.time;
-        }
-
-        int timeleft = (int) studytime * (100 - meter) / 100;
-        int hoursleft = timeleft / 60;
-        int minutesleft = timeleft - hoursleft * 60;
-
-        timelefttex = Text.renderstroked(String.format("%d:%02d", hoursleft, minutesleft), Color.WHITE, Color.BLACK, numfnd).tex();
-        return true;
-    }
-
     private Random rnd = null;
 
     public Random mkrandoom() {
@@ -146,6 +153,15 @@ public class GItem extends AWidget implements ItemInfo.SpriteOwner, GSprite.Owne
         return (res.get());
     }
 
+    private static final OwnerContext.ClassResolver<GItem> ctxr = new OwnerContext.ClassResolver<GItem>()
+            .add(Glob.class, wdg -> wdg.ui.sess.glob)
+            .add(Session.class, wdg -> wdg.ui.sess);
+
+    public <T> T context(Class<T> cl) {
+        return (ctxr.context(cl, this));
+    }
+
+    @Deprecated
     public Glob glob() {
         return (ui.sess.glob);
     }
@@ -155,6 +171,10 @@ public class GItem extends AWidget implements ItemInfo.SpriteOwner, GSprite.Owne
         if (spr == null) {
             try {
                 spr = this.spr = GSprite.create(this, res.get(), sdt.clone());
+                if (!postProcessed) {
+                    dropItMaybe();
+                    postProcessed = true;
+                }
             } catch (Loading l) {
             }
         }
@@ -199,24 +219,20 @@ public class GItem extends AWidget implements ItemInfo.SpriteOwner, GSprite.Owne
             rawinfo = args;
         } else if (name == "meter") {
             meter = (int)((Number)args[0]).doubleValue();
-            metertex = Text.renderstroked(String.format("%d%%", meter), Color.WHITE, Color.BLACK, numfnd).tex();
-            timelefttex = null;
+            metertex = Text.renderstroked(String.format("%d%%", meter), Color.WHITE, Color.BLACK, num10Fnd).tex();
         }
     }
 
     public void qualitycalc(List<ItemInfo> infolist) {
-        double q = 0;
-        boolean curio = false;
         for (ItemInfo info : infolist) {
-            if (info instanceof QBuff)
-                q = ((QBuff)info).q;
-            else if (info.getClass() == haven.resutil.Curiosity.class)
-                curio = true;
+            if (info instanceof QBuff) {
+                this.quality = (QBuff) info;
+                break;
+            }
         }
-        quality = new Quality(q, curio);
     }
 
-    public Quality quality() {
+    public QBuff quality() {
         if (quality == null) {
             try {
                 for (ItemInfo info : info()) {
@@ -226,7 +242,7 @@ public class GItem extends AWidget implements ItemInfo.SpriteOwner, GSprite.Owne
                     }
                 }
                 qualitycalc(info());
-            } catch (Exception ex) { // ignored
+            } catch (Loading l) {
             }
         }
         return quality;
@@ -241,5 +257,17 @@ public class GItem extends AWidget implements ItemInfo.SpriteOwner, GSprite.Owne
         } catch (Exception e) { // fail silently if info is not ready
         }
         return null;
+    }
+
+    private void dropItMaybe() {
+        Resource curs = ui.root.getcurs(Coord.z);
+        if (curs != null && curs.name.equals("gfx/hud/curs/mine")) {
+            String name = this.resource().basename();
+            if (Config.dropMinedStones && Config.mineablesStone.contains(name) ||
+                    Config.dropMinedOre && Config.mineablesOre.contains(name) ||
+                    Config.dropMinedOrePrecious && Config.mineablesOrePrecious.contains(name) ||
+                    Config.dropMinedCurios && Config.mineablesCurios.contains(name))
+                this.wdgmsg("drop", Coord.z);
+        }
     }
 }

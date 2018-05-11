@@ -27,6 +27,8 @@
 package haven;
 
 import java.awt.*;
+import java.awt.Graphics;
+import java.awt.image.BufferedImage;
 import java.awt.event.KeyEvent;
 import java.util.*;
 import java.util.List;
@@ -43,10 +45,10 @@ public class FightWnd extends Widget {
     public List<Action> acts = new ArrayList<Action>();
     public final Action[] order;
     private final Text[] saves;
-    private final CharWnd.LoadingTextBox info;
+    private final ImageInfoBox info;
     private Tex count;
+    private final Map<Indir<Resource>, Object[]> actrawinfo = new HashMap<>();
     private Dropbox<Pair<Text, Integer>> schoolsDropdown;
-    private static final Text.Foundry cardnum = new Text.Foundry(Text.sans.deriveFont(Font.BOLD), 12).aa(true);
 
     private static final Set<String> attacks = new HashSet<>(Arrays.asList(
             "paginae/atk/pow",
@@ -68,7 +70,8 @@ public class FightWnd extends Widget {
             "paginae/atk/uppercut",
             "paginae/atk/punchboth",
             "paginae/atk/stealthunder",
-            "paginae/atk/ravenbite"
+            "paginae/atk/ravenbite",
+            "paginae/atk/takedown"
     ));
     private static final Set<String> restorations = new HashSet<>(Arrays.asList(
             "paginae/atk/regain",
@@ -100,7 +103,15 @@ public class FightWnd extends Widget {
     private int filter = 0;
 
 
-    public class Action {
+    public static interface IconInfo {
+        public void draw(BufferedImage img, Graphics g);
+    }
+
+    private static final OwnerContext.ClassResolver<FightWnd> actxr = new OwnerContext.ClassResolver<FightWnd>()
+            .add(Glob.class, wdg -> wdg.ui.sess.glob)
+            .add(Session.class, wdg -> wdg.ui.sess);
+    public static final Text.Foundry namef = new Text.Foundry(Text.serif.deriveFont(java.awt.Font.BOLD, 16f)).aa(true);
+    public class Action implements ItemInfo.ResOwner {
         public final Indir<Resource> res;
         private final int id;
         public int a, u;
@@ -140,13 +151,134 @@ public class FightWnd extends Widget {
                 recount();
             }
         }
+
+        public Resource resource() {return(res.get());}
+
+        private List<ItemInfo> info = null;
+        public List<ItemInfo> info() {
+            if(info == null) {
+                Object[] rawinfo = actrawinfo.get(this.res);
+                if(rawinfo != null)
+                    info = ItemInfo.buildinfo(this, rawinfo);
+                else
+                    info = Arrays.asList(new ItemInfo.Name(this, res.get().layer(Resource.tooltip).t));
+            }
+            return(info);
+        }
+        public <T> T context(Class<T> cl) {return(actxr.context(cl, FightWnd.this));}
+
+        public BufferedImage rendericon() {
+            BufferedImage ret = res.get().layer(Resource.imgc).img;
+            Graphics g = null;
+            for(ItemInfo inf : info()) {
+                if(inf instanceof IconInfo) {
+                    if(g == null) {
+                        BufferedImage buf = TexI.mkbuf(PUtils.imgsz(ret));
+                        g = buf.getGraphics();
+                        ret = buf;
+                    }
+                    ((IconInfo)inf).draw(ret, g);
+                }
+            }
+            if(g != null)
+                g.dispose();
+            return(ret);
+        }
+
+        private Tex icon = null;
+        public Tex icon() {
+            if(icon == null)
+                icon = new TexI(rendericon());
+            return(icon);
+        }
+
+        public BufferedImage renderinfo(int width) {
+            ItemInfo.Layout l = new ItemInfo.Layout();
+            l.width = width;
+            List<ItemInfo> info = info();
+            l.cmp.add(rendericon(), Coord.z);
+            ItemInfo.Name nm = ItemInfo.find(ItemInfo.Name.class, info);
+            l.cmp.add(namef.render(nm.str.text).img, new Coord(0, l.cmp.sz.y + 10));
+            l.cmp.sz = l.cmp.sz.add(0, 10);
+            for(ItemInfo inf : info) {
+                if((inf != nm) && (inf instanceof ItemInfo.Tip)) {
+                    l.add((ItemInfo.Tip)inf);
+                }
+            }
+            Resource.Pagina pag = res.get().layer(Resource.pagina);
+            if(pag != null)
+                l.add(new ItemInfo.Pagina(this, pag.text));
+            return(l.render());
+        }
     }
 
     private void recount() {
         int u = 0;
         for (Action act : acts)
             u += act.u;
-        count = cardnum.render(String.format("= %d/%d", u, maxact), (u > maxact) ? Color.RED : Color.WHITE).tex();
+        count = Text.num12boldFnd.render(String.format("= %d/%d", u, maxact), (u > maxact) ? Color.RED : Color.WHITE).tex();
+    }
+
+    public static class ImageInfoBox extends Widget {
+        private Tex img;
+        private Indir<Tex> loading;
+        private final Scrollbar sb;
+
+        public ImageInfoBox(Coord sz) {
+            super(sz);
+            sb = adda(new Scrollbar(sz.y, 0, 1), sz.x, 0, 1, 0);
+        }
+
+        public void drawbg(GOut g) {
+            g.chcolor(0, 0, 0, 128);
+            g.frect(Coord.z, sz);
+            g.chcolor();
+        }
+
+        public Coord marg() {return(new Coord(10, 10));}
+
+        public void tick(double dt) {
+            if(loading != null) {
+                try {
+                    set(loading.get());
+                    loading = null;
+                } catch(Loading l) {
+                }
+            }
+            super.tick(dt);
+        }
+
+        public void draw(GOut g) {
+            drawbg(g);
+            if(img != null)
+                g.image(img, marg().sub(0, sb.val));
+            super.draw(g);
+        }
+
+        public void set(Tex img) {
+            this.img = img;
+            if(img != null) {
+                sb.max = img.sz().y + (marg().y * 2) - sz.y;
+                sb.val = 0;
+            } else {
+                sb.max = sb.val = 0;
+            }
+        }
+        public void set(Indir<Tex> loading) {
+            this.loading = loading;
+        }
+
+        public boolean mousewheel(Coord c, int amount) {
+            sb.ch(amount * 20);
+            return(true);
+        }
+
+        public void resize(Coord sz) {
+            super.resize(sz);
+            sb.c = new Coord(sz.x - sb.sz.x, 0);
+            sb.resize(sz.y);
+            set(img);
+        }
     }
 
     private static final Tex[] add = {Resource.loadtex("gfx/hud/buttons/addu"),
@@ -217,9 +349,12 @@ public class FightWnd extends Widget {
             g.chcolor((idx % 2 == 0) ? CharWnd.every : CharWnd.other);
             g.frect(Coord.z, g.sz);
             g.chcolor();
+            if(act.ru == null)
+                act.ru = attrf.render(String.format("%d/%d", act.u, act.a));
+
             try {
                 if (act.ri == null)
-                    act.ri = new TexI(PUtils.convolvedown(act.res.get().layer(Resource.imgc).img, new Coord(itemh, itemh), CharWnd.iconfilter));
+                    act.ri = new TexI(PUtils.convolvedown(act.rendericon(), new Coord(itemh, itemh), CharWnd.iconfilter));
                 g.image(act.ri, Coord.z);
             } catch (Loading l) {
                 g.image(WItem.missing.layer(Resource.imgc).tex(), Coord.z, new Coord(itemh, itemh));
@@ -228,19 +363,15 @@ public class FightWnd extends Widget {
             g.image(act.rnm.tex(), new Coord(itemh + 2, ty));
 
             if (act.ra == null)
-                act.ra = cardnum.render(String.valueOf(act.a));
+                act.ra = Text.num12boldFnd.render(String.valueOf(act.a));
             g.aimage(act.ra.tex(), new Coord(sz.x - 15, ty), 1.0, 0.0);
         }
 
         public void change(final Action act) {
-            if (act != null)
-                info.settext(new Indir<String>() {
-                    public String get() {
-                        return (act.rendertext());
-                    }
-                });
-            else if (sel != null)
-                info.settext("");
+            if(act != null)
+                info.set(() -> new TexI(act.renderinfo(info.sz.x - 20)));
+            else if(sel != null)
+                info.set((Tex)null);
             super.change(act);
         }
 
@@ -333,7 +464,7 @@ public class FightWnd extends Widget {
     }
 
     public static final String[] keys = {"1", "2", "3", "4", "5", "\u21e71", "\u21e72", "\u21e73", "\u21e74", "\u21e75"};
-    public static final String[] keysf = {"F1", "F2", "F3", "F4", "F5"};
+    public static final String[] keysf = {"F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10"};
 
     public class BView extends Widget implements DropTarget {
         private int subp = -1;
@@ -391,6 +522,13 @@ public class FightWnd extends Widget {
                     keysftex[i] = Text.render(FightWnd.keysf[i - 5]).tex();
             }
         }
+        
+        final Tex[] keysfftex = new Tex[10];
+        {
+        	for(int i = 0; i < 10; i++) {
+        		keysfftex[i] = Text.render(FightWnd.keysf[i]).tex();
+        	}
+        }
 
         public void draw(GOut g) {
             int pcy = invsq.sz().y + 4;
@@ -419,7 +557,7 @@ public class FightWnd extends Widget {
                         g.image(act.res.get().layer(Resource.imgc).tex(), ic);
 
                         if (act.ru == null)
-                            act.ru = cardnum.render(String.format("%d/%d", act.u, act.a));
+                            act.ru = Text.num12boldFnd.render(String.format("%d/%d", act.u, act.a));
 
                         g.image(act.ru.tex(), c.add(invsq.sz().x / 2 - act.ru.sz().x / 2, pcy));
                         g.chcolor();
@@ -429,7 +567,20 @@ public class FightWnd extends Widget {
                     }
                 } catch(Loading l) {}
                 g.chcolor(156, 180, 158, 255);
-                g.aimage(Config.combatkeys == 0 ? keystex[i] : keysftex[i], c.add(invsq.sz().sub(2, 0)), 1, 1);
+                
+                Tex keytex;
+                if(Config.combatkeys == 0)
+                {
+                	keytex = keystex[i];
+                } else if (Config.combatkeys == 1)
+                {
+                	keytex = keystex[i];
+                } else
+                {
+                	keytex = keysfftex[i];
+                }
+                
+                g.aimage(keytex, c.add(invsq.sz().sub(2, 0)), 1, 1);
                 g.chcolor();
             }
 
@@ -540,35 +691,29 @@ public class FightWnd extends Widget {
         }
 
         public boolean dropthing(Coord c, Object thing) {
-            if(thing instanceof Action) {
-                Action act = (Action)thing;
+            if (thing instanceof Action) {
+                Action act = (Action) thing;
                 int s = citem(c);
-                if(s < 0)
-                    return(false);
-                if(order[s] != act) {
-                    if(order[s] != null) {
-                        int cp = findorder(act);
-                        if(cp >= 0) {
-                            order[cp] = order[s];
+                if (s < 0)
+                    return (false);
+                if (order[s] != act) {
+                    int cp = findorder(act);
+                    if (cp >= 0)
+                        order[cp] = order[s];
+                    if (order[s] != null) {
+                        if (cp >= 0) {
                             animate(cp, itemc(s).sub(itemc(cp)));
                         } else {
                             order[s].u(0);
                         }
-                    } else {
-                        for (int i = 0; i < order.length; i++) {
-                            if (order[i] != null && order[i].id == act.id) {
-                                order[i] = null;
-                                break;
-                            }
-                        }
                     }
                     order[s] = act;
-                    if(act.u < 1)
+                    if (act.u < 1)
                         act.u(1);
                 }
-                return(true);
+                return (true);
             }
-            return(false);
+            return (false);
         }
 
         public void tick(double dt) {
@@ -589,7 +734,7 @@ public class FightWnd extends Widget {
 
     @RName("fmg")
     public static class $_ implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             return(new FightWnd((Integer)args[0], (Integer)args[1], (Integer)args[2]));
         }
     }
@@ -700,13 +845,11 @@ public class FightWnd extends Widget {
             }
         };
 
-        info = add(new CharWnd.LoadingTextBox(new Coord(255, 152), "", CharWnd.ifnd), new Coord(0, 35).add(wbox.btloff()));
-
-        info.bg = new Color(0, 0, 0, 128);
+        info = add(new ImageInfoBox(new Coord(223, 152)), new Coord(5, 35).add(wbox.btloff()));
         Frame.around(this, Collections.singletonList(info));
 
         add(new Img(CharWnd.catf.render(Resource.getLocString(Resource.BUNDLE_LABEL,"Martial Arts & Combat Schools")).tex()), 0, 0);
-        actlist = add(new Actions(235, Config.iswindows ? 7 : 8), new Coord(276, 35).add(wbox.btloff()));
+        actlist = add(new Actions(235, actionsListHeight()), new Coord(276, 35).add(wbox.btloff()));
         Frame.around(this, Collections.singletonList(actlist));
         Widget p = add(new BView(), 77, 200);
 
@@ -725,7 +868,7 @@ public class FightWnd extends Widget {
         add(new Button(110, "Rename", false) {
             public void click() {
                 Pair<Text, Integer> sel = schoolsDropdown.sel;
-                if (sel == null || sel.a.text.equals("unused save"))
+                if (sel == null || sel.a.text.equals(Resource.getLocString(Resource.BUNDLE_LABEL, "unused save")))
                     return;
 
                 Window renwnd = new Window(new Coord(225, 100), "Rename School") {
@@ -779,6 +922,20 @@ public class FightWnd extends Widget {
         pack();
     }
 
+    private static int actionsListHeight() {
+        switch (Resource.language) {
+            default:
+            case "en":
+                return Config.iswindows ? 7 : 8;
+            case "ru":
+                return 8;
+            case "zh":
+                return Config.iswindows ? 7 : 8;
+            case "ko":
+                return 7;
+        }
+    }
+
     public Action findact(int resid) {
         for(Action act : acts) {
             if(act.id == resid)
@@ -787,7 +944,7 @@ public class FightWnd extends Widget {
         return(null);
     }
 
-    private final Text unused = new Text.Foundry(attrf.font.deriveFont(java.awt.Font.ITALIC)).aa(true).render("unused save");
+    private final Text unused = new Text.Foundry(Text.sans.deriveFont(Font.ITALIC, 14)).aa(true).render(Resource.getLocString(Resource.BUNDLE_LABEL, "unused save"));
 
     public void uimsg(String nm, Object... args) {
         if (nm == "avail") {
@@ -808,6 +965,10 @@ public class FightWnd extends Widget {
             }
             this.acts = acts;
             actlist.loading = true;
+        } else if(nm == "tt") {
+            Indir<Resource> res = ui.sess.getres((Integer)args[0]);
+            Object[] rawinfo = (Object[])args[1];
+            actrawinfo.put(res, rawinfo);
         } else if(nm == "used") {
             int a = 0;
             for(Action act : acts)

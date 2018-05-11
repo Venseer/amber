@@ -27,16 +27,19 @@
 package haven;
 
 import haven.automation.WItemDestroyCallback;
+import haven.ItemInfo.AttrCache;
 import haven.res.ui.tt.Wear;
+import haven.res.ui.tt.q.qbuff.QBuff;
 
 import java.awt.Color;
-import java.awt.Desktop;
 import java.awt.image.BufferedImage;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
 import java.util.function.*;
 
 import static haven.Inventory.sqsz;
+import static haven.Text.num10Fnd;
 
 public class WItem extends Widget implements DTarget {
     public static final Resource missing = Resource.local().loadwait("gfx/invobjs/missing");
@@ -46,6 +49,7 @@ public class WItem extends Widget implements DTarget {
     public static final Color[] wearclr = new Color[]{
             new Color(233, 0, 14), new Color(218, 128, 87), new Color(246, 233, 87), new Color(145, 225, 60)
     };
+
     private WItemDestroyCallback destroycb;
 
     public WItem(GItem item) {
@@ -103,16 +107,16 @@ public class WItem extends Widget implements DTarget {
         }
     }
 
-    private long hoverstart;
+    private double hoverstart;
     private ItemTip shorttip = null, longtip = null;
     private List<ItemInfo> ttinfo = null;
 
     public Object tooltip(Coord c, Widget prev) {
-        long now = System.currentTimeMillis();
+        double now = Utils.rtime();
         if (prev == this) {
         } else if (prev instanceof WItem) {
-            long ps = ((WItem) prev).hoverstart;
-            if (now - ps < 1000)
+            double ps = ((WItem)prev).hoverstart;
+            if (now - ps < 1.0)
                 hoverstart = now;
             else
                 hoverstart = ps;
@@ -127,7 +131,7 @@ public class WItem extends Widget implements DTarget {
                 shorttip = longtip = null;
                 ttinfo = info;
             }
-            if (now - hoverstart < 1000) {
+            if (now - hoverstart < 1.0) {
                 if (shorttip == null)
                     shorttip = new ShortTip(info);
                 return (shorttip);
@@ -141,32 +145,8 @@ public class WItem extends Widget implements DTarget {
         }
     }
 
-    public volatile static int cacheseq = 0;
-
-    public class AttrCache<T> {
-        private final Function<List<ItemInfo>, T> data;
-        private List<ItemInfo> forinfo = null;
-        public T save = null;
-        private int forseq = -1;
-
-        public AttrCache(Function<List<ItemInfo>, T> data) {this.data = data;}
-
-        public T get() {
-            try {
-                List<ItemInfo> info = item.info();
-                if ((cacheseq != forseq) || (info != forinfo)) {
-                    save = data.apply(info);
-                    forinfo = info;
-                    forseq = cacheseq;
-                }
-            } catch (Loading e) {
-                return (null);
-            }
-            return (save);
-        }
-    }
-
-    public final AttrCache<Color> olcol = new AttrCache<Color>(info -> {
+    private List<ItemInfo> info() {return(item.info());}
+    public final AttrCache<Color> olcol = new AttrCache<>(this::info, info -> {
         Color ret = null;
         for(ItemInfo inf : info) {
             if(inf instanceof GItem.ColorInfo) {
@@ -175,19 +155,37 @@ public class WItem extends Widget implements DTarget {
                     ret = (ret == null)?c:Utils.preblend(ret, c);
             }
         }
-        return(ret);
+        Color fret = ret;
+        return(() -> fret);
     });
 
-    public final AttrCache<Tex> itemnum = new AttrCache<Tex>(info -> {
-        GItem.NumberInfo ninf = ItemInfo.find(GItem.NumberInfo.class, info);
-        if(ninf == null) return(null);
-        return(new TexI(Utils.outline2(Text.render(Integer.toString(ninf.itemnum()), Color.WHITE).img, Utils.contrast(Color.WHITE))));
+    public final AttrCache<GItem.InfoOverlay<?>[]> itemols = new AttrCache<>(this::info, info -> {
+        ArrayList<GItem.InfoOverlay<?>> buf = new ArrayList<>();
+        for(ItemInfo inf : info) {
+            if(inf instanceof GItem.OverlayInfo)
+                buf.add(GItem.InfoOverlay.create((GItem.OverlayInfo<?>)inf));
+        }
+        GItem.InfoOverlay<?>[] ret = buf.toArray(new GItem.InfoOverlay<?>[0]);
+        return(() -> ret);
     });
-
-    public final AttrCache<Double> itemmeter = new AttrCache<Double>(info -> {
-        GItem.MeterInfo minf = ItemInfo.find(GItem.MeterInfo.class, info);
-        return((minf == null)?null:minf.meter());
-    });
+    
+    public final AttrCache<Double> itemmeter = new AttrCache<>(this::info, AttrCache.map1(GItem.MeterInfo.class, minf -> {
+        GItem itm = WItem.this.item;
+        if (minf != null) {
+            double meter = minf.meter();
+            if (itm.studytime > 0 && parent instanceof InventoryStudy) {
+                int timeleft = (int) (itm.studytime * (1.0 - meter));
+                int hoursleft = timeleft / 60;
+                int minutesleft = timeleft - hoursleft * 60;
+                itm.metertex = Text.renderstroked(String.format("%d:%02d", hoursleft, minutesleft), Color.WHITE, Color.BLACK, num10Fnd).tex();
+            } else {
+                itm.metertex = Text.renderstroked(String.format("%d%%", (int) (meter * 100)), Color.WHITE, Color.BLACK, num10Fnd).tex();
+            }
+            return minf::meter;
+        }
+        itm.metertex = null;
+        return minf::meter;
+    }));
 
     private GSprite lspr = null;
 
@@ -216,27 +214,19 @@ public class WItem extends Widget implements DTarget {
                 g.usestate(new ColorMask(olcol.get()));
             drawmain(g, spr);
             g.defstate();
-            if (item.num >= 0) {
-                g.atext(Integer.toString(item.num), sz, 1, 1, Text.numfnd);
-            } else if (itemnum.get() != null) {
-                g.aimage(itemnum.get(), new Coord(sz.x, 0), 1, 0);
+            GItem.InfoOverlay<?>[] ols = itemols.get();
+            if(ols != null) {
+                for(GItem.InfoOverlay<?> ol : ols)
+                    ol.draw(g);
+            }
+            Double meter = item.meter > 0 ? Double.valueOf(item.meter / 100.0) : itemmeter.get();
+            if (Config.itemmeterbar && meter != null && meter > 0) {
+                g.chcolor(220, 60, 60, 255);
+                g.frect(Coord.z, new Coord((int) (sz.x / (100 / (meter * 100))), 4));
+                g.chcolor();
             }
 
-            Double meter = item.meter > 0 ? item.meter / 100.0 : itemmeter.get();
-            if (meter != null && meter > 0) {
-                if (Config.itemmeterbar) {
-                    g.chcolor(220, 60, 60, 255);
-                    g.frect(Coord.z, new Coord((int) (sz.x / (100 / (meter * 100))), 4));
-                    g.chcolor();
-                } else if (!Config.itempercentage) {
-                    g.chcolor(255, 255, 255, 64);
-                    Coord half = sz.div(2);
-                    g.prect(half, half.inv(), half, meter * Math.PI * 2);
-                    g.chcolor();
-                }
-            }
-
-            GItem.Quality quality = item.quality();
+            QBuff quality = item.quality();
             if (Config.showquality) {
                 if (quality != null && quality.qtex != null) {
                     Coord btm = new Coord(0, sz.y - 12);
@@ -250,42 +240,28 @@ public class WItem extends Widget implements DTarget {
                 }
             }
 
-            boolean studylefttimedisplayed = false;
-            if (Config.showstudylefttime && quality != null && quality.curio && item.meter > 0 && parent instanceof InventoryStudy) {
-                if (item.timelefttex == null) {
-                    item.updatetimelefttex();
-                }
-
-                if (item.timelefttex != null) {
-                    g.image(item.timelefttex, Coord.z);
-                    studylefttimedisplayed = true;
-                }
-            }
-
-            if (!studylefttimedisplayed && item.meter > 0 && Config.itempercentage && item.metertex != null) {
+            if (item.metertex != null)
                 g.image(item.metertex, Coord.z);
-            }
 
             ItemInfo.Contents cnt = item.getcontents();
             if (cnt != null && cnt.content > 0)
                 drawamountbar(g, cnt.content, cnt.isseeds);
 
-            if (Config.showwearbars) {
-                try {
-                    for (ItemInfo info : item.info()) {
-                        if (info instanceof Wear) {
-                            double d = ((Wear) info).d;
-                            double m = ((Wear) info).m;
-                            double p = (m - d) / m;
-                            int h = (int) (p * (double) sz.y);
-                            g.chcolor(wearclr[p == 1.0 ? 3 : (int) (p / 0.25)]);
-                            g.frect(new Coord(sz.x - 3, sz.y - h), new Coord(3, h));
-                            g.chcolor();
-                            break;
-                        }
+
+            try {
+                for (ItemInfo info : item.info()) {
+                    if (info instanceof Wear) {
+                        double d = ((Wear) info).d;
+                        double m = ((Wear) info).m;
+                        double p = (m - d) / m;
+                        int h = (int) (p * (double) sz.y);
+                        g.chcolor(wearclr[p == 1.0 ? 3 : (int) (p / 0.25)]);
+                        g.frect(new Coord(sz.x - 3, sz.y - h), new Coord(3, h));
+                        g.chcolor();
+                        break;
                     }
-                } catch (Exception e) { // fail silently if info is not ready
                 }
+            } catch (Exception e) { // fail silently if info is not ready
             }
         } else {
             g.image(missing.layer(Resource.imgc).tex(), Coord.z, sz);
@@ -313,17 +289,6 @@ public class WItem extends Widget implements DTarget {
         g.chcolor();
     }
 
-    private void openwebpage(String url) {
-        Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
-        if (desktop != null && desktop.isSupported(Desktop.Action.BROWSE)) {
-            try {
-                desktop.browse(new URL(url).toURI());
-            } catch (Exception e) {
-                // NOP
-            }
-        }
-    }
-
     public boolean mousedown(Coord c, int btn) {
         if (btn == 1) {
             if (ui.modctrl && ui.modmeta)
@@ -336,11 +301,16 @@ public class WItem extends Widget implements DTarget {
                     if (i > 0)
                         name = name.substring(i + 1, name.length() - 1);
                 }
-                String url = String.format("http://ringofbrodgar.com/wiki/%s", name);
-                openwebpage(url);
-            } else if (ui.modshift && !ui.modmeta)
+                try {
+                    WebBrowser.self.show(new URL(String.format("http://ringofbrodgar.com/wiki/%s", name)));
+                } catch (WebBrowser.BrowserException e) {
+                    getparent(GameUI.class).error("Could not launch web browser.");
+                } catch (MalformedURLException e) {
+                }
+            } else if (ui.modshift && !ui.modmeta) {
+                // server side transfer all identical: pass third argument -1 (or 1 for single item)
                 item.wdgmsg("transfer", c);
-            else if (ui.modctrl)
+            } else if (ui.modctrl)
                 item.wdgmsg("drop", c);
             else if (ui.modmeta)
                 wdgmsg("transfer-identical", this.item);

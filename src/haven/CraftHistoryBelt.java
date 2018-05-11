@@ -37,7 +37,7 @@ public class CraftHistoryBelt extends Widget {
             Coord c = beltc(i);
             g.image(invsq, c);
             if (belt[slot] != null)
-                g.image(belt[slot].img.tex(), c.add(1, 1));
+                g.image(belt[slot].img, c.add(1, 1));
         }
     }
 

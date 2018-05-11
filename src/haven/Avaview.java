@@ -29,11 +29,14 @@ package haven;
 import java.awt.Color;
 import java.util.*;
 
+import haven.Composited.Desc;
+
 public class Avaview extends PView {
     public static final Tex missing = Resource.loadtex("gfx/hud/equip/missing");
     public static final Coord dasz = missing.sz();
     public Color color = Color.WHITE;
     public long avagob;
+    public Desc avadesc;
     private Composited comp;
     private List<Composited.MD> cmod = null;
     private List<Composited.ED> cequ = null;
@@ -41,8 +44,17 @@ public class Avaview extends PView {
 
     @RName("av")
     public static class $_ implements Factory {
-        public Widget create(Widget parent, Object[] args) {
-            return (new Avaview(dasz, (Integer) args[0], "avacam"));
+        public Widget create(UI ui, Object[] args) {
+            long avagob = -1;
+            Coord sz = dasz;
+            String camnm = "avacam";
+            if (args[0] != null)
+                avagob = Utils.uint32((Integer) args[0]);
+            if ((args.length > 1) && (args[1] != null))
+                sz = (Coord) args[1];
+            if ((args.length > 2) && (args[2] != null))
+                camnm = (String) args[2];
+            return (new Avaview(sz, avagob, camnm));
         }
     }
 
@@ -54,14 +66,69 @@ public class Avaview extends PView {
 
     public void uimsg(String msg, Object... args) {
         if (msg == "upd") {
-            this.avagob = (long) (Integer) args[0];
-            return;
+            if (args[0] == null)
+                this.avagob = -1;
+            else
+                this.avagob = Utils.uint32((Integer) args[0]);
+            this.avadesc = null;
+        } else if (msg == "col") {
+            this.color = (Color) args[0];
+        } else if (msg == "pop") {
+            this.avadesc = Desc.decode(ui.sess, args);
+            this.avagob = -1;
+        } else {
+            super.uimsg(msg, args);
         }
-        super.uimsg(msg, args);
     }
 
-    private boolean missed = false;
+    private static final OwnerContext.ClassResolver<Avaview> ctxr = new OwnerContext.ClassResolver<Avaview>()
+            .add(Glob.class, v -> v.ui.sess.glob)
+            .add(Session.class, v -> v.ui.sess);
+
+    private class AvaOwner implements Sprite.Owner {
+        public Random mkrandoom() {
+            return (new Random());
+        }
+
+        public Resource getres() {
+            return (null);
+        }
+
+        public <T> T context(Class<T> cl) {
+            return (ctxr.context(cl, Avaview.this));
+        }
+    }
+
+    private void initcomp(Composite gc) {
+        if ((comp == null) || (comp.skel != gc.comp.skel)) {
+            comp = new Composited(gc.comp.skel);
+            comp.eqowner = new AvaOwner();
+        }
+    }
+
+    private static Camera makecam(Resource base, Composited comp, String camnm) {
+        Skeleton.BoneOffset bo = base.layer(Skeleton.BoneOffset.class, camnm);
+        if (bo == null)
+            throw (new Loading());
+        GLState.Buffer buf = new GLState.Buffer(null);
+        bo.forpose(comp.pose).prep(buf);
+        return (new LocationCam(buf.get(PView.loc)));
+    }
+
     private Camera cam = null;
+
+    protected Camera camera() {
+        if (cam == null)
+            throw (new Loading());
+        return (cam);
+    }
+
+    protected void setup(RenderList rl) {
+        if (comp == null)
+            throw (new Loading());
+        rl.add(comp, null);
+        rl.add(new DirLight(Color.WHITE, Color.WHITE, Color.WHITE, new Coord3f(1, 1, 1).norm()), null);
+    }
 
     private Composite getgcomp() {
         Gob gob = ui.sess.glob.oc.getgob(avagob);
@@ -76,55 +143,33 @@ public class Avaview extends PView {
         return (gc);
     }
 
-    private class AvaOwner implements Sprite.Owner {
-	public Random mkrandoom() {return(new Random());}
-	public Resource getres() {return(null);}
-	public Glob glob() {return(ui.sess.glob);}
-    }
+    private Indir<Resource> lbase = null;
 
-    private void initcomp(Composite gc) {
-	if((comp == null) || (comp.skel != gc.comp.skel)) {
-            comp = new Composited(gc.comp.skel);
-	    comp.eqowner = new AvaOwner();
-	}
-    }
-
-    private Camera makecam(Composite gc, String camnm) {
-        if (comp == null)
-            throw (new Loading());
-        Skeleton.BoneOffset bo = gc.base.get().layer(Skeleton.BoneOffset.class, camnm);
-        if (bo == null)
-            throw (new Loading());
-        GLState.Buffer buf = new GLState.Buffer(null);
-        bo.forpose(comp.pose).prep(buf);
-        return (new LocationCam(buf.get(PView.loc)));
-    }
-
-    private Composite lgc = null;
-
-    protected Camera camera() {
-        Composite gc = getgcomp();
-        if (gc == null)
-            throw (new Loading());
-        initcomp(gc);
-        if ((cam == null) || (gc != lgc))
-            cam = makecam(lgc = gc, camnm);
-        return (cam);
-    }
-
-    protected void setup(RenderList rl) {
-        Composite gc = getgcomp();
-        if (gc == null) {
-            missed = true;
-            return;
+    public void updcomp() {
+        if (avagob != -1) {
+            Composite gc = getgcomp();
+            if (gc == null)
+                throw (new Loading());
+            initcomp(gc);
+            if ((cam == null) || (gc.base != lbase))
+                cam = makecam((lbase = gc.base).get(), comp, camnm);
+            if (gc.comp.cmod != this.cmod)
+                comp.chmod(this.cmod = gc.comp.cmod);
+            if (gc.comp.cequ != this.cequ)
+                comp.chequ(this.cequ = gc.comp.cequ);
+        } else if (avadesc != null) {
+            Desc d = avadesc;
+            if ((d.base != lbase) || (cam == null) || (comp == null)) {
+                lbase = d.base;
+                comp = new Composited(d.base.get().layer(Skeleton.Res.class).s);
+                comp.eqowner = new AvaOwner();
+                cam = makecam(d.base.get(), comp, camnm);
+            }
+            if (d.mod != this.cmod)
+                comp.chmod(this.cmod = d.mod);
+            if (d.equ != this.cequ)
+                comp.chequ(this.cequ = d.equ);
         }
-        initcomp(gc);
-        if (gc.comp.cmod != this.cmod)
-            comp.chmod(this.cmod = gc.comp.cmod);
-        if (gc.comp.cequ != this.cequ)
-            comp.chequ(this.cequ = gc.comp.cequ);
-        rl.add(comp, null);
-        rl.add(new DirLight(Color.WHITE, Color.WHITE, Color.WHITE, new Coord3f(1, 1, 1).norm()), null);
     }
 
     public void tick(double dt) {
@@ -133,19 +178,14 @@ public class Avaview extends PView {
     }
 
     public void draw(GOut g) {
-    /*
-    g.chcolor(Color.BLACK);
-	g.frect(Coord.z, sz);
-	g.chcolor();
-	*/
-        missed = false;
+        if (TexGL.disableall)
+            return;
         try {
+            updcomp();
             super.draw(g);
         } catch (Loading e) {
-            missed = true;
-        }
-        if (missed)
             g.image(missing, Coord.z, sz);
+        }
         if (color != null) {
             g.chcolor(color);
             Window.wbox.draw(g, Coord.z, sz);
@@ -153,7 +193,10 @@ public class Avaview extends PView {
     }
 
     public boolean mousedown(Coord c, int button) {
-        wdgmsg("click", button);
-        return (true);
+        if (canactivate) {
+            wdgmsg("click", button);
+            return (true);
+        }
+        return (super.mousedown(c, button));
     }
 }

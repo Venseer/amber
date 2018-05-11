@@ -26,7 +26,7 @@
 
 package haven;
 
-import java.awt.Color;
+import java.util.*;
 
 public class Bufflist extends Widget {
     static final int margin = 2;
@@ -34,15 +34,13 @@ public class Bufflist extends Widget {
     public final static Resource buffswim = Resource.local().loadwait("gfx/hud/buffs/toggles/swim");
     public final static Resource bufftrack = Resource.local().loadwait("gfx/hud/buffs/toggles/tracking");
     public final static Resource buffcrime = Resource.local().loadwait("gfx/hud/buffs/toggles/crime");
+    public final static Resource partyperm = Resource.local().loadwait("gfx/hud/buffs/toggles/partyperm");
     public final static Resource buffbrain = Resource.local().loadwait("gfx/hud/buffs/brain");
-
-    public Bufflist() {
-        super(new Coord(0, Buff.cframe.sz().y * 2 + margin));
-    }
 
     private void arrange(Widget imm) {
         int i = 0;
         Coord br = new Coord();
+        Collection<Pair<Buff, Coord>> mv = new ArrayList<>();
         for (Widget wdg = child; wdg != null; wdg = wdg.next) {
             if (!(wdg instanceof Buff))
                 continue;
@@ -51,28 +49,22 @@ public class Bufflist extends Widget {
             if (ch == imm)
                 ch.c = c;
             else
-                ch.move(c);
+                mv.add(new Pair<>(ch, c));
             i++;
             if (c.x > br.x) br.x = c.x;
             if (c.y > br.y) br.y = c.y;
         }
-        resize(new Coord(br.x + Buff.cframe.sz().x, Buff.cframe.sz().y * 2 + margin));
+        resize(br.add(Buff.cframe.sz()));
+        double off = 1.0 / mv.size(), coff = 0.0;
+        for (Pair<Buff, Coord> p : mv) {
+            p.a.move(p.b, coff);
+            coff += off;
+        }
     }
 
     public void addchild(Widget child, Object... args) {
         add(child);
         arrange(child);
-    }
-
-    public BuffToggle gettoggle(String name) {
-        for (Widget wdg = child; wdg != null; wdg = wdg.next) {
-            if (wdg instanceof BuffToggle) {
-                BuffToggle tgl = (BuffToggle) wdg;
-                if (tgl.name.equals(name))
-                    return tgl;
-            }
-        }
-        return null;
     }
 
     public void cdestroy(Widget ch) {
@@ -81,5 +73,20 @@ public class Bufflist extends Widget {
 
     public void draw(GOut g) {
         draw(g, false);
+    }
+
+    public Buff gettoggle(String name) {
+        for (Widget wdg = child; wdg != null; wdg = wdg.next) {
+            if (wdg instanceof Buff) {
+                Buff buff = (Buff) wdg;
+                try {
+                    Resource res = buff.res.get();
+                    if (res.basename().equals(name))
+                        return buff;
+                } catch (Loading l) {
+                }
+            }
+        }
+        return null;
     }
 }

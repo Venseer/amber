@@ -105,7 +105,7 @@ public class Defer extends ThreadGroup {
         private volatile String state = "";
         private Throwable exc = null;
         private Loading lastload = null;
-	private volatile Thread running = null;
+        private volatile Thread running = null;
 
         private Future(Callable<T> task) {
             this.task = task;
@@ -162,19 +162,19 @@ public class Defer extends ThreadGroup {
                 if (state != "done")
                     chstate("resched");
                 running = null;
-		/* XXX: This is a race; a cancelling thread could have
-		 * gotten the thread reference via running and then
-		 * interrupt this thread after interrupted()
-		 * returns. There is no obvious elegant solution,
-		 * though, and the risk should be quite low. Fix if
-		 * possible. */
-		Thread.interrupted();
+                /* XXX: This is a race; a cancelling thread could have
+                 * gotten the thread reference via running and then
+                 * interrupt this thread after interrupted()
+                 * returns. There is no obvious elegant solution,
+                 * though, and the risk should be quite low. Fix if
+                 * possible. */
+                Thread.interrupted();
             }
         }
 
-        public T get() {
+        public T get(int prio) {
             synchronized (this) {
-                boostprio(5);
+                boostprio(prio);
                 if (state == "done") {
                     if (exc != null)
                         throw (new DeferredException(exc));
@@ -188,15 +188,23 @@ public class Defer extends ThreadGroup {
             }
         }
 
-        public boolean done() {
+        public T get() {
+            return (get(5));
+        }
+
+        public boolean done(int prio) {
             synchronized (this) {
-                boostprio(5);
+                boostprio(prio);
                 if (state == "resched") {
                     defer(this);
                     state = "";
                 }
                 return (state == "done");
             }
+        }
+
+        public boolean done() {
+            return (done(5));
         }
 
         public int priority() {

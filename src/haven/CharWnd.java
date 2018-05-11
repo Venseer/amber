@@ -30,18 +30,21 @@ import haven.resutil.Curiosity;
 import haven.resutil.FoodInfo;
 
 import java.awt.*;
+import java.awt.font.TextAttribute;
 import java.awt.image.BufferedImage;
 import java.util.*;
 import java.util.List;
 
 import static haven.PUtils.*;
 
-
+/* XXX: There starts to seem to be reason to split the while character
+ * sheet into some more modular structure, as it is growing quite
+ * large. */
 public class CharWnd extends Window {
-    public static final RichText.Foundry ifnd = new RichText.Foundry(Resource.remote(), java.awt.font.TextAttribute.FAMILY, "SansSerif", java.awt.font.TextAttribute.SIZE, Config.fontsizeglobal).aa(true);
+    public static final RichText.Foundry ifnd = new RichText.Foundry(Resource.remote(), TextAttribute.FAMILY, Text.cfg.font.get("sans"), TextAttribute.SIZE, Text.cfg.charWndBox).aa(true);
     public static final Text.Furnace catf = new BlurFurn(new TexFurn(new Text.Foundry(Text.sans, 20).aa(true), Window.ctex), 2, 2, new Color(96, 48, 0));
-    public static final Text.Furnace failf = new BlurFurn(new TexFurn(new Text.Foundry(Text.fraktur, 25).aa(true), Resource.loadimg("gfx/hud/fontred")), 3, 2, new Color(96, 48, 0));
-    public static final Text.Foundry attrf = new Text.Foundry(Text.sans.deriveFont(Font.BOLD), Config.fontsizeattr).aa(true);
+    public static final Text.Furnace failf = new BlurFurn(new TexFurn(new Text.Foundry(Text.sans, 25).aa(true), Resource.loadimg("gfx/hud/fontred")), 3, 2, new Color(96, 48, 0));
+    public static final Text.Foundry attrf = Text.attrf;
     public static final Text.Foundry numfnd = new Text.Foundry(Text.sans, 12);
     public static final Color debuff = new Color(255, 128, 128);
     public static final Color buff = new Color(128, 255, 128);
@@ -52,8 +55,9 @@ public class CharWnd extends Window {
     public final FoodMeter feps;
     public final GlutMeter glut;
     public final Constipations cons;
-    public final SkillList csk, nsk;
-    public final ExperienceList exps;
+    public final SkillGrid skg;
+    public final CredoGrid credos;
+    public final ExpGrid exps;
     public final Widget woundbox;
     public final WoundList wounds;
     public Wound.Info wound;
@@ -73,12 +77,13 @@ public class CharWnd extends Window {
         private List<El> enew = null, etr = null;
         private Indir<Resource> trev = null;
         private Tex trol;
-        private long trtm = 0;
+        private double trtm = 0;
 
         @Resource.LayerName("foodev")
         public static class Event extends Resource.Layer {
             public final Color col;
             public final String nm;
+            public final String orignm;
             public final int sort;
 
             public Event(Resource res, Message buf) {
@@ -86,7 +91,8 @@ public class CharWnd extends Window {
                 int ver = buf.uint8();
                 if (ver == 1) {
                     col = new Color(buf.uint8(), buf.uint8(), buf.uint8(), buf.uint8());
-                    nm = Resource.getLocString(Resource.BUNDLE_TOOLTIP, res, buf.string());
+                    orignm = buf.string();
+                    nm = Resource.getLocString(Resource.BUNDLE_TOOLTIP, res, orignm);
                     sort = buf.int16();
                 } else {
                     throw (new Resource.LoadException("unknown foodev version: " + ver, res));
@@ -176,9 +182,9 @@ public class CharWnd extends Window {
                     Collections.sort(etr, dcmp);
                     GameUI gui = getparent(GameUI.class);
                     if (gui != null)
-                        gui.msg(String.format(Resource.getLocString(Resource.BUNDLE_LABEL, "You gained ") + Loading.waitfor(trev).layer(Event.class).nm), Color.WHITE);
+                        gui.msg("You gained " + Loading.waitfor(trev).layer(Event.class).orignm, Color.WHITE);
                     trol = new TexI(mktrol(etr, trev));
-                    trtm = System.currentTimeMillis();
+                    trtm = Utils.rtime();
                     trev = null;
                 } catch (Loading l) {
                 }
@@ -186,17 +192,17 @@ public class CharWnd extends Window {
         }
 
         public void draw(GOut g) {
-            int d = (trtm > 0) ? ((int) (System.currentTimeMillis() - trtm)) : Integer.MAX_VALUE;
+            double d = (trtm > 0) ? (Utils.rtime() - trtm) : Double.POSITIVE_INFINITY;
             g.chcolor(0, 0, 0, 255);
             g.frect(marg, sz.sub(marg.mul(2)));
             drawels(g, els, 255);
-            if (d < 1000)
-                drawels(g, etr, 255 - ((d * 255) / 1000));
+            if (d < 1.0)
+                drawels(g, etr, (int) (255 - (d * 255)));
             g.chcolor();
             g.image(frame, Coord.z);
-            if (d < 2500) {
+            if (d < 2.5) {
                 GOut g2 = g.reclipl(trmg.inv(), sz.add(trmg.mul(2)));
-                g2.chcolor(255, 255, 255, 255 - ((d * 255) / 2500));
+                g2.chcolor(255, 255, 255, (int) (255 - ((d * 255) * (1.0 / 2.5))));
                 g2.image(trol, Coord.z);
             } else {
                 trtm = 0;
@@ -434,8 +440,7 @@ public class CharWnd extends Window {
             order();
         }
 
-        public boolean mousedown(Coord c, int button) {
-            return (false);
+        protected void itemclick(El item, int button) {
         }
     }
 
@@ -687,9 +692,9 @@ public class CharWnd extends Window {
             add(new Label("Learning points:"), 2, sz.y - 32);
 
             if (Config.studybuff && ((Inventory)study).getFreeSpace() > 0) {
-                BuffToggle tgl = study.gameui().buffs.gettoggle("brain");
+                Buff tgl = study.gameui().buffs.gettoggle("brain");
                 if (tgl == null)
-                    study.gameui().buffs.addchild(new BuffToggle("brain", Bufflist.buffbrain));
+                    study.gameui().buffs.addchild(new Buff(Bufflist.buffbrain.indir()));
             }
         }
 
@@ -761,6 +766,7 @@ public class CharWnd extends Window {
         public final String nm;
         public final Indir<Resource> res;
         public final int cost;
+        public boolean has = false;
         private String sortkey;
         private Tex small;
         private final Text.UText<?> rnm = new Text.UText<String>(attrf) {
@@ -773,10 +779,11 @@ public class CharWnd extends Window {
             }
         };
 
-        private Skill(String nm, Indir<Resource> res, int cost) {
+        private Skill(String nm, Indir<Resource> res, int cost, boolean has) {
             this.nm = nm;
             this.res = res;
             this.cost = cost;
+            this.has = has;
             this.sortkey = nm;
         }
 
@@ -785,16 +792,56 @@ public class CharWnd extends Window {
             Resource res = this.res.get();
             buf.append("$img[" + res.name + "]\n\n");
             buf.append("$b{$font[serif,16]{" + res.layer(Resource.tooltip).t + "}}\n\n\n");
-            buf.append(Resource.getLocString(Resource.BUNDLE_LABEL, "Cost: ") + cost + "\n\n");
+            if (cost > 0)
+                buf.append("Cost: " + cost + "\n\n");
             buf.append(res.layer(Resource.pagina).text);
             return (buf.toString());
+        }
+
+        private Text tooltip = null;
+
+        public Text tooltip() {
+            if (tooltip == null)
+                tooltip = Text.render(res.get().layer(Resource.tooltip).t);
+            return (tooltip);
+        }
+    }
+
+    public class Credo {
+        public final String nm;
+        public final Indir<Resource> res;
+        public boolean has = false;
+        private String sortkey;
+        private Tex small;
+
+        private Credo(String nm, Indir<Resource> res, boolean has) {
+            this.nm = nm;
+            this.res = res;
+            this.has = has;
+            this.sortkey = nm;
+        }
+
+        public String rendertext() {
+            StringBuilder buf = new StringBuilder();
+            Resource res = this.res.get();
+            buf.append("$img[" + res.name + "]\n\n");
+            buf.append("$b{$font[serif,16]{" + res.layer(Resource.tooltip).t + "}}\n\n\n");
+            buf.append(res.layer(Resource.pagina).text);
+            return (buf.toString());
+        }
+
+        private Text tooltip = null;
+
+        public Text tooltip() {
+            if (tooltip == null)
+                tooltip = Text.render(res.get().layer(Resource.tooltip).t);
+            return (tooltip);
         }
     }
 
     public class Experience {
         public final Indir<Resource> res;
         public final int mtime, score;
-        private String sortkey = "\uffff";
         private Tex small;
         private final Text.UText<?> rnm = new Text.UText<String>(attrf) {
             public String value() {
@@ -821,6 +868,14 @@ public class CharWnd extends Window {
                 buf.append(Resource.getLocString(Resource.BUNDLE_LABEL, "Experience points: ") + Utils.thformat(score) + "\n\n");
             buf.append(res.layer(Resource.pagina).text);
             return (buf.toString());
+        }
+
+        private Text tooltip = null;
+
+        public Text tooltip() {
+            if (tooltip == null)
+                tooltip = Text.render(res.get().layer(Resource.tooltip).t);
+            return (tooltip);
         }
     }
 
@@ -894,9 +949,9 @@ public class CharWnd extends Window {
 
         @RName("wound")
         public static class $wound implements Factory {
-            public Widget create(Widget parent, Object[] args) {
+            public Widget create(UI ui, Object[] args) {
                 int id = (Integer) args[0];
-                Indir<Resource> res = parent.ui.sess.getres((Integer) args[1]);
+                Indir<Resource> res = ui.sess.getres((Integer) args[1]);
                 return (new Box(id, res));
             }
         }
@@ -946,6 +1001,7 @@ public class CharWnd extends Window {
             public final String desc;
             public int done;
             public String status;
+            public Object[] wdata = null;
 
             public Condition(String desc, int done, String status) {
                 this.desc = Resource.getLocString(Resource.BUNDLE_LABEL, desc);
@@ -1013,7 +1069,49 @@ public class CharWnd extends Window {
             });
         }
 
-        public static class Box extends Widget implements Info {
+        public abstract static class CondWidget extends Widget {
+            public final Condition cond;
+
+            public CondWidget(Condition cond) {
+                this.cond = cond;
+            }
+
+            public boolean update() {
+                return(false);
+            }
+        }
+
+        public static class DefaultCond extends CondWidget {
+            public Text text;
+
+            public DefaultCond(Condition cond) {
+                super(cond);
+            }
+
+            @Deprecated
+            public DefaultCond(Widget parent, Condition cond) {
+                super(cond);
+            }
+
+            protected void added() {
+                super.added();
+                StringBuilder buf = new StringBuilder();
+                buf.append(String.format("%s{%c %s", RichText.Parser.col2a(stcol[cond.done]), stsym[cond.done], cond.desc));
+                if (cond.status != null) {
+                    buf.append(' ');
+                    buf.append(cond.status);
+                }
+                buf.append("}");
+                text = ifnd.render(buf.toString(), parent.sz.x - 20);
+                resize(text.sz().add(15, 1));
+            }
+
+            public void draw(GOut g) {
+                g.image(text.tex(), new Coord(15, 0));
+            }
+        }
+
+        public static class Box extends Widget implements Info, QView.QVInfo {
             public final int id;
             public final Indir<Resource> res;
             public Condition[] cond = {};
@@ -1037,6 +1135,10 @@ public class CharWnd extends Window {
                 resize(parent.sz);
             }
 
+            public Condition[] conds() {
+                return(cond);
+            }
+
             public void refresh() {
             }
 
@@ -1044,16 +1146,12 @@ public class CharWnd extends Window {
                 StringBuilder buf = new StringBuilder();
                 Resource res = this.res.get();
                 buf.append("$img[" + res.name + "]\n\n");
-                buf.append("$b{$font[serif,16]{" + title() + "}}\n\n\n");
-                buf.append(res.layer(Resource.pagina).text);
-                buf.append("\n");
-                for (Condition cond : this.cond) {
-                    buf.append(String.format("%s{ %c %s", RichText.Parser.col2a(stcol[cond.done]), stsym[cond.done], cond.desc));
-                    if (cond.status != null) {
-                        buf.append(' ');
-                        buf.append(cond.status);
-                    }
-                    buf.append("}\n");
+                buf.append("$b{$font[serif,16]{" + title() + "}}\n\n");
+                Resource.Pagina pag = res.layer(Resource.pagina);
+                if ((pag != null) && !pag.text.equals("")) {
+                    buf.append("\n");
+                    buf.append(pag.text);
+                    buf.append("\n");
                 }
                 return (buf.toString());
             }
@@ -1074,6 +1172,9 @@ public class CharWnd extends Window {
                         String desc = (String) args[a++];
                         int st = (Integer) args[a++];
                         String status = (String) args[a++];
+                        Object[] wdata = null;
+                        if ((a < args.length) && (args[a] instanceof Object[]))
+                            wdata = (Object[])args[a++];
                         Condition cond = findcond(desc);
                         if (cond != null) {
                             boolean ch = false;
@@ -1085,10 +1186,14 @@ public class CharWnd extends Window {
                                 cond.status = status;
                                 ch = true;
                             }
+                            if (!Arrays.equals(wdata, cond.wdata)) {
+                                cond.wdata = wdata; ch = true;
+                            }
                             if (ch && (cqv != null))
                                 cqv.update(cond);
                         } else {
                             cond = new Condition(desc, st, status);
+                            cond.wdata = wdata;
                         }
                         ncond.add(cond);
                     }
@@ -1107,127 +1212,136 @@ public class CharWnd extends Window {
                     cqv.reqdestroy();
             }
 
-            static final Text.Furnace qtfnd = new BlurFurn(new Text.Foundry(Text.serif.deriveFont(java.awt.Font.BOLD, 16)).aa(true), 2, 1, Color.BLACK);
-            static final Text.Foundry qcfnd = new Text.Foundry(Text.sans, Config.fontsizeglobal * 14 / 11).aa(true);
 
-            class QView extends Widget {
-                private Condition[] ccond;
-                private Tex[] rcond = {};
-                private Tex rtitle = null;
-                private Tex glow, glowon;
-                private double glowt = -1;
+            public int questid() {return(id);}
 
-                private void resize() {
-                    Coord sz = new Coord(0, 0);
-                    if (rtitle != null) {
-                        sz.y += rtitle.sz().y + 5;
-                        sz.x = Math.max(sz.x, rtitle.sz().x);
-                    }
-                    for (Tex c : rcond) {
-                        sz.y += c.sz().y;
-                        sz.x = Math.max(sz.x, c.sz().x);
-                    }
-                    sz.x += 3;
-                    resize(sz);
+            public Widget qview() {
+                return(cqv = new QView(this));
+            }
+        }
+
+        public static class QView extends Widget {
+            public static final Text.Furnace qtfnd = new BlurFurn(new Text.Foundry(Text.serif.deriveFont(java.awt.Font.BOLD, 16)).aa(true), 2, 1, Color.BLACK);
+            public static final Text.Foundry qcfnd = new Text.Foundry(Text.sans, 12).aa(true);
+            public final QVInfo info;
+            private Condition[] ccond;
+            private Tex[] rcond = {};
+            private Tex rtitle = null;
+            private Tex glow, glowon;
+            private double glowt = -1;
+
+            public interface QVInfo {
+                public String title();
+
+                public Condition[] conds();
+            }
+
+            public QView(QVInfo info) {
+                this.info = info;
+            }
+
+            private void resize() {
+                Coord sz = new Coord(0, 0);
+                if (rtitle != null) {
+                    sz.y += rtitle.sz().y + 5;
+                    sz.x = Math.max(sz.x, rtitle.sz().x);
                 }
+                for (Tex c : rcond) {
+                    sz.y += c.sz().y;
+                    sz.x = Math.max(sz.x, c.sz().x);
+                }
+                sz.x += 3;
+                resize(sz);
+            }
 
-                public void draw(GOut g) {
-                    int y = 0;
-                    if (rtitle != null) {
-                        if (rootxlate(ui.mc).isect(Coord.z, rtitle.sz()))
-                            g.chcolor(192, 192, 255, 255);
-                        g.image(rtitle, new Coord(3, y));
+            public void draw(GOut g) {
+                int y = 0;
+                if (rtitle != null) {
+                    if (rootxlate(ui.mc).isect(Coord.z, rtitle.sz()))
+                        g.chcolor(192, 192, 255, 255);
+                    g.image(rtitle, new Coord(3, y));
+                    g.chcolor();
+                    y += rtitle.sz().y + 5;
+                }
+                for (Tex c : rcond) {
+                    g.image(c, new Coord(3, y));
+                    if (c == glowon) {
+                        double a = (1.0 - Math.pow(Math.cos(glowt * 2 * Math.PI), 2));
+                        g.chcolor(255, 255, 255, (int) (128 * a));
+                        g.image(glow, new Coord(0, y - 3));
                         g.chcolor();
-                        y += rtitle.sz().y + 5;
                     }
-                    for (Tex c : rcond) {
-                        g.image(c, new Coord(3, y));
-                        if (c == glowon) {
-                            double a = (1.0 - Math.pow(Math.cos(glowt * 2 * Math.PI), 2));
-                            g.chcolor(255, 255, 255, (int) (128 * a));
-                            g.image(glow, new Coord(0, y - 3));
-                            g.chcolor();
-                        }
-                        y += c.sz().y;
+                    y += c.sz().y;
+                }
+            }
+
+            public boolean mousedown(Coord c, int btn) {
+                if ((rtitle != null) && c.isect(Coord.z, rtitle.sz())) {
+                    CharWnd cw = getparent(GameUI.class).chrwdg;
+                    cw.show();
+                    cw.raise();
+                    cw.parent.setfocus(cw);
+                    cw.questtab.showtab();
+                    return (true);
+                }
+                return (super.mousedown(c, btn));
+            }
+
+            public void tick(double dt) {
+                if (rtitle == null) {
+                    try {
+                        rtitle = qtfnd.render(info.title()).tex();
+                        resize();
+                    } catch (Loading l) {
                     }
                 }
-
-                public boolean mousedown(Coord c, int btn) {
-                    if ((rtitle != null) && c.isect(Coord.z, rtitle.sz())) {
-                        CharWnd cw = getparent(GameUI.class).chrwdg;
-                        cw.show();
-                        cw.raise();
-                        cw.parent.setfocus(cw);
-                        cw.questtab.showtab();
-                        return (true);
-                    }
-                    return (super.mousedown(c, btn));
-                }
-
-                public void tick(double dt) {
-                    if (rtitle == null) {
-                        try {
-                            rtitle = qtfnd.render(title()).tex();
-                            resize();
-                        } catch (Loading l) {
-                        }
-                    }
-                    if (glowt >= 0) {
-                        if ((glowt += (dt * 0.5)) > 1.0) {
-                            glowt = -1;
-                            glow = glowon = null;
-                        }
+                if (glowt >= 0) {
+                    if ((glowt += (dt * 0.5)) > 1.0) {
+                        glowt = -1;
+                        glow = glowon = null;
                     }
                 }
+            }
 
-                private Text ct(Condition c) {
-                    return (qcfnd.render(" " + stsym[c.done] + " " + c.desc + ((c.status != null)?(" " + c.status):""), stcol[c.done]));
+            private Text ct(Condition c) {
+                return (qcfnd.render(" " + stsym[c.done] + " " + c.desc + ((c.status != null) ? (" " + c.status) : ""), stcol[c.done]));
+            }
+
+            void update() {
+                Condition[] cond = info.conds();
+                Tex[] rcond = new Tex[cond.length];
+                for (int i = 0; i < cond.length; i++) {
+                    Condition c = cond[i];
+                    BufferedImage text = ct(c).img;
+                    rcond[i] = new TexI(rasterimg(blurmask2(text.getRaster(), 1, 1, Color.BLACK)));
                 }
-
-                void update() {
-                    Condition[] cond = Box.this.cond;
-                    Tex[] rcond = new Tex[cond.length];
-                    for (int i = 0; i < cond.length; i++) {
-                        Condition c = cond[i];
-                        BufferedImage text = ct(c).img;
-                        rcond[i] = new TexI(rasterimg(blurmask2(text.getRaster(), 1, 1, Color.BLACK)));
-                    }
-                    if (glowon != null) {
-                        for (int i = 0; i < this.rcond.length; i++) {
-                            if (this.rcond[i] == glowon) {
-                                for (int o = 0; o < cond.length; o++) {
-                                    if (cond[o] == this.ccond[i]) {
-                                        glowon = rcond[o];
-                                        break;
-                                    }
+                if (glowon != null) {
+                    for (int i = 0; i < this.rcond.length; i++) {
+                        if (this.rcond[i] == glowon) {
+                            for (int o = 0; o < cond.length; o++) {
+                                if (cond[o] == this.ccond[i]) {
+                                    glowon = rcond[o];
+                                    break;
                                 }
-                                break;
                             }
-                        }
-                    }
-                    this.ccond = cond;
-                    this.rcond = rcond;
-                    resize();
-                }
-
-                void update(Condition c) {
-                    glow = new TexI(rasterimg(blurmask2(ct(c).img.getRaster(), 3, 2, stcol[c.done])));
-                    for (int i = 0; i < ccond.length; i++) {
-                        if (ccond[i] == c) {
-                            glowon = rcond[i];
                             break;
                         }
                     }
-                    glowt = 0.0;
                 }
+                this.ccond = cond;
+                this.rcond = rcond;
+                resize();
             }
 
-            public int questid() {
-                return(id);
-            }
-
-            public Widget qview() {
-                return (cqv = new QView());
+            void update(Condition c) {
+                glow = new TexI(rasterimg(blurmask2(ct(c).img.getRaster(), 3, 2, stcol[c.done])));
+                for (int i = 0; i < ccond.length; i++) {
+                    if (ccond[i] == c) {
+                        glowon = rcond[i];
+                        break;
+                    }
+                }
+                glowt = 0.0;
             }
         }
 
@@ -1235,31 +1349,67 @@ public class CharWnd extends Window {
             private Widget current;
             private boolean refresh = true;
             public List<Pair<String, String>> options = Collections.emptyList();
+            public CondWidget[] condw = {};
 
             public DefaultBox(int id, Indir<Resource> res, String title) {
                 super(id, res, title);
+            }
+            protected void layouth(Widget cont) {
+                RichText text = ifnd.render(rendertext(), cont.sz.x - 20);
+                cont.add(new Img(text.tex()), new Coord(10, 10));
+            }
+
+            protected void layoutc(Widget cont) {
+                int y = cont.contentsz().y + 10;
+                CondWidget[] nw = new CondWidget[cond.length];
+                CondWidget[] pw = condw;
+                cond: for(int i = 0; i < cond.length; i++) {
+                    for(int o = 0; o < pw.length; o++) {
+                        if((pw[o] != null) && (pw[o].cond == cond[i])) {
+                            if(pw[o].update()) {
+                                pw[o].unlink();
+                                nw[i] = cont.add(pw[o], new Coord(0, y));
+                                y += nw[i].sz.y;
+                                pw[o] = null;
+                                continue cond;
+                            }
+                        }
+                    }
+                    if(cond[i].wdata != null) {
+                        Indir<Resource> wres = ui.sess.getres((Integer)cond[i].wdata[0]);
+                        nw[i] = (CondWidget)wres.get().getcode(Widget.Factory.class, true).create(ui, new Object[] {cond[i]});
+                    } else {
+                        nw[i] = new DefaultCond(cont, cond[i]);
+                    }
+                    y += cont.add(nw[i], new Coord(10, y)).sz.y;
+                }
+                condw = nw;
+            }
+
+            protected void layouto(Widget cont) {
+                int y = cont.contentsz().y + 10;
+                for(Pair<String, String> opt : options) {
+                    y += cont.add(new Button(cont.sz.x - 20, opt.b, false) {
+                        public void click() {
+                            DefaultBox.this.wdgmsg("opt", opt.a);
+                        }
+                    }, new Coord(10, y)).sz.y + 5;
+                }
+            }
+
+            protected void layout(Widget cont) {
+                layouth(cont);
+                layoutc(cont);
+                layouto(cont);
             }
 
             public void draw(GOut g) {
                 refresh: if(refresh) {
                     Scrollport newch = new Scrollport(sz);
-                    RichText text;
                     try {
-                        text = ifnd.render(rendertext(), newch.cont.sz.x - 20);
+                        layout(newch.cont);
                     } catch(Loading l) {
                         break refresh;
-                    }
-                    Widget prev;
-                    int y = 10;
-                    newch.addchild(prev = new Img(text.tex()), new Coord(10, y));
-                    y += prev.sz.y + 10;
-                    for(Pair<String, String> opt : options) {
-                        newch.addchild(prev = new Button(newch.cont.sz.x - 20, opt.b, false) {
-                            public void click() {
-                                DefaultBox.this.wdgmsg("opt", opt.a);
-                            }
-                        }, new Coord(10, y));
-                        y += prev.sz.y + 5;
                     }
                     if(current != null)
                         current.destroy();
@@ -1288,9 +1438,9 @@ public class CharWnd extends Window {
 
         @RName("quest")
         public static class $quest implements Factory {
-            public Widget create(Widget parent, Object[] args) {
+            public Widget create(UI ui, Object[] args) {
                 int id = (Integer) args[0];
-                Indir<Resource> res = parent.ui.sess.getres((Integer) args[1]);
+                Indir<Resource> res = ui.sess.getres((Integer) args[1]);
                 String title = (args.length > 2)?(String)args[2]:null;
                 return(new DefaultBox(id, res, title));
             }
@@ -1303,141 +1453,233 @@ public class CharWnd extends Window {
         }
     }
 
-    public class SkillList extends Listbox<Skill> {
-        public Skill[] skills = new Skill[0];
-        public boolean dav = false;
+    public class SkillGrid extends GridList<Skill> {
+        public final Group nsk, csk;
         private boolean loading = false;
-        private final Comparator<Skill> skcomp = new Comparator<Skill>() {
-            public int compare(Skill a, Skill b) {
-                return (a.sortkey.compareTo(b.sortkey));
-            }
-        };
 
-        public SkillList(int w, int h) {
-            super(w, h, attrf.height() + 2);
+        public SkillGrid(Coord sz) {
+            super(sz);
+            nsk = new Group(new Coord(40, 40), new Coord(-1, 5), Resource.getLocString(Resource.BUNDLE_LABEL, "Available Skills"), Collections.emptyList());
+            csk = new Group(new Coord(40, 40), new Coord(-1, 5), Resource.getLocString(Resource.BUNDLE_LABEL, "Known Skills"), Collections.emptyList());
+            itemtooltip = Skill::tooltip;
+        }
+
+        protected void drawitem(GOut g, Skill sk) {
+            if(sk.small == null)
+                sk.small = new TexI(convolvedown(sk.res.get().layer(Resource.imgc).img, new Coord(40, 40), iconfilter));
+            g.image(sk.small, Coord.z);
+        }
+
+        protected void update() {
+            super.update();
+            loading = true;
+        }
+
+        private void sksort(List<Skill> skills) {
+            for(Skill sk : skills) {
+                try {
+                    sk.sortkey = sk.res.get().layer(Resource.tooltip).t;
+                } catch(Loading l) {
+                    sk.sortkey = sk.nm;
+                    loading = true;
+                }
+            }
+            Collections.sort(skills, (a, b) -> a.sortkey.compareTo(b.sortkey));
         }
 
         public void tick(double dt) {
-            if (loading) {
+            super.tick(dt);
+            if(loading) {
                 loading = false;
-                for (Skill sk : skills) {
-                    try {
-                        sk.sortkey = sk.res.get().layer(Resource.tooltip).t;
-                    } catch (Loading l) {
-                        sk.sortkey = sk.nm;
-                        loading = true;
-                    }
-                }
-                Arrays.sort(skills, skcomp);
+                sksort(nsk.items);
+                sksort(csk.items);
             }
-        }
-
-        protected Skill listitem(int idx) {
-            return (skills[idx]);
-        }
-
-        protected int listitems() {
-            return (skills.length);
-        }
-
-        protected void drawbg(GOut g) {
-        }
-
-        protected void drawitem(GOut g, Skill sk, int idx) {
-            g.chcolor((idx % 2 == 0) ? every : other);
-            g.frect(Coord.z, g.sz);
-            g.chcolor();
-            try {
-                if (sk.small == null)
-                    sk.small = new TexI(PUtils.convolvedown(sk.res.get().layer(Resource.imgc).img, new Coord(itemh, itemh), iconfilter));
-                g.image(sk.small, Coord.z);
-            } catch (Loading e) {
-                g.image(WItem.missing.layer(Resource.imgc).tex(), Coord.z, new Coord(itemh, itemh));
-            }
-            if (dav && (sk.cost > exp))
-                g.chcolor(255, 192, 192, 255);
-            g.aimage(sk.rnm.get().tex(), new Coord(itemh + 5, itemh / 2), 0, 0.5);
-        }
-
-        public void pop(Collection<Skill> nsk) {
-            Skill[] skills = nsk.toArray(new Skill[0]);
-            sb.val = 0;
-            sb.max = skills.length - h;
-            Skill psel = sel;
-            sel = null;
-            this.skills = skills;
-            if (psel != null) {
-                for (Skill sk : skills) {
-                    if (sk.nm.equals(psel.nm)) {
-                        sel = sk;
-                        break;
-                    }
-                }
-            }
-            loading = true;
         }
     }
 
-    public static class ExperienceList extends Listbox<Experience> {
-        public Experience[] exps = new Experience[0];
+    public class CredoGrid extends Scrollport {
+        public final Coord crsz = new Coord(70, 88);
+        public final Tex credoufr = new TexI(convolvedown(Resource.loadimg("gfx/hud/chr/yrkirframe"), crsz, iconfilter));
+        public final Tex credosfr = new TexI(convolvedown(Resource.loadimg("gfx/hud/chr/yrkirsframe"), crsz, iconfilter));
+        public final Text.Foundry prsf = Text.std;
+        public List<Credo> ncr = Collections.emptyList(), ccr = Collections.emptyList();
+        public Credo pcr = null;
+        public int pcl, pclt, pcql, pcqlt, pqid;
+        public Credo sel = null;
+        private final Img pcrc, ncrc, ccrc;
+        private final Button pbtn, qbtn;
         private boolean loading = false;
-        private final Comparator<Experience> comp = new Comparator<Experience>() {
-            public int compare(Experience a, Experience b) {
-                return (a.sortkey.compareTo(b.sortkey));
-            }
-        };
 
-        public ExperienceList(int w, int h) {
-            super(w, h, attrf.height() + 2);
+        public CredoGrid(Coord sz) {
+            super(sz);
+            pcrc = new Img(GridList.dcatf.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Pursuing")).tex());
+            ncrc = new Img(GridList.dcatf.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Credos Available")).tex());
+            ccrc = new Img(GridList.dcatf.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Credos Acquired")).tex());
+            pbtn = new Button(100, "Pursue", false) {
+                public void click() {
+                    if(sel != null)
+                        CharWnd.this.wdgmsg("crpursue", sel.nm);
+                }
+            };
+            qbtn = new Button(100, "Show quest", false) {
+                public void click() {
+                    CharWnd.this.wdgmsg("qsel", pqid);
+                    questtab.showtab();
+                }
+            };
+        }
+
+        private Tex crtex(Credo cr) {
+            if(cr.small == null)
+                cr.small = new TexI(convolvedown(cr.res.get().layer(Resource.imgc).img, crsz, iconfilter));
+            return(cr.small);
+        }
+
+        private class CredoImg extends Img {
+            private final Credo cr;
+
+            CredoImg(Credo cr) {
+                super(crtex(cr));
+                this.cr = cr;
+                this.tooltip = Text.render(cr.res.get().layer(Resource.tooltip).t);
+            }
+
+            public void draw(GOut g) {
+                super.draw(g);
+                g.image((cr == sel) ? credosfr : credoufr, Coord.z);
+            }
+
+            public boolean mousedown(Coord c, int button) {
+                if(button == 1) {
+                    change(cr);
+                }
+                return(true);
+            }
+        }
+
+        private int crgrid(int y, Collection<Credo> crs) {
+            int col = 0;
+            for(Credo cr : crs) {
+                if(col >= 3) {
+                    col = 0;
+                    y += crsz.y + 5;
+                }
+                cont.add(new CredoImg(cr), col * (crsz.x + 5) + 5, y);
+                col++;
+            }
+            return(y + crsz.y + 5);
+        }
+
+        private void sort(List<Credo> buf) {
+            Collections.sort(buf, Comparator.comparing(cr -> cr.res.get().layer(Resource.tooltip).t));
+        }
+
+        private void update() {
+            sort(ccr); sort(ncr);
+            for(Widget ch = cont.child; ch != null; ch = cont.child)
+                ch.destroy();
+            int y = 0;
+            if(pcr != null) {
+                cont.add(pcrc, 5, y);
+                y += pcrc.sz.y + 5;
+                Widget pcrim = cont.add(new CredoImg(pcr), 5, y);
+                cont.add(new Label(String.format(Resource.getLocString(Resource.BUNDLE_LABEL, "Level: %d/%d"), pcl, pclt), prsf), pcrim.c.x + pcrim.sz.x + 5, y);
+                cont.add(new Label(String.format(Resource.getLocString(Resource.BUNDLE_LABEL, "Quest: %d/%d"), pcql, pcqlt), prsf), pcrim.c.x + pcrim.sz.x + 5, y + 20);
+                cont.adda(qbtn, pcrim.c.x + pcrim.sz.x + 5, y + pcrim.sz.y, 0, 1);
+                y += pcrim.sz.y;
+                y += 10;
+            }
+
+            if(ncr.size() > 0) {
+                cont.add(ncrc, 5, y);
+                y += ncrc.sz.y + 5;
+                y = crgrid(y, ncr);
+                if(pcr == null) {
+                    cont.add(pbtn, 5, y);
+                    y += pbtn.sz.y;
+                }
+                y += 10;
+            }
+
+            if(ccr.size() > 0) {
+                cont.add(ccrc, 5, y);
+                y += ccrc.sz.y + 5;
+                y = crgrid(y, ccr);
+                y += 10;
+            }
+            cont.update();
         }
 
         public void tick(double dt) {
-            if (loading) {
+            if(loading) {
                 loading = false;
-                for (Experience exp : exps) {
-                    try {
-                        exp.sortkey = exp.res.get().layer(Resource.tooltip).t;
-                    } catch (Loading l) {
-                        exp.sortkey = "\uffff";
-                        loading = true;
-                    }
+                try {
+                    update();
+                } catch(Loading l) {
+                    loading = true;
                 }
-                Arrays.sort(exps, comp);
             }
         }
 
-        protected Experience listitem(int idx) {
-            return (exps[idx]);
+        public void change(Credo cr) {
+            sel = cr;
         }
 
-        protected int listitems() {
-            return (exps.length);
-        }
-
-        protected void drawbg(GOut g) {
-        }
-
-        protected void drawitem(GOut g, Experience exp, int idx) {
-            g.chcolor((idx % 2 == 0) ? every : other);
-            g.frect(Coord.z, g.sz);
-            g.chcolor();
-            try {
-                if (exp.small == null)
-                    exp.small = new TexI(PUtils.convolvedown(exp.res.get().layer(Resource.imgc).img, new Coord(itemh, itemh), iconfilter));
-                g.image(exp.small, Coord.z);
-            } catch (Loading e) {
-                g.image(WItem.missing.layer(Resource.imgc).tex(), Coord.z, new Coord(itemh, itemh));
-            }
-            g.aimage(exp.rnm.get().tex(), new Coord(itemh + 5, itemh / 2), 0, 0.5);
-        }
-
-        public void pop(Collection<Experience> nl) {
-            Experience[] exps = nl.toArray(new Experience[0]);
-            sb.val = 0;
-            sb.max = exps.length - h;
-            sel = null;
-            this.exps = exps;
+        public void pcr(Credo cr, int crl, int crlt, int crql, int crqlt, int qid) {
+            this.pcr = cr;
+            this.pcl = crl;
+            this.pclt = crlt;
+            this.pcql = crql;
+            this.pcqlt = crqlt;
+            this.pqid = qid;
             loading = true;
+        }
+
+        public void ncr(List<Credo> cr) {
+            this.ncr = cr;
+            loading = true;
+        }
+
+        public void ccr(List<Credo> cr) {
+            this.ccr = cr;
+            loading = true;
+        }
+
+        public boolean mousedown(Coord c, int button) {
+            if(super.mousedown(c, button))
+                return(true);
+            change(null);
+            return(true);
+        }
+    }
+
+    public class ExpGrid extends GridList<Experience> {
+        public final Group seen;
+        private boolean loading = false;
+
+        public ExpGrid(Coord sz) {
+            super(sz);
+            seen = new Group(new Coord(40, 40), new Coord(-1, 5), null, Collections.emptyList());
+            itemtooltip = Experience::tooltip;
+        }
+
+        protected void drawitem(GOut g, Experience exp) {
+            if(exp.small == null)
+                exp.small = new TexI(convolvedown(exp.res.get().layer(Resource.imgc).img, new Coord(40, 40), iconfilter));
+            g.image(exp.small, Coord.z);
+        }
+
+        protected void update() {
+            super.update();
+            loading = true;
+        }
+
+        public void tick(double dt) {
+            super.tick(dt);
+            if(loading) {
+                loading = false;
+                Collections.sort(seen.items, Comparator.comparing((Experience a) -> a.mtime).reversed());
+            }
         }
     }
 
@@ -1633,8 +1875,8 @@ public class CharWnd extends Window {
 
     @RName("chr")
     public static class $_ implements Factory {
-        public Widget create(Widget parent, Object[] args) {
-            return (new CharWnd(parent.ui.sess.glob));
+        public Widget create(UI ui, Object[] args) {
+            return (new CharWnd(ui.sess.glob));
         }
     }
 
@@ -1783,100 +2025,96 @@ public class CharWnd extends Window {
             skills.add(new Img(catf.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Entries")).tex()), new Coord(x - 2, y));
             y += 35;
             Tabs lists = new Tabs(new Coord(x, y), new Coord(attrw + wbox.bisz().x + 10, 0), skills);
-            Tabs.Tab nsk = lists.add();
+            Tabs.Tab sktab = lists.add();
             {
-                this.nsk = nsk.add(new SkillList(lists.sz.x - wbox.bisz().x, 7) {
-                    public void change(final Skill sk) {
+                Frame f = sktab.add(new Frame(new Coord(lists.sz.x, 192), false), 0, 0);
+                y = f.sz.y + 5;
+                skg = f.addin(new SkillGrid(Coord.z) {
+                    public void change(Skill sk) {
                         Skill p = sel;
                         super.change(sk);
-                        CharWnd.this.csk.sel = null;
                         CharWnd.this.exps.sel = null;
-                        if (sk != null)
-                            info.settext(new Indir<String>() {
-                                public String get() {
-                                    return (sk.rendertext());
-                                }
-                            });
-                        else if (p != null)
+                        CharWnd.this.credos.sel = null;
+                        if(sk != null)
+                            info.settext(sk::rendertext);
+                        else if(p != null)
                             info.settext("");
                     }
-                }, wbox.btloff());
-                this.nsk.dav = true;
-                y = Frame.around(nsk, Collections.singletonList(this.nsk)).sz.y + 5;
-                int rx = attrw + 5;
-                Frame.around(nsk, Area.sized(new Coord(0, y).add(wbox.btloff()), new Coord(attrw + 10, 69)));
-                nsk.add(new Label("Learning points:"), new Coord(15, y + 10));
-                nsk.add(new ExpLabel(new Coord(rx, y + 10)));
-                nsk.add(new Label("Cost:"), new Coord(15, y + 25));
-                nsk.add(new RLabel(new Coord(rx, y + 25), "N/A") {
+                });
+                int rx = attrw + wbox.btloff().x - 10;
+                Frame.around(sktab, Area.sized(new Coord(0, y).add(wbox.btloff()), new Coord(attrw + 10, 34)));
+                /*
+                sktab.add(new Label("Learning points:"), new Coord(15, y + 10));
+                sktab.add(new ExpLabel(new Coord(rx, y + 10)));
+                */
+                Button bbtn = sktab.add(new Button(50, "Buy") {
+                    public void click() {
+                        if(skg.sel != null)
+                            CharWnd.this.wdgmsg("buy", skg.sel.nm);
+                    }
+                }, new Coord(rx - 50, y + 10));
+                Label clbl = sktab.adda(new Label("Cost:"), new Coord(15, bbtn.c.y + (bbtn.sz.y / 2)), 0, 0.5);
+                sktab.add(new RLabel(new Coord(bbtn.c.x - 10, clbl.c.y), "N/A") {
                     Integer cc = null;
+                    int cexp;
 
                     public void draw(GOut g) {
-                        if ((cc != null) && (cc > exp))
+                        if((cc != null) && (cc > exp))
                             g.chcolor(debuff);
                         super.draw(g);
-                        Skill sel = CharWnd.this.nsk.sel;
-                        if ((sel == null) && (cc != null)) {
-                            settext("N/A");
-                            cc = null;
-                        } else if ((sel != null) && ((cc == null) || (cc != sel.cost))) {
-                            settext(Utils.thformat(cc = sel.cost));
+                        Integer cost = ((skg.sel == null) || skg.sel.has) ? null : skg.sel.cost;
+                        if(!Utils.eq(cost, cc) || (cexp != exp)) {
+                            if(cost == null) {
+                                settext("N/A");
+                            } else {
+                                settext(String.format("%,d / %,d LP", cost, exp));
+                            }
+                            cc = cost;
+                            cexp = exp;
                         }
                     }
                 });
-                nsk.add(new Button(75, "Buy") {
-                    public void click() {
-                        if (CharWnd.this.nsk.sel != null)
-                            CharWnd.this.wdgmsg("buy", CharWnd.this.nsk.sel.nm);
-                    }
-                }, new Coord(rx - 75, y + 44));
             }
-            Tabs.Tab csk = lists.add();
+            Tabs.Tab credos = lists.add();
             {
-                this.csk = csk.add(new SkillList(lists.sz.x - wbox.bisz().x, 11) {
-                    public void change(final Skill sk) {
-                        Skill p = sel;
-                        super.change(sk);
-                        CharWnd.this.nsk.sel = null;
+                Frame f = credos.add(new Frame(new Coord(lists.sz.x, 241), false), 0, 0);
+                y = f.sz.y + 5;
+                this.credos = f.addin(new CredoGrid(Coord.z) {
+                    public void change(Credo cr) {
+                        Credo p = sel;
+                        super.change(cr);
+                        CharWnd.this.skg.sel = null;
                         CharWnd.this.exps.sel = null;
-                        if (sk != null)
-                            info.settext(new Indir<String>() {
-                                public String get() {
-                                    return (sk.rendertext());
-                                }
-                            });
-                        else if (p != null)
+                        if(cr != null)
+                            info.settext(cr::rendertext);
+                        else if(p != null)
                             info.settext("");
                     }
-                }, wbox.btloff());
-                Frame.around(csk, Collections.singletonList(this.csk));
+                });
+                int rx = attrw + wbox.btloff().x - 10;
             }
             Tabs.Tab exps = lists.add();
             {
-                this.exps = exps.add(new ExperienceList(lists.sz.x - wbox.bisz().x, 11) {
-                    public void change(final Experience exp) {
+                Frame f = exps.add(new Frame(new Coord(lists.sz.x, 241), false), 0, 0);
+                this.exps = f.addin(new ExpGrid(Coord.z) {
+                    public void change(Experience exp) {
                         Experience p = sel;
                         super.change(exp);
-                        CharWnd.this.nsk.sel = null;
-                        CharWnd.this.csk.sel = null;
-                        if (exp != null)
-                            info.settext(new Indir<String>() {
-                                public String get() {
-                                    return (exp.rendertext());
-                                }
-                            });
-                        else if (p != null)
+                        CharWnd.this.skg.sel = null;
+                        CharWnd.this.credos.sel = null;
+                        if(exp != null)
+                            info.settext(exp::rendertext);
+                        else if(p != null)
                             info.settext("");
                     }
-                }, wbox.btloff());
-                Frame.around(exps, Collections.singletonList(this.exps));
+                });
             }
             lists.pack();
             int bw = (lists.sz.x + 5) / 3;
             x = lists.c.x;
             y = lists.c.y + lists.sz.y + 5;
-            skills.add(lists.new TabButton(bw - 5, "Available", nsk), new Coord(x, y));
-            skills.add(lists.new TabButton(bw - 5, "Known", csk), new Coord(x + bw, y));
+            skills.add(lists.new TabButton(bw - 5, "Skills", sktab), new Coord(x, y));
+            skills.add(lists.new TabButton(bw - 5, "Credos", credos), new Coord(x + bw * 1, y));
             skills.add(lists.new TabButton(bw - 5, "Lore", exps), new Coord(x + bw * 2, y));
         }
 
@@ -2028,22 +2266,36 @@ public class CharWnd extends Window {
         }
     }
 
-    private void decsklist(Collection<Skill> buf, Object[] args, int a) {
+    private List<Skill> decsklist(Object[] args, int a, boolean has) {
+        List<Skill> buf = new ArrayList<>();
         while (a < args.length) {
             String nm = (String) args[a++];
             Indir<Resource> res = ui.sess.getres((Integer) args[a++]);
             int cost = ((Number) args[a++]).intValue();
-            buf.add(new Skill(nm, res, cost));
+            buf.add(new Skill(nm, res, cost, has));
         }
+        return(buf);
     }
 
-    private void decexplist(Collection<Experience> buf, Object[] args, int a) {
+    private List<Credo> deccrlist(Object[] args, int a, boolean has) {
+        List<Credo> buf = new ArrayList<>();
+        while(a < args.length) {
+            String nm = (String)args[a++];
+            Indir<Resource> res = ui.sess.getres((Integer)args[a++]);
+            buf.add(new Credo(nm, res, has));
+        }
+        return(buf);
+    }
+
+    private List<Experience> decexplist(Object[] args, int a) {
+        List<Experience> buf = new ArrayList<>();
         while (a < args.length) {
             Indir<Resource> res = ui.sess.getres((Integer) args[a++]);
             int mtime = ((Number) args[a++]).intValue();
             int score = ((Number) args[a++]).intValue();
             buf.add(new Experience(res, mtime, score));
         }
+        return (buf);
     }
 
     public void uimsg(String nm, Object... args) {
@@ -2070,22 +2322,28 @@ public class CharWnd extends Window {
                 cons.update(t, m);
             }
         } else if (nm == "csk") {
-        /* One *could* argue that rmessages should have some
-         * built-in fragmentation scheme. ^^ */
-            boolean rst = ((Integer) args[0]) != 0;
-            Collection<Skill> buf = rst ? new ArrayList<Skill>() : new ArrayList<Skill>(Arrays.asList(csk.skills));
-            decsklist(buf, args, 1);
-            csk.pop(buf);
-        } else if (nm == "nsk") {
-            boolean rst = ((Integer) args[0]) != 0;
-            Collection<Skill> buf = rst ? new ArrayList<Skill>() : new ArrayList<Skill>(Arrays.asList(nsk.skills));
-            decsklist(buf, args, 1);
-            nsk.pop(buf);
-        } else if (nm == "exps") {
-            boolean rst = ((Integer) args[0]) != 0;
-            Collection<Experience> buf = rst ? new ArrayList<Experience>() : new ArrayList<Experience>(Arrays.asList(exps.exps));
-            decexplist(buf, args, 1);
-            exps.pop(buf);
+            skg.csk.update(decsklist(args, 0, true));
+        } else if(nm == "nsk") {
+            skg.nsk.update(decsklist(args, 0, false));
+        } else if(nm == "ccr") {
+            credos.ccr(deccrlist(args, 0, true));
+        } else if(nm == "ncr") {
+            credos.ncr(deccrlist(args, 0, false));
+        } else if(nm == "pcr") {
+            if(args.length > 0) {
+                int a = 0;
+                String cnm = (String)args[a++];
+                Indir<Resource> res = ui.sess.getres((Integer)args[a++]);
+                int crl = (Integer)args[a++], crlt = (Integer)args[a++];
+                int crql = (Integer)args[a++], crqlt = (Integer)args[a++];
+                int qid = (Integer)args[a++];
+                credos.pcr(new Credo(cnm, res, false),
+                        crl, crlt, crql, crqlt, qid);
+            } else {
+                credos.pcr(null, 0, 0, 0, 0, 0);
+            }
+        } else if(nm == "exps") {
+            exps.seen.update(decexplist(args, 0));
         } else if (nm == "wounds") {
             for (int i = 0; i < args.length; i += 3) {
                 int id = (Integer) args[i];

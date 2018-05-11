@@ -43,8 +43,8 @@ public class Fightview extends Widget {
     public Indir<Resource> blk, batk, iatk;
     public double atkcs, atkct;
     public Indir<Resource> lastact = null;
-    public long lastuse = 0;
-    public int atkcd;
+    public double lastuse = 0;
+    public double atkcd;
     private GiveButton curgive;
     private Avaview curava;
     private Button curpurs;
@@ -67,13 +67,13 @@ public class Fightview extends Widget {
         }
         public int ip, oip;
         public Indir<Resource> lastact = null;
-        public long lastuse = 0;
+        public double lastuse = 0;
 
         public Relation(long gobid) {
             this.gobid = gobid;
-            add(this.ava = new Avaview(avasz, gobid, "avacam"));
+            add(this.ava = new Avaview(avasz, gobid, "avacam")).canactivate = true;
             add(this.give = new GiveButton(0, new Coord(15, 15)));
-            add(this.purs = new Button(70, "Pursue"));
+            add(this.purs = new Button(70, "Chase"));
         }
 
         public void give(int state) {
@@ -96,7 +96,7 @@ public class Fightview extends Widget {
 
         public void use(Indir<Resource> act) {
             lastact = act;
-            lastuse = System.currentTimeMillis();
+            lastuse = Utils.rtime();
             if (lastact != null && Config.logcombatactions) {
                 try {
                     Resource res = lastact.get();
@@ -114,7 +114,7 @@ public class Fightview extends Widget {
 
     public void use(Indir<Resource> act) {
         lastact = act;
-        lastuse = System.currentTimeMillis();
+        lastuse = Utils.rtime();
         if (lastact != null && Config.logcombatactions) {
             try {
                 Resource res = lastact.get();
@@ -123,7 +123,7 @@ public class Fightview extends Widget {
                     gameui().syslog.append("Combat: WARNING! tooltip is missing for " + res.name + ". Notify Jorb/Loftar about this.", combatLogMeClr);
                     return;
                 }
-                String cd = Utils.fmt1DecPlace(atkct - System.currentTimeMillis() / 1000.0);
+                String cd = Utils.fmt1DecPlace(atkct - lastuse);
                 gameui().syslog.append(String.format("me: %s, ip %d - %d, cd %ss", tt.t, current.ip, current.oip, cd), combatLogMeClr);
             } catch (Loading l) {
             }
@@ -132,7 +132,7 @@ public class Fightview extends Widget {
 
     @RName("frv")
     public static class $_ implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             return (new Fightview());
         }
     }
@@ -157,8 +157,8 @@ public class Fightview extends Widget {
     private void setcur(Relation rel) {
         if ((current == null) && (rel != null)) {
             add(curgive = new GiveButton(0), cgivec);
-            add(curava = new Avaview(Avaview.dasz, rel.gobid, "avacam"), cavac);
-            add(curpurs = new Button(70, "Pursue"), cpursc);
+            add(curava = new Avaview(Avaview.dasz, rel.gobid, "avacam"), cavac).canactivate = true;
+            add(curpurs = new Button(70, "Chase"), cpursc);
             curgive.state = rel.give.state;
         } else if ((current != null) && (rel == null)) {
             ui.destroy(curgive);
@@ -312,8 +312,8 @@ public class Fightview extends Widget {
             }
             return;
         } else if (msg == "atkc") {
-            atkcd = (Integer) args[0];
-            atkcs = System.currentTimeMillis() / 1000.0;
+            atkcd = ((Number)args[0]).doubleValue();
+            atkcs = Utils.rtime();
             atkct = atkcs + (atkcd * 0.06);
             return;
         } else if (msg == "blk") {

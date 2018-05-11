@@ -30,21 +30,20 @@ import java.awt.Color;
 import java.util.*;
 
 import haven.*;
-import haven.Resource.Tile;
 import haven.Surface.MeshVertex;
 
 public class GroundTile extends Tiler implements Tiler.MCons, Tiler.CTrans {
     private static final Material.Colors gcol = new Material.Colors(new Color(128, 128, 128), new Color(255, 255, 255), new Color(0, 0, 0), new Color(0, 0, 0));
-    public final Resource.Tileset set;
+    public final Tileset set;
 
     @ResName("gnd")
     public static class Fac implements Factory {
-        public Tiler create(int id, Resource.Tileset set) {
+        public Tiler create(int id, Tileset set) {
             return (new GroundTile(id, set));
         }
     }
 
-    public GroundTile(int id, Resource.Tileset set) {
+    public GroundTile(int id, Tileset set) {
         super(id);
         this.set = set;
     }
@@ -68,7 +67,7 @@ public class GroundTile extends Tiler implements Tiler.MCons, Tiler.CTrans {
     /* XXX: Some strange javac bug seems to make it resolve the
      * trans() references to the wrong signature, thus the name
      * distinction. */
-    public void _faces(MapMesh m, Tile t, int z, Surface.Vertex[] v, float[] tcx, float[] tcy, int[] f) {
+    public void _faces(MapMesh m, Tileset.Tile t, int z, Surface.Vertex[] v, float[] tcx, float[] tcy, int[] f) {
         Tex tex = t.tex();
         float tl = tex.tcx(0), tt = tex.tcy(0), tw = tex.tcx(tex.sz().x) - tl, th = tex.tcy(tex.sz().y) - tt;
         GLState st = stfor(tex, z, t.t != 'g');
@@ -92,7 +91,7 @@ public class GroundTile extends Tiler implements Tiler.MCons, Tiler.CTrans {
         lay(m, lc, gc, this, false);
     }
 
-    private MCons tcons(final int z, final Tile t) {
+    private MCons tcons(final int z, final Tileset.Tile t) {
         return (new MCons() {
             public void faces(MapMesh m, MPart d) {
                 _faces(m, t, z, d.v, d.tcx, d.tcy, d.f);

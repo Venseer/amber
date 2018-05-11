@@ -63,15 +63,10 @@ public class Phong extends ValBlock.Group {
 
         public void modify(ProgramContext prog) {
             Phong ph = prog.getmod(Phong.class);
-            Macro1<Expression> cel = new Macro1<Expression>() {
-                public Expression expand(Expression in) {
-                    return (celramp.call(in));
-                }
-            };
             if (dif)
-                ph.bcol.mod(cel, 0);
+                ph.bcol.mod(in -> celramp.call(in), 0);
             if (spc)
-                ph.scol.mod(cel, 0);
+                ph.scol.mod(in -> celramp.call(in), 0);
         }
     }
 
@@ -178,7 +173,7 @@ public class Phong extends ValBlock.Group {
         } else {
             for (int i = 0; i < 4; i++) {
         /* No few drivers seem to be having trouble with the for
-         * loop. It would be nice to be able to select this code
+		 * loop. It would be nice to be able to select this code
 		 * path only on those drivers. */
                 blk.add(new If(gt(nlights.ref(), l(i)),
                         stmt(dolight.call(l(i), vert, edir, norm, bcol.tgt, scol.tgt))));
@@ -189,15 +184,11 @@ public class Phong extends ValBlock.Group {
     }
 
     private static void fmod(final FragmentContext fctx, final Expression bcol, final Expression scol) {
-        fctx.fragcol.mod(new Macro1<Expression>() {
-            public Expression expand(Expression in) {
-                return (add(mul(in, vec4(bcol, pick(fref(fctx.prog.gl_FrontMaterial.ref(), "diffuse"), "a"))), vec4(scol, l(0.0))));
-            }
-        }, 500);
+        fctx.fragcol.mod(in -> add(mul(in, vec4(bcol, pick(fref(fctx.prog.gl_FrontMaterial.ref(), "diffuse"), "a"))), vec4(scol, l(0.0))), 500);
     }
 
     public Phong(VertexContext vctx) {
-        vctx.mainvals.super ();
+        vctx.mainvals.super();
         pfrag = false;
         prog = vctx.prog;
         Value edir = MiscLib.vertedir(vctx);
@@ -224,7 +215,7 @@ public class Phong extends ValBlock.Group {
     }
 
     public Phong(FragmentContext fctx) {
-        fctx.mainvals.super ();
+        fctx.mainvals.super();
         pfrag = true;
         prog = fctx.prog;
         Value edir = MiscLib.fragedir(fctx);

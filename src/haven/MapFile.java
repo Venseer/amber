@@ -40,19 +40,16 @@ import static haven.MCache.cmaps;
 public class MapFile {
     public static boolean debug = false;
     public final ResCache store;
-
-    public ResCache store() {
-        return (store);
-    }
-
+    public final String filename;
     public final Collection<Long> knownsegs = new HashSet<>();
     public final Collection<Marker> markers = new ArrayList<>();
     public final Map<Long, SMarker> smarkers = new HashMap<>();
     public int markerseq = 0;
     public final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
-    public MapFile(ResCache store) {
+    public MapFile(ResCache store, String filename) {
         this.store = store;
+        this.filename = filename;
     }
 
     private void checklock() {
@@ -60,11 +57,30 @@ public class MapFile {
             throw (new IllegalMonitorStateException());
     }
 
-    public static MapFile load(ResCache store) {
-        MapFile file = new MapFile(store);
+    private String mangle(String datum) {
+        StringBuilder buf = new StringBuilder();
+        buf.append("map/");
+        if (!filename.equals("")) {
+            buf.append(filename);
+            buf.append('/');
+        }
+        buf.append(datum);
+        return (buf.toString());
+    }
+
+    private InputStream sfetch(String ctl, Object... args) throws IOException {
+        return (store.fetch(mangle(String.format(ctl, args))));
+    }
+
+    private OutputStream sstore(String ctl, Object... args) throws IOException {
+        return (store.store(mangle(String.format(ctl, args))));
+    }
+
+    public static MapFile load(ResCache store, String filename) {
+        MapFile file = new MapFile(store, filename);
         InputStream fp;
         try {
-            fp = store.fetch("map/index");
+            fp = file.sfetch("index");
         } catch (FileNotFoundException e) {
             return (file);
         } catch (IOException e) {
@@ -96,7 +112,7 @@ public class MapFile {
         checklock();
         OutputStream fp;
         try {
-            fp = store.store("map/index");
+            fp = sstore("index");
         } catch (IOException e) {
             throw (new StreamMessage.IOError(e));
         }
@@ -133,7 +149,7 @@ public class MapFile {
         checklock();
         InputStream fp;
         try {
-            fp = store().fetch(String.format("map/gi-%x", id));
+            fp = sfetch("gi-%x", id);
         } catch (IOException e) {
             return (null);
         }
@@ -152,7 +168,7 @@ public class MapFile {
         checklock();
         OutputStream fp;
         try {
-            fp = store().store(String.format("map/gi-%x", info.id));
+            fp = sstore("gi-%x", info.id);
         } catch (IOException e) {
             throw (new StreamMessage.IOError(e));
         }
@@ -369,15 +385,16 @@ public class MapFile {
     }
 
     public static class Grid {
-        public final long id;
+        public final long id, mtime;
         public final TileInfo[] tilesets;
         public final byte[] tiles;
         private int useq = -1;
 
-        public Grid(long id, TileInfo[] tilesets, byte[] tiles) {
+        public Grid(long id, TileInfo[] tilesets, byte[] tiles, long mtime) {
             this.id = id;
             this.tilesets = tilesets;
             this.tiles = tiles;
+            this.mtime = mtime;
         }
 
         public static Grid from(MCache map, MCache.Grid cg) {
@@ -406,17 +423,18 @@ public class MapFile {
             byte[] tiles = new byte[cmaps.x * cmaps.y];
             for (int i = 0; i < cg.tiles.length; i++)
                 tiles[i] = (byte) (tmap[cg.tiles[i]]);
-            Grid g = new Grid(cg.id, infos, tiles);
+            Grid g = new Grid(cg.id, infos, tiles, System.currentTimeMillis());
             g.useq = oseq;
             return (g);
         }
 
         public void save(Message fp) {
-            fp.adduint8(1);
+            fp.adduint8(2);
             ZMessage z = new ZMessage(fp);
             z.addint64(id);
+            z.addint64(mtime);
             z.adduint8(tilesets.length);
-            for (int i = 0; i < tilesets.length; i++) {
+            for(int i = 0; i < tilesets.length; i++) {
                 z.addstring(tilesets[i].res.name);
                 z.adduint16(tilesets[i].res.ver);
                 z.adduint8(tilesets[i].prio);
@@ -425,38 +443,41 @@ public class MapFile {
             z.finish();
         }
 
-        public void save(ResCache store) {
+        public void save(MapFile file) {
             OutputStream fp;
             try {
-                fp = store.store(String.format("map/grid-%x", id));
-            } catch (IOException e) {
-                throw (new StreamMessage.IOError(e));
+                fp = file.sstore("grid-%x", id);
+            } catch(IOException e) {
+                //throw (new StreamMessage.IOError(e));
+                // ignore IOE to prevent crashing when running multiple clients on Windows.
+                return;
             }
-            try (StreamMessage out = new StreamMessage(fp)) {
+            try(StreamMessage out = new StreamMessage(fp)) {
                 save(out);
             }
         }
 
-        public static Grid load(ResCache store, long id) {
+        public static Grid load(MapFile file, long id) {
             InputStream fp;
             try {
-                fp = store.fetch(String.format("map/grid-%x", id));
+                fp = file.sfetch("grid-%x", id);
             } catch (IOException e) {
                 Debug.log.printf("mapfile warning: error when locating grid %x: %s\n", id, e);
                 return (null);
             }
             try (StreamMessage data = new StreamMessage(fp)) {
                 int ver = data.uint8();
-                if (ver == 1) {
+                if ((ver >= 1) && (ver <= 2)) {
                     ZMessage z = new ZMessage(data);
                     long storedid = z.int64();
                     if (storedid != id)
                         throw (new Message.FormatError(String.format("Grid ID mismatch: expected %s, got %s", id, storedid)));
+                    long mtime = (ver >= 2) ? z.int64() : System.currentTimeMillis();
                     List<TileInfo> tilesets = new ArrayList<TileInfo>();
                     for (int i = 0, no = z.uint8(); i < no; i++)
                         tilesets.add(new TileInfo(new Resource.Spec(Resource.remote(), z.string(), z.uint16()), z.uint8()));
                     byte[] tiles = z.bytes(cmaps.x * cmaps.y);
-                    return (new Grid(id, tilesets.toArray(new TileInfo[0]), tiles));
+                    return (new Grid(id, tilesets.toArray(new TileInfo[0]), tiles, mtime));
                 } else {
                     throw (new Message.FormatError(String.format("Unknown grid data version for %x: %d", id, ver)));
                 }
@@ -564,7 +585,7 @@ public class MapFile {
         }
 
         private Future<Grid> loadgrid(long id) {
-            return (Defer.later(() -> Grid.load(store, id)));
+            return (Defer.later(() -> Grid.load(MapFile.this, id)));
         }
 
         private Cached grid0(long id) {
@@ -629,7 +650,7 @@ public class MapFile {
         checklock();
         InputStream fp;
         try {
-            fp = store().fetch(String.format("map/seg-%x", id));
+            fp = sfetch("seg-%x", id);
         } catch (IOException e) {
             return (null);
         }
@@ -655,7 +676,7 @@ public class MapFile {
         checklock();
         OutputStream fp;
         try {
-            fp = store().store(String.format("map/seg-%x", seg.id));
+            fp = sstore("seg-%x", seg.id);
         } catch (IOException e) {
             throw (new StreamMessage.IOError(e));
         }
@@ -720,7 +741,7 @@ public class MapFile {
                 if (moff == null) {
                     Coord psc = seg.map.reverse().get(g.id);
                     if (psc == null) {
-                        Debug.log.printf("mapfile warning: grid %x is oddly gone from segment %x; was at %s\n", g.id, seg.id, info.sc);
+                        if (debug) Debug.log.printf("mapfile warning: grid %x is oddly gone from segment %x; was at %s\n", g.id, seg.id, info.sc);
                         missing.add(g);
                         continue;
                     } else if (!psc.equals(info.sc)) {
@@ -734,7 +755,7 @@ public class MapFile {
                 Grid cur = seg.loaded(g.id);
                 if (!((cur != null) && (cur.useq == g.seq))) {
                     Grid sg = Grid.from(map, g);
-                    sg.save(store);
+                    sg.save(MapFile.this);
                 }
                 if (seg.id != mseg) {
                     if (merge == null)
@@ -759,7 +780,7 @@ public class MapFile {
                 for (MCache.Grid g : missing) {
                     Grid sg = Grid.from(map, g);
                     Coord sc = g.gc.add(moff);
-                    sg.save(store);
+                    sg.save(MapFile.this);
                     seg.include(sg, sc);
                     gridinfo.put(g.id, new GridInfo(g.id, seg.id, sc));
                 }

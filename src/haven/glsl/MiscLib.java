@@ -50,11 +50,7 @@ public abstract class MiscLib {
                         return (frageyen.ref());
                     }
                 };
-                ret.mod(new Macro1<Expression>() {
-                    public Expression expand(Expression in) {
-                        return (normalize(in));
-                    }
-                }, 0);
+                ret.mod(in -> normalize(in), 0);
                 return (ret);
             }
         }));
@@ -136,7 +132,7 @@ public abstract class MiscLib {
     public static final Uniform globtime = new Uniform.AutoApply(FLOAT, "globtime") {
         public void apply(GOut g, VarID loc) {
             Glob glob = g.st.cur(PView.ctx).glob();
-            g.gl.glUniform1f(loc, (glob.globtime() % 10000000L) / 1000f);
+            g.gl.glUniform1f(loc, (float)(glob.globtime() % 10000.0));
         }
     };
 

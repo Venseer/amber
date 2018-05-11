@@ -45,7 +45,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.nio.*;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.IntPredicate;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.prefs.Preferences;
 
@@ -300,7 +302,7 @@ public class Utils {
         }
     }
 
-    static JSONObject[] getprefjsona(String prefname, JSONObject[] def) {
+    public static JSONObject[] getprefjsona(String prefname, JSONObject[] def) {
         try {
             String jsonstr = Utils.getpref(prefname, null);
             if (jsonstr == null)
@@ -318,7 +320,7 @@ public class Utils {
         }
     }
 
-    static void setprefjsona(String prefname, JSONObject[] val) {
+    public static void setprefjsona(String prefname, JSONObject[] val) {
         try {
             String jsonarr = "";
             for (JSONObject o : val)
@@ -370,7 +372,7 @@ public class Utils {
         }
     }
 
-    static void setprefb(String prefname, boolean val) {
+    public static void setprefb(String prefname, boolean val) {
         try {
             prefs().putBoolean(prefname, val);
         } catch (SecurityException e) {
@@ -430,6 +432,10 @@ public class Utils {
 
     public static byte sb(int b) {
         return ((byte) b);
+    }
+
+    public static long uint32(int n) {
+        return(n & 0xffffffffl);
     }
 
     public static int uint16d(byte[] buf, int off) {
@@ -528,18 +534,15 @@ public class Utils {
                 yb = (word & 0x003fc000) >> 14, ys = ((word & 0x00400000) >> 22) & 1,
                 zb = (word & 0x00001fd0) >> 5, zs = ((word & 0x00002000) >> 13) & 1;
         int me = (word & 0x1f) - 15;
-        int xe = Integer.numberOfLeadingZeros(xb),
-                ye = Integer.numberOfLeadingZeros(yb),
-                ze = Integer.numberOfLeadingZeros(zb);
+        int xe = Integer.numberOfLeadingZeros(xb) - 24,
+                ye = Integer.numberOfLeadingZeros(yb) - 24,
+                ze = Integer.numberOfLeadingZeros(zb) - 24;
         if (xe == 32) ret[0] = 0;
-        else
-            ret[0] = Float.intBitsToFloat((xs << 31) | ((me - (xe - 24) + 126) << 23) | ((xb << (xe - 8)) & 0x007fffff));
+        else ret[0] = Float.intBitsToFloat((xs << 31) | ((me - xe + 127) << 23) | ((xb << (xe + 16)) & 0x007fffff));
         if (ye == 32) ret[1] = 0;
-        else
-            ret[1] = Float.intBitsToFloat((ys << 31) | ((me - (ye - 24) + 126) << 23) | ((yb << (ye - 8)) & 0x007fffff));
+        else ret[1] = Float.intBitsToFloat((ys << 31) | ((me - ye + 127) << 23) | ((yb << (ye + 16)) & 0x007fffff));
         if (ze == 32) ret[2] = 0;
-        else
-            ret[2] = Float.intBitsToFloat((zs << 31) | ((me - (ze - 24) + 126) << 23) | ((zb << (ze - 8)) & 0x007fffff));
+        else ret[2] = Float.intBitsToFloat((zs << 31) | ((me - ze + 127) << 23) | ((zb << (ze + 16)) & 0x007fffff));
     }
 
     public static float hfdec(short bits) {
@@ -576,10 +579,10 @@ public class Utils {
             m = 0;
         } else if (e == 0xff) {
             ee = 0x1f;
-        } else if (e < 113) {
+        } else if (e < 127 - 14) {
             ee = 0;
-            m = (m | 0x00800000) >> (113 - e);
-        } else if (e > 142) {
+            m = (m | 0x00800000) >> ((127 - 14) - e);
+        } else if (e > 127 + 15) {
             return (((b & 0x80000000) == 0) ? ((short) 0x7c00) : ((short) 0xfc00));
         } else {
             ee = e - 127 + 15;
@@ -588,6 +591,79 @@ public class Utils {
                 (ee << 10) |
                 (m >> 13);
         return ((short) f16);
+    }
+
+    public static float mfdec(byte bits) {
+        int b = ((int) bits) & 0xff;
+        int e = (b & 0x78) >> 3;
+        int m = b & 0x07;
+        int ee;
+        if (e == 0) {
+            if (m == 0) {
+                ee = 0;
+            } else {
+                int n = Integer.numberOfLeadingZeros(m) - 29;
+                ee = (-7 - n) + 127;
+                m = (m << (n + 1)) & 0x07;
+            }
+        } else if (e == 0x0f) {
+            ee = 0xff;
+        } else {
+            ee = e - 7 + 127;
+        }
+        int f32 = ((b & 0x80) << 24) |
+                (ee << 23) |
+                (m << 20);
+        return (Float.intBitsToFloat(f32));
+    }
+
+    public static byte mfenc(float f) {
+        int b = Float.floatToIntBits(f);
+        int e = (b & 0x7f800000) >> 23;
+        int m = b & 0x007fffff;
+        int ee;
+        if (e == 0) {
+            ee = 0;
+            m = 0;
+        } else if (e == 0xff) {
+            ee = 0x0f;
+        } else if (e < 127 - 6) {
+            ee = 0;
+            m = (m | 0x00800000) >> ((127 - 6) - e);
+        } else if (e > 127 + 7) {
+            return (((b & 0x80000000) == 0) ? ((byte) 0x78) : ((byte) 0xf8));
+        } else {
+            ee = e - 127 + 7;
+        }
+        int f8 = ((b >> 24) & 0x80) |
+                (ee << 3) |
+                (m >> 20);
+        return ((byte) f8);
+    }
+
+    public static void uvec2oct(float[] buf, float x, float y, float z) {
+	float m = 1.0f / (Math.abs(x) + Math.abs(y) + Math.abs(z));
+	float hx = x * m, hy = y * m;
+	if(z >= 0) {
+	    buf[0] = hx;
+	    buf[1] = hy;
+	} else {
+	    buf[0] = (1 - Math.abs(hy)) * Math.copySign(1, hx);
+	    buf[1] = (1 - Math.abs(hx)) * Math.copySign(1, hy);
+	}
+    }
+
+    public static void oct2uvec(float[] buf, float x, float y) {
+	float z = 1 - (Math.abs(x) + Math.abs(y));
+	if(z < 0) {
+	    float xc = x, yc = y;
+	    x = (1 - Math.abs(yc)) * Math.copySign(1, xc);
+	    y = (1 - Math.abs(xc)) * Math.copySign(1, yc);
+	}
+	float f = 1 / (float)Math.sqrt((x * x) + (y * y) + (z * z));
+	buf[0] = x * f;
+	buf[1] = y * f;
+	buf[2] = z * f;
     }
 
     static char num2hex(int num) {
@@ -834,13 +910,19 @@ public class Utils {
         if (term) out.println();
     }
 
-    public static Resource myres(Class<?> c) {
-        ClassLoader cl = c.getClassLoader();
-        if (cl instanceof Resource.ResClassLoader) {
-            return (((Resource.ResClassLoader) cl).getres());
-        } else {
-            return (null);
-        }
+    public static void dumparr(int[] arr, PrintStream out, boolean term) {
+	if(arr == null) {
+	    out.print("null");
+	} else {
+	    out.print('[');
+	    boolean f = true;
+	    for(int i : arr) {
+		if(!f) out.print(", "); f = false;
+		out.print(i);
+	    }
+	    out.print(']');
+	}
+	if(term) out.println();
     }
 
     public static String titlecase(String str) {
@@ -1079,8 +1161,7 @@ public class Utils {
     }
 
     public static boolean eq(Object a, Object b) {
-        return (((a == null) && (b == null)) ||
-                ((a != null) && (b != null) && a.equals(b)));
+        return ((a == b) || ((a != null) && a.equals(b)));
     }
 
     public static boolean parsebool(String s, boolean def) {
@@ -1316,8 +1397,28 @@ public class Utils {
         return (true);
     }
 
-    public static <T> T or(T val, Supplier<T> els) {
-	return((val != null)?val:els.get());
+    public static <T> T find(Iterable<? extends T> in, Predicate<? super T> p) {
+        for(T obj : in) {
+            if(p.test(obj))
+                return(obj);
+        }
+        return(null);
+    }
+
+    @SafeVarargs
+    public static <T> T or(Supplier<T>... vals) {
+        for(Supplier<T> val : vals) {
+            T ret = val.get();
+            if(ret != null)
+                return(ret);
+        }
+        return(null);
+    }
+
+    public static <T> void clean(Collection<T> c, Consumer<? super T> clean) {
+        for (T item : c)
+            clean.accept(item);
+        c.clear();
     }
 
     public static <T> T construct(Constructor<T> cons, Object... args) {
@@ -1418,6 +1519,15 @@ public class Utils {
         }
     }
 
+    public static double ntime() {
+        return(System.currentTimeMillis() / 1e3);
+    }
+
+    private static final long rtimeoff = System.nanoTime();
+    public static double rtime() {
+        return((System.nanoTime() - rtimeoff) / 1e9);
+    }
+
     public static class MapBuilder<K, V> {
         private final Map<K, V> bk;
 
@@ -1435,8 +1545,57 @@ public class Utils {
         }
     }
 
+    public static <T> Indir<T> cache(Indir<T> src) {
+	return(new Indir<T>() {
+		private T val;
+		private boolean has = false;
+
+		public T get() {
+		    if(!has) {
+			val = src.get();
+			has = true;
+		    }
+		    return(val);
+		}
+	    });
+    }
+
     public static <K, V> MapBuilder<K, V> map() {
         return (new MapBuilder<K, V>(new HashMap<K, V>()));
+    }
+
+    public static <T, F> Iterator<T> filter(Iterator<F> from, Class<T> filter) {
+        return(new Iterator<T>() {
+            boolean h = false;
+            T n;
+
+            public boolean hasNext() {
+                while(!h) {
+                    if(!from.hasNext())
+                        return(false);
+                    F g = from.next();
+                    if(filter.isInstance(g)) {
+                        n = filter.cast(g);
+                        h = true;
+                        break;
+                    }
+                }
+                return(true);
+            }
+
+            public T next() {
+                if(!hasNext())
+                    throw(new NoSuchElementException());
+                T ret = n;
+                h = false;
+                n = null;
+                return(ret);
+            }
+
+            public void remove() {
+                from.remove();
+            }
+        });
     }
 
     public static final Comparator<Object> idcmd = new Comparator<Object>() {

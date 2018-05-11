@@ -22,6 +22,7 @@ public class MenuSearch extends GameUI.Hidewnd {
 
                 boolean ret = buf.key(ev);
                 list.changeFilter(text);
+                list.sb.val = 0;
                 return ret;
             }
         };

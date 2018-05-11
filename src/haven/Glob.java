@@ -31,7 +31,7 @@ import java.util.*;
 
 public class Glob {
     public static final double SERVER_TIME_RATIO = 3.29d;
-    public long time, epoch = System.currentTimeMillis();
+    public double serverEpoch, localEpoch = Utils.rtime();
     public Astronomy ast;
     public OCache oc = new OCache(this);
     public MCache map;
@@ -50,12 +50,12 @@ public class Glob {
     public Indir<Resource> sky1 = null, sky2 = null;
     public double skyblend = 0.0;
     private Map<Indir<Resource>, Object> wmap = new HashMap<Indir<Resource>, Object>();
-    public static TimersThread timersThread;
+    public static haven.timers.TimersThread timersThread;
     public String servertime;
     public Tex servertimetex;
 
     static {
-        timersThread = new TimersThread();
+        timersThread = new haven.timers.TimersThread();
         timersThread.start();
     }
 
@@ -75,7 +75,6 @@ public class Glob {
     }
 
     public static class CAttr extends Observable {
-        public static final Text.Foundry capval = new Text.Foundry(Text.sans.deriveFont(Font.BOLD), 12).aa(true);
         String nm;
         int base, comp;
         public Tex comptex;
@@ -84,7 +83,7 @@ public class Glob {
             this.nm = nm.intern();
             this.base = base;
             this.comp = comp;
-            this.comptex = Text.renderstroked(comp + "", Color.WHITE, Color.BLACK, capval).tex();
+            this.comptex = Text.renderstroked(comp + "", Color.WHITE, Color.BLACK, Text.num12boldFnd).tex();
         }
 
         public void update(int base, int comp) {
@@ -94,7 +93,7 @@ public class Glob {
             this.comp = comp;
             setChanged();
             notifyObservers(null);
-            this.comptex = Text.renderstroked(comp + "", Color.WHITE, Color.BLACK, capval).tex();
+            this.comptex = Text.renderstroked(comp + "", Color.WHITE, Color.BLACK, Text.num12boldFnd).tex();
         }
     }
 
@@ -153,26 +152,21 @@ public class Glob {
         lastctick = now;
     }
 
-    private static double defix(int i) {
-        return (((double) i) / 1e9);
-    }
+    private double lastrep = 0, rgtime = 0;
 
-    private long lastrep = 0;
-    private long rgtime = 0;
-
-    public long globtime() {
-        long now = System.currentTimeMillis();
-        long raw = ((now - epoch) * 3) + (time * 1000);
+    public double globtime() {
+        double now = Utils.rtime();
+        double raw = ((now - localEpoch) * SERVER_TIME_RATIO) + serverEpoch;
         if (lastrep == 0) {
             rgtime = raw;
         } else {
-            long gd = (now - lastrep) * 3;
+            double gd = (now - lastrep) * SERVER_TIME_RATIO;
             rgtime += gd;
-            if (Math.abs(rgtime + gd - raw) > 1000)
-                rgtime = rgtime + (long) ((raw - rgtime) * (1.0 - Math.pow(10.0, -(now - lastrep) / 1000.0)));
+            if (Math.abs(rgtime + gd - raw) > 1.0)
+                rgtime = rgtime + ((raw - rgtime) * (1.0 - Math.pow(10.0, -(now - lastrep))));
         }
         lastrep = now;
-        return (rgtime);
+        return rgtime;
     }
 
     private static final long secinday = 60 * 60 * 24;
@@ -180,7 +174,7 @@ public class Glob {
     private static final long dewyladysmantletimemax = 7 * 60 * 60 + 15 * 60;
 
     private void servertimecalc() {
-        long secs = globtime() / 1000;
+        long secs = (long)globtime();
         long day = secs / secinday;
         long secintoday = secs % secinday;
         long hours = secintoday / 3600;
@@ -198,11 +192,10 @@ public class Glob {
             Object[] a = msg.list();
             int n = 0;
             if (t == "tm") {
-                time = ((Number) a[n++]).intValue();
-                epoch = System.currentTimeMillis();
+                serverEpoch = ((Number) a[n++]).doubleValue();
+                localEpoch = Utils.rtime();
                 if (!inc)
                     lastrep = 0;
-                timersThread.tick(time, epoch);
                 servertimecalc();
             } else if (t == "astro") {
                 double dt = ((Number) a[n++]).doubleValue();

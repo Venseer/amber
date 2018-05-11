@@ -16,7 +16,7 @@ public class ButcherFish implements Runnable, WItemDestroyCallback {
     @Override
     public void run() {
         WItem fish;
-        while ((fish = findfish()) != null) {
+        while ((fish = Utils.findItemByPrefixInInv(gui.maininv, "gfx/invobjs/fish-")) != null) {
             fishdone = false;
             fish.registerDestroyCallback(this);
 
@@ -36,20 +36,6 @@ public class ButcherFish implements Runnable, WItemDestroyCallback {
                 }
             }
         }
-    }
-
-    private WItem findfish() {
-        for (Widget wdg = gui.maininv.child; wdg != null; wdg = wdg.next) {
-            if (wdg instanceof WItem) {
-                WItem witm = ((WItem) wdg);
-                try {
-                    if (witm.item.getres().name.startsWith("gfx/invobjs/fish-"))
-                        return witm;
-                } catch (Loading l) {
-                }
-            }
-        }
-        return null;
     }
 
     @Override

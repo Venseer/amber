@@ -27,6 +27,7 @@
 package haven.resutil;
 
 import haven.*;
+import haven.res.ui.tt.q.qbuff.QBuff;
 
 import java.text.DecimalFormat;
 import java.util.*;
@@ -72,7 +73,7 @@ public class FoodInfo extends ItemInfo.Tip {
         }
     }
 
-    public BufferedImage longtip() {
+    public BufferedImage tipimg() {
         String infoStr = Resource.getLocString(Resource.BUNDLE_LABEL, "Energy: $col[128,128,255]{%s%%}, Hunger: $col[255,192,128]{%s%%}");
         String chanceStr = Resource.getLocString(Resource.BUNDLE_LABEL, "$i{($col[192,192,255]{%d%%} chance)}");
 
@@ -82,8 +83,8 @@ public class FoodInfo extends ItemInfo.Tip {
         for (int i = 0; i < evs.length; i++) {
             Color col = Utils.blendcol(evs[i].ev.col, Color.WHITE, 0.5);
             String str;
-            if (showbaseq) {
-                GItem.Quality q = ((GItem) owner).quality();
+            if (showbaseq && owner instanceof GItem) {
+                QBuff q = ((GItem) owner).quality();
                 str = String.format("%s: $col[%d,%d,%d]{%s}  $col[%d,%d,%d]{(%s)}",
                         evs[i].ev.nm,
                         col.getRed(), col.getGreen(), col.getBlue(), Utils.odformat2(evs[i].a, 2),

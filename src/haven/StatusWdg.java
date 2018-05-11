@@ -14,10 +14,11 @@ public class StatusWdg extends Widget {
     private Tex players = hearthlingsplayingdef;
     private Tex pingtime = pingtimedef;
     private long lastPingUpdate = System.currentTimeMillis();
-    private final static Pattern pattern = Config.iswindows ?
-            Pattern.compile(".+?=32 .+?=(\\d+).*? TTL=.+") :    // Reply from 87.245.198.59: bytes=32 time=2ms TTL=53
-            Pattern.compile(".+?time=(\\d+\\.?\\d*) ms");       // 64 bytes from ansgar.seatribe.se (213.239.201.139): icmp_seq=1 ttl=47 time=71.4 ms
-
+    // Windows IPv4:    Reply from 213.239.201.139: bytes=32 time=71ms TTL=127
+    // Windows IPv6:    Reply from 2a01:4f8:130:7393::2: time=71ms
+    // GNU ping IPv4:   64 bytes from ansgar.seatribe.se (213.239.201.139): icmp_seq=1 ttl=50 time=72.5 ms
+    // GNU ping IPv6:   64 bytes from ansgar.seatribe.se: icmp_seq=1 ttl=53 time=15.3 ms
+    private final static Pattern pattern = Pattern.compile(Config.iswindows ? ".+?=(\\d+)[^ \\d\\s]" : ".+?time=(\\d+\\.?\\d*) ms");
 
     public StatusWdg() {
         tg.interrupt();
@@ -47,7 +48,7 @@ public class StatusWdg extends Widget {
             }
 
             Matcher matcher = pattern.matcher(output);
-            while (matcher.find()) {
+            if (matcher.find()) {
                 ping = matcher.group(1);
             }
         } catch (IOException ex) {

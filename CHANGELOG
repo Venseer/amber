@@ -1,12 +1,483 @@
+Version 1.67.9
+    Fixed:
+        * Crash when running on certain Intel drivers and 32-bit VMs.
+        * Peer into auto-selection not working.
+
+    Misc:
+        * Upstream code merge.
+
+
+Version 1.67.8
+    Fixed: 
+        * Crash when teleporting.
+
+
+Version 1.67.7
+    Misc:
+        * Added aggro radius to wild goats.
+        * Added mole to icons list.
+        * Add seashell to alarms list.
+        * Add treatments for coaler's cough.
+        * Ignore auto flower menu settings for eatable curios and spitroast.
+
+
+Version 1.67.6
+    Fixed:
+        * (hopefully) issues with ore dropping.
+
+    Misc:
+        * JVM argument for specifying whether to dump l10n strings.
+        * Better handling of bounding boxes for rlink-ed resources.
+
+
+Version 1.67.5
+    New: 
+        * Added hitbox for pig and goat (ported from Clenda's client).
+        * Added goat to the Shoo command (ported from Clenda's client).
+        * Added goat to the LeashAnimal command (ported from Clenda's client).
+        * Added lizards and snails to icons list.
+        * Added sound effect for eagles.
+
+    Fixed:
+        * Nanny avatar in livestock manager.
+
+    Misc:
+        * Changed key binding for taking screenshots and saving them locally to Ctrl+S.
+        * Upstream code merge.
+
+
+Version 1.67.4
+    New:
+        * Added goats to the livestock manager.
+
+    Misc:
+        * Re-enable alternative openings option.
+        * Revert last ko l10n update due to reverted combat.
+
+
+Version 1.67.3
+    New:
+        * Option to use F1-F10 for combat (Clenda).
+
+    Misc:
+        * Added goats to the clover feeder.
+        * Update ko l10n.
+        * Upstream code merge.
+
+
+Version 1.67.2
+    Fixed:
+        * Wear & armor tooltips
+
+
+Version 1.67.1
+    Fixed:
+        * Crash when viewing barter-stands with price set to gems.
+        * Wound treatments for wretched gore and sever mauling.
+
+    Misc:
+        * Added sound effect for seals.
+        * Added peer into to the menu list.
+        * Added cattail to the icons list.
+        * Upstream code merge.
+
+
+Version 1.67.0
+    Fixed:
+        * Troll belt.
+
+    Misc:
+        * Updated wound treatments lists.
+        * Allow selecting foregables for which to sound the 'aww yeah' alarm.
+
+
+Version 1.66.4
+    Fixed:
+        * Actions selected in the search window not being added to the craft history bar.
+        * Cooldown value in combat log.
+
+    Misc:
+        * Added treatments for nasty laceration.
+        * Don't show next button in the menu grid if not needed.
+        * Localization improvements.
+
+
+Version 1.66.3
+    Misc:
+        * Upstream code merge.
+
+
+Version 1.66.2
+    Fixed:
+        * Tracking toggle.
+
+    Misc:
+        * Upstream code merge.
+
+
+Version 1.66.1
+    Fixed:
+        * Timers.
+
+    Misc:
+        * Upstream code merge.
+
+
+Version 1.66.0
+    Misc:
+        * Upstream code merge.
+
+
+Version 1.65.5
+    Misc:
+        * Russian localization updates.
+        * Upstream code merge.
+
+
+Version 1.65.4
+    Fixed:
+        * Barter stands crash.
+
+
+Version 1.65.3
+    Misc:
+        * Russian localization updates.
+        * Korean localization updates.
+        * Synchronized with current server version.
+
+
+Version 1.65.2
+    Misc:
+        * Open containers while having an item on the cursor with alt+rmb.
+        * Added radius for mine beam.
+        * Added Uncommon Snapdragon to hide icons list.
+        * Russian localization updates.
+        * Upstream code merge.
+
+
+Version 1.65.1
+    Fixed:
+        * Pony power sound alert.
+        * Issue with scroller in the menu search window.
+        * Mining area selector remaining indefinitely under certain conditions.
+        * Trellis harvester not working when crop stages are not enabled.
+
+
+Version 1.65.0
+    New:
+        * Extension for filling smelters with 8 an 9 coal.
+        * Extension for equipping sword, battleaxe, or axe from the inventory or a belt.
+        * Extension for dismounting nearest rider.
+
+    Fixed:
+        * Crash on broken gemstone display signs from previous server update.
+
+    Misc:
+        * Don't navigate backward when selecting action in menu grid.
+
+
+Version 1.64.4
+    Fixed:
+        * Temporary workaround for gemstone display signs.
+
+
+Version 1.64.3
+    Fixed:
+        * Crash on studying gems when study history is turned on.
+        * Extensions menu gets opened when using alt+x.
+        * Cheese tray filler not recognizing mixed curd.
+
+
+Version 1.64.2
+    New:
+        * Options for selecting which items to auto-drop when mining.
+
+
+Version 1.64.1
+    Fixed:
+        * Gilding slots.
+
+
+Version 1.64.0
+    New:
+        * Ctrl+U for hiding the UI.
+
+    Fixed:
+        * Speech bubble showing when highlighting objects.
+
+    Misc:
+        * Added hornblende to boulders list.
+        * Made opium dragon pickable with the Q key.
+        * Temporary fix for Oct 5 patch.
+
+
+Version 1.63.0
+    New:
+        * Extension to fill cheese trays with curd from inventory.
+        * Extension to harvest/remove plants from nearest trellis.
+
+    Fixed:
+        * Finished curios alarm not working.
+
+    Misc:
+        * Added opium to relevant wound descriptions.
+        * Cave clay added to aww yeah alarm.
+        * Lore events are now sorted by last seen time instead of alphabetically.
+        * Updated Korean and Russian localizations.
+
+
+Version 1.62.0
+    Misc:
+        * Added grasshopper and irrlight to icons list.
+        * Upstream code merge.
+
+
+Version 1.61.6
+    Misc:
+        * Upstream code merge.
+
+
+Version 1.61.5
+    Fixed:
+        * Mining.
+
+
+Version 1.61.4
+    Misc:
+        * Upstream code merge.
+
+
+Version 1.61.3
+    Fixed:
+        * Remaining study time.
+
+
+Version 1.61.2
+    Fixed:
+        * Item's progress percentage.
+        * Possible crash when transferring multiple items with Alt+Mouse Click.
+
+    Misc:
+        * Updated localization.
+        * Upstream code merge.
+
+
+Version 1.61.1
+    New:
+        * Option for aggroing players in proximity to the mouse cursor.
+
+    Fixed:
+        * Issues with alternative belts window when interacting with wardrobes and other players' equipments.
+
+    Misc:
+        * Save positions of all windows instead of only those in a predefined list.
+        * Add Study to auto-menus list.
+        * Make "light object with a torch" extension to work with torches already carried in hand.
+        * Localization improvements.
+
+
+Version 1.61.0
+    Fixed:
+        * Alternative belt window not working with Exquisite Belts.
+
+    Misc:
+        * Added clover and lady's mantles to icons list.
+        * Right-clicking entry in the livestock manager will simulate right-click on the animal.
+        * Upstream code merge.
+
+
+Version 1.60.0
+    New:
+        * Option to change interface font.
+        * Dream harvester.
+
+    Fixed:
+        * Unable to hang items on walls at different heights.
+
+    Misc:
+        * Upstream code merge.
+
+
+Version 1.59.2
+    Misc:
+        * Reverted to system supplied fonts.
+
+
+Version 1.59.1
+    Fixed:
+        * Missing Latin script in Korean/Chinese localization.
+
+
+Version 1.59.0
+    New:
+        * Korean localization.
+
+    Fixed:
+        * Crash when accessing wardrobes while alternative belt window is toggled on.
+
+    Misc:
+        * Bundle all the required fonts with the client instead of using system defined fonts.
+        * Improvements to localization support.
+
+
+Version 1.58.0
+    New:
+        * Alternative belt window. See UI Settings.
+
+    Fixed:
+        * Crash when running multiple clients on Windows.
+
+    Misc:
+        * Login list is now scrollable.
+        * Timers list is also scrollable (once you have more than 13 timers).
+        * Shift+Z+Right Click used to automatically place items into containers has been changed to Shift+Alt.
+          And also no longer needs to be held all the time to work.
+        * Added crabs to hide icons list. They can be picked with the Q key now.
+        * Improvements to localization support.
+
+
+Version 1.57.5
+    Misc:
+        * Upstream code merge.
+
+
+Version 1.57.4
+    New:
+        * Option to restrict dropping mouse held items (by lichengyu).
+
+    Fixed:
+        * Shoo extensions triggering on dead animals.
+        * Player alarms triggering on mannequins.
+
+    Misc:
+        * Dead adders are now pickable with the Q key.
+        * Upstream code merge.
+
+
+Version 1.57.3
+    Fixed:
+        * Possible crash when toggling grid overlay.
+
+    Misc:
+        * Added Chip stone to auto flower menus.
+        * Upstream code merge.
+
+
+Version 1.57.2
+    Fixed:
+        * Crash when running multiple clients.
+        * Invalid softcap value on high stats.
+
+    Misc:
+        * Display system specs in error reports.
+        * Updated wound treatments.
+        * Show warning radius around adders.
+
+
+Version 1.57.1
+    New:
+        * Shoo animals extension.
+
+    Misc:
+        * Added camomile to foragables alarm.
+        * Upstream code merge.
+
+
+Version 1.57.0
+    New:
+        * Draw gilding number in blue for items with available gilding slots (by Jynx). 
+
+    Fixed:
+        * Leashing extension not working with domesticated horses. 
+        * Last entry in livestock manager not displaying properly.
+
+    Misc:
+        * Russian localization has been significantly improved (by mdsanta, not_a_cat, North Grey).
+        * Hide bushes in addition to trees on Ctrl+H.
+        * Updated wound treatments.
+        * Some other minor changes.
+        * Upstream code merge.
+
+
+Version 1.56.0
+    New:
+        * Livestock manager.
+        * Animal leashing extension.
+        * Option to highlight finished pots.
+
+    Fixed:
+        * Incorrect error message when geolocation fails.
+        * Show container's content quality instead that of container in barterstands.
+
+    Misc:
+        * More sensible settings defaults
+        * Update treatments for Black-Eyed and Blade Kiss wounds.
+        * Some other minor changes...
+        * Upstream code merge.
+
+
+Version 1.55.4
+    Fixed:
+        * Crash in timers thread.
+
+
+Version 1.55.3
+    Fixed:
+        * Various timers issues.
+        * Charter secrets list erroneously displayed in charter/portico build windows.
+
+    Misc:
+        * Restored auto-logout option.
+        * Added harvest wax to menu options.
+        * Added rustroot to icons list.
+        * Added takedown to attacks filter.
+
+
+Version 1.55.2
+    Fixed:
+        * F-key bar related crashes yet again.
+
+
+Version 1.55.1
+    Fixed:
+        * F-key bar related crashes.
+
+
+Version 1.55.0
+    New:
+        * Geolocation using odditown world map.
+        * Add buff icon for party permissions.
+
+    Fixed:
+        * Ping incorrectly displayed on Windows.
+        * Various F-key bar issues. 
+
+    Misc:
+        * Removed auto-logout option since it doesn't provide any benefits over auto-hearth anymore.
+        * Added yellowfoot and chives to icons list.
+        * Upstream code merge.
+
+
+Version 1.54.3
+    Fixed:
+        * Crime/tracking/swimming icons not showing.
+        * Crash related to baseq console command.
+        * Ping time not displayed for IPv6 routes.
+
+    Misc:
+        * Upstream code merge.
+        * Removed auto-leveler since it's implemented server-side now.
+
+
 Version 1.54.2
     Fixed:
         * Aggro radius erroneously shown around mammoths.
-		* A couple of issues with world map.
-		* Mirkwood log highlight not working.
-		* Auto-mussel picker not working with Q key.
+        * A couple of issues with world map.
+        * Mirkwood log highlight not working.
+        * Auto-mussel picker not working with Q key.
 
-	Misc:
-		* Restored automatic map tiles dumper.
+    Misc:
+        * Restored automatic map tiles dumper.
 
 
 Version 1.54.1
@@ -18,19 +489,19 @@ Version 1.54.0
     New:
         * Allow removing resource markers.
         * Console command 'savemap' for dumping world map tiles.
-		* Highlight intermediate harvestable stages for carrots and hemp.
-		* Add option to disable dropping tubers in auto-leveler.
+        * Highlight intermediate harvestable stages for carrots and hemp.
+        * Add option to disable dropping tubers in auto-leveler.
 
     Fixed:
         * Raven's Bite not being listed and Attacks filter.
-		* Map highlight settings (trees, icons. etc) not being cleared when switching chars.
-		* Black eye didn't list available cures.
-		* Water vortex missing from world map filters.
-		* Auto-leveler for people having high ping.
-		
+        * Map highlight settings (trees, icons. etc) not being cleared when switching chars.
+        * Black eye didn't list available cures.
+        * Water vortex missing from world map filters.
+        * Auto-leveler for people having high ping.
+        
     Misc:
-		* Added grub to icons list
-		* Tweaked blue kin color.
+        * Added grub to icons list
+        * Tweaked blue kin color.
 
 
 Version 1.53.0
@@ -1328,4 +1799,3 @@ Version 1.1.0
     New:
         * Daylight mode.
         * Better font.
-

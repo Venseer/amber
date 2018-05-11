@@ -8,7 +8,7 @@ public class CharterList extends Listbox<String> {
     private String[] charters;
     private static final String prefname = "charters";
     private static final Coord txtoff = new Coord(3, 3);
-    private Tex xicon = Text.render("\u2716", Color.RED, new Text.Foundry(Text.sans, 14)).tex();
+    private Tex xicon = Text.render("\u2716", Color.RED, new Text.Foundry(Text.latin, 14)).tex();
     private static final int itemh = 20;
 
     public CharterList(int w, int h) {

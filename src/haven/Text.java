@@ -28,28 +28,129 @@ package haven;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.InputStream;
 import java.util.*;
 
 public class Text {
-    // Following fonts should not be removed even if unused, since they could be needed for remotely loaded resources.
-    // Serif - used for misc numerical values, quest panel title, village names, text input boxes.
-    // Mono - used by the console.
-    // Sans - everything else.
-    public static final Font serif = new Font("Serif", Font.PLAIN, Config.fontsizeglobal);
-    public static final Font sans = new Font("Sans", Font.PLAIN, Config.fontsizeglobal);
-    public static final Font mono = new Font("Monospaced", Font.PLAIN, Config.fontsizeglobal);
-    public static final Font fraktur = Resource.local().loadwait("ui/fraktur").layer(Resource.Font.class).font;
-    public static final Font dfont = sans;
+    // Following block of fonts and foundries should not be removed even if unused,
+    // since they could be used by remotely loaded resources.
+    public static final Font serif;
+    public static final Font sans;
+    public static final Font mono;
+    public static final Font fraktur;
+    public static final Font dfont;
     public static final Foundry std;
-    public static final Foundry numfnd = new Foundry(sans, 10);
+
+    public static final Font latin;
+    public static final Foundry labelFnd;
+    public static final Foundry num10Fnd;
+    public static final Foundry num11Fnd;
+    public static final Foundry num12boldFnd;
+    public static final Foundry delfnd;
+    public static final Foundry slotFnd;
+    public static final Foundry attrf;
+    public final static FontSettings cfg;
     public final BufferedImage img;
     public final String text;
     private Tex tex;
-    public static final Color black = Color.BLACK;
-    public static final Color white = Color.WHITE;
+
+    public static class FontSettings {
+        public Map<String, String> font = new HashMap<>(4);
+        public int label;
+        public int def;
+        public int attr;
+        public int charWndBox;
+        public int tooltipCap;
+        public int wndCap;
+        public int flowerMenu;
+        public int msg;
+        public int charName;
+        public int btn;
+        public int chatName;
+        public int richText;
+
+        public FontSettings(int label, int def, int attr, int charWndBox, int tooltipCap, int wndCap, int flowerMenu, int msg, int charName, int btn, int chatName, int richText) {
+            this.label = scale(label);
+            this.def = scale(def);
+            this.attr = scale(attr);
+            this.charWndBox = scale(charWndBox);
+            this.tooltipCap = scale(tooltipCap);
+            this.wndCap = scale(wndCap);
+            this.flowerMenu = scale(flowerMenu);
+            this.msg = scale(msg);
+            this.charName = scale(charName);
+            this.btn = scale(btn);
+            this.chatName = scale(chatName);
+            this.richText = scale(richText);
+        }
+
+        static private int scale(int value) {
+            return value + Config.fontadd;
+        }
+    }
 
     static {
-        std = new Foundry(sans, Config.fontsizeglobal);
+        // here be localization horrors...
+        
+        switch (Resource.language) {
+            default:
+            case "en":
+                cfg = new FontSettings(11, 11, 14, 11, 11, 14, 12, 14, 12, 12, 12, 11); break;
+            case "ru":
+                cfg = new FontSettings(11, 11, 13, 11, 11, 14, 12, 14, 12, 12, 12, 11); break;
+            case "ko":
+                cfg = new FontSettings(14, 14, 16, 14, 14, 14, 14, 14, 12, 12, 12, 14); break;
+            case "zh":
+                cfg = new FontSettings(14, 16, 14, 16, 16, 16, 16, 16, 12, 14, 16, 16); break;
+        }
+
+        // this mapping is not really needed anymore.
+        // however it's still here just in case we would want to use custom fonts in the future.
+        if (Config.usefont) {
+            cfg.font.put("serif", Config.font);
+            cfg.font.put("sans", Config.font);
+            cfg.font.put("sansserif", Config.font);
+            cfg.font.put("dialog", Config.font);
+        } else {
+            cfg.font.put("serif", "Serif");
+            cfg.font.put("sans", "Dialog");
+            cfg.font.put("sansserif", "SansSerif");
+            cfg.font.put("dialog", "Dialog");
+        }
+
+        dfont = sans = new Font(Text.cfg.font.get("sans"), Font.PLAIN, 12);
+        serif = new Font(Text.cfg.font.get("serif"), Font.PLAIN, 12);
+        mono = new Font("Monospace", Font.PLAIN, 12);
+        fraktur = Resource.local().loadwait("ui/fraktur").layer(Resource.Font.class).font;
+
+        latin = new Font("Dialog", Font.PLAIN, 10);
+        num10Fnd = new Foundry(latin);
+        num11Fnd = new Text.Foundry(latin, 11);
+        num12boldFnd = new Text.Foundry(latin.deriveFont(Font.BOLD), 12).aa(true);
+
+        delfnd = new Text.Foundry(latin.deriveFont(Font.BOLD), 16);
+
+        std = new Foundry(sans, Text.cfg.def);
+        labelFnd = new Foundry(sans, Text.cfg.label);
+
+        switch (Resource.language) {
+            default:
+            case "en":
+            case "ru":
+                slotFnd = new Text.Foundry(Text.dfont.deriveFont(Font.ITALIC), new Color(0, 169, 224));
+                attrf = new Text.Foundry(Text.sans.deriveFont(Font.BOLD), Text.cfg.attr).aa(true);
+                break;
+            case "ko":
+            case "zh":
+                std.aa(true);
+                labelFnd.aa(true);
+                RichText.stdf.aa(true);
+                MenuGrid.ttfnd.aa(true);
+                slotFnd = new Foundry(Text.dfont, new Color(0, 169, 224)).aa(true);
+                attrf = new Text.Foundry(Text.sans, Text.cfg.attr).aa(true);
+                break;
+        }
     }
 
     public static class Line extends Text {
@@ -109,7 +210,7 @@ public class Text {
         private FontMetrics m;
         Font font;
         Color defcol;
-        public boolean aa = false;
+        public boolean aa = Config.fontaa;
         private RichText.Foundry wfnd = null;
 
         public Foundry(Font f, Color defcol) {
@@ -303,7 +404,7 @@ public class Text {
     }
 
     public static Line renderstroked(String text, Color c, Color stroke) {
-        return (renderstroked(text, c, stroke, std));
+        return (renderstroked(text, c, stroke, num11Fnd));
     }
 
     public static Line renderstroked(String text, Color c, Color stroke, Foundry foundry) {
@@ -321,7 +422,7 @@ public class Text {
         if (cmd == "render") {
             PosixArgs opt = PosixArgs.getopt(args, 1, "aw:f:s:");
             boolean aa = false;
-            String font = "SansSerif";
+            String font = Config.font;
             int width = 100, size = 10;
             for (char c : opt.parsed()) {
                 if (c == 'a') {
@@ -341,5 +442,25 @@ public class Text {
             javax.imageio.ImageIO.write(t.img, "PNG", out);
             out.close();
         }
+    }
+
+    private static Font loadFontFromFile(String fontfile) {
+        try {
+            return java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, new File(fontfile));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static Font loadFont(String fonname) {
+        java.awt.Font font;
+        try {
+            InputStream in = Text.class.getResourceAsStream("/fonts/" + fonname);
+            font = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, in);
+            in.close();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+       return font;
     }
 }

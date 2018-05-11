@@ -45,6 +45,8 @@ public abstract class Message {
     public static final int T_BYTES = 14;
     public static final int T_FLOAT32 = 15;
     public static final int T_FLOAT64 = 16;
+    public static final int T_FCOORD32 = 18;
+    public static final int T_FCOORD64 = 19;
 
     private final static byte[] empty = new byte[0];
     public int rh = 0, rt = 0, wh = 0, wt = 0;
@@ -57,6 +59,10 @@ public abstract class Message {
 
         public void overflow(int min) {
             throw (new RuntimeException("nil message is not writable"));
+        }
+
+        public String toString() {
+            return ("Message(nil)");
         }
     };
 
@@ -284,6 +290,12 @@ public abstract class Message {
                     break;
                 case T_FLOAT64:
                     ret.add(float64());
+                    break;
+                case T_FCOORD32:
+                    ret.add(new Coord2d(float32(), float32()));
+                    break;
+                case T_FCOORD64:
+                    ret.add(new Coord2d(float64(), float64()));
                     break;
                 default:
                     throw (new FormatError("Encountered unknown type " + t + " in TTO list."));

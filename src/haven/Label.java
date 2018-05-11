@@ -27,18 +27,16 @@
 package haven;
 
 import java.awt.Color;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class Label extends Widget {
     Text.Foundry f;
     Text text;
-    String texts;
-    Color col = Color.WHITE;
+    public String texts;
+    public Color col = Color.WHITE;
 
     @RName("lbl")
     public static class $_ implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             if (args.length > 1)
                 return (new Label((String) args[0], (Integer) args[1]));
             else
@@ -64,19 +62,20 @@ public class Label extends Widget {
         sz = this.text.sz();
     }
 
-    public Label(String text, Text.Foundry f, boolean noL10n) {
+    public Label(String text, Text.Foundry f, Color col) {
         super(Coord.z);
+        this.col = col;
         this.f = f;
-        this.text = f.render(texts = text, this.col);
+        this.text = f.render(texts = text, this.col); // used only for numbers and symbols. hence no localization.
         sz = this.text.sz();
     }
 
     public Label(String text, int w) {
-        this(text, w, Text.std);
+        this(text, w, Text.labelFnd);
     }
 
     public Label(String text) {
-        this(text, Text.std);
+        this(text, Text.labelFnd);
     }
 
     public void settext(String text) {

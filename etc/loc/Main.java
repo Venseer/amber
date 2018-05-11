@@ -8,8 +8,8 @@ import java.util.Map;
 import java.util.Properties;
 
 public class Main {
-    private static Map<String, String> baseTooltip, basePagina, baseWindow, baseButton, baseFlower, baseMsg, baseLabel, baseAction;
-    private static Map<String, String> l10nTooltip, l10nPagina, l10nWindow, l10nButton, l10nFlower, l10nMsg, l10nLabel, l10nAction;
+    private static Map<String, String> baseTooltip, basePagina, baseWindow, baseButton, baseFlower, baseMsg, baseLabel, baseAction, baseIngredient;
+    private static Map<String, String> l10nTooltip, l10nPagina, l10nWindow, l10nButton, l10nFlower, l10nMsg, l10nLabel, l10nAction, l10nIngredient;
     private static final String BUNDLE_TOOLTIP = "tooltip";
     private static final String BUNDLE_PAGINA = "pagina";
     private static final String BUNDLE_WINDOW = "window";
@@ -18,6 +18,7 @@ public class Main {
     private static final String BUNDLE_MSG = "msg";
     private static final String BUNDLE_LABEL = "label";
     private static final String BUNDLE_ACTION = "action";
+    private static final String BUNDLE_INGREDIENT = "ingredient";
 
     private static final String missing = "missing";
     private static final String extra = "extra";
@@ -38,6 +39,7 @@ public class Main {
         baseMsg = load(BUNDLE_MSG, "en");
         baseLabel = load(BUNDLE_LABEL, "en");
         baseAction = load(BUNDLE_ACTION, "en");
+        baseIngredient = load(BUNDLE_INGREDIENT, "en");
 
         l10nTooltip = load(BUNDLE_TOOLTIP, args[0]);
         l10nPagina = load(BUNDLE_PAGINA, args[0]);
@@ -47,6 +49,7 @@ public class Main {
         l10nMsg = load(BUNDLE_MSG, args[0]);
         l10nLabel = load(BUNDLE_LABEL, args[0]);
         l10nAction = load(BUNDLE_ACTION, args[0]);
+        l10nIngredient = load(BUNDLE_INGREDIENT, args[0]);
 
         diff(baseTooltip, l10nTooltip);
         diff(basePagina, l10nPagina);
@@ -56,6 +59,7 @@ public class Main {
         diff(baseMsg, l10nMsg);
         diff(baseLabel, l10nLabel);
         diff(baseAction, l10nAction);
+        diff(baseIngredient, l10nIngredient);
 
         dump(baseTooltip, BUNDLE_TOOLTIP, missing);
         dump(basePagina, BUNDLE_PAGINA, missing);
@@ -65,6 +69,7 @@ public class Main {
         dump(baseMsg, BUNDLE_MSG, missing);
         dump(baseLabel, BUNDLE_LABEL, missing);
         dump(baseAction, BUNDLE_ACTION, missing);
+        dump(baseIngredient, BUNDLE_INGREDIENT, missing);
 
         dump(l10nTooltip, BUNDLE_TOOLTIP, extra);
         dump(l10nPagina, BUNDLE_PAGINA, extra);
@@ -74,6 +79,7 @@ public class Main {
         dump(l10nMsg, BUNDLE_MSG, extra);
         dump(l10nLabel, BUNDLE_LABEL, extra);
         dump(l10nAction, BUNDLE_ACTION, extra);
+        dump(l10nIngredient, BUNDLE_INGREDIENT, extra);
 
         System.out.println("Done");
     }
@@ -91,7 +97,15 @@ public class Main {
             for (String key : base.keySet()) {
                 String val = base.get(key);
                 key = key.replace(" ", "\\ ").replace(":", "\\:").replace("=", "\\=");
+                if (key.startsWith("\\ "))
+                    key = "\\u0020" + key.substring(2);
+                if (key.endsWith("\\ "))
+                    key = "\\u0020" + key.substring(0, key.length() - 2);
                 val = val.replace("\\", "\\\\").replace("\n", "\\n").replace("\u0000", "");
+                if (val.startsWith(" "))
+                    val = "\\u0020" + val.substring(1);
+                if (val.endsWith(" "))
+                    val = "\\u0020" + val.substring(0, val.length() - 1);
                 out.write(key + " = " + val);
                 out.newLine();
             }

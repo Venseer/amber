@@ -40,6 +40,7 @@
     <copy todir="build/classes/haven" file="etc/res-preload" />
     <copy todir="build/classes/haven" file="etc/res-bgload" />
     <copy todir="build/classes/haven" file="etc/icon.png" />
+    <copy todir="build" file="etc/grid_ids.txt" />
   </target>
 
   <target name="lib-classes" depends="build-env" unless="unpacked-lib">
@@ -90,13 +91,13 @@
 
  <target name="dist" depends="rebuild">
     <zip destfile="${basedir}/${name}-${version}.zip" update="false">
-        <fileset dir="build" includes="*.jar" excludes="*natives*.jar"/>
+        <fileset dir="build" includes="*.jar,grid_ids.txt" excludes="*natives*.jar"/>
         <fileset dir="${basedir}" includes="README, CHANGELOG"/>
         <fileset dir="lib/jogl-natives" includes="*.jar"/>
         <fileset dir="etc" includes="*.bat,run.sh,run.command"/>
     </zip>
     <zip destfile="${basedir}/${name}-${version}-upd.zip" update="false">
-        <fileset dir="build" includes="amber-res.jar, hafen.jar, l10n.jar, builtin-res.jar" />
+        <fileset dir="build" includes="amber-res.jar, hafen.jar, l10n.jar, builtin-res.jar, grid_ids.txt" />
         <fileset dir="${basedir}" includes="CHANGELOG"/>
     </zip>
   </target>

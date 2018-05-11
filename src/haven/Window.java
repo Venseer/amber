@@ -54,7 +54,7 @@ public class Window extends Widget implements DTarget {
     public static final int capo = 7, capio = 2;
     public static final Coord dlmrgn = new Coord(23, 14), dsmrgn = new Coord(9, 9);
     public static final BufferedImage ctex = Resource.loadimg("gfx/hud/fonttex");
-    public static final Text.Furnace cf = new Text.Imager(new PUtils.TexFurn(new Text.Foundry(Text.sans, Config.fontsizewndcap).aa(true), ctex)) {
+    public static final Text.Furnace cf = new Text.Imager(new PUtils.TexFurn(new Text.Foundry(Text.sans, Text.cfg.wndCap).aa(true), ctex)) {
         protected BufferedImage proc(Text text) {
             return (rasterimg(blurmask2(text.img.getRaster(), 1, 1, Color.BLACK)));
         }
@@ -91,15 +91,10 @@ public class Window extends Widget implements DTarget {
     public int cmw;
     private UI.Grab dm = null;
     private Coord doff;
-    public static final Set<String> persistentwnds = new HashSet<String>(
-            Arrays.asList("Timers", "Inventory", "Equipment", "Crafting", "Character Sheet", "Kith & Kin", "Crate",
-                    "Cupboard", "Barrel", "Table", "Cauldron", "Stockpile", "Tub", "Ore Smelter", "Land survey",
-                    "Quiver", "Stone Casket", "Chicken Coop", "Extraction Press", "Oven", "Large Chest",
-                    "Herbalist Table", "Kiln", "Finery Forge", "Stone Column", "Steelbox", "Wooden Chest", "Search..."));
 
     @RName("wnd")
     public static class $_ implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             Coord sz = (Coord) args[0];
             String cap = (args.length > 1) ? (String) args[1] : null;
             boolean lg = (args.length > 2) ? ((Integer) args[2] != 0) : false;
@@ -289,7 +284,7 @@ public class Window extends Widget implements DTarget {
         if (dm != null) {
             dm.remove();
             dm = null;
-            if (persistentwnds.contains(origcap))
+            if (!origcap.equals("Options"))
                 Utils.setprefc(origcap + "_c", this.c);
         } else {
             super.mouseup(c, button);

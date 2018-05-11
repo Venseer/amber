@@ -37,11 +37,13 @@ public class Widget {
     public Coord c, sz;
     public Widget next, prev, child, lchild, parent;
     public boolean focustab = false, focusctl = false, hasfocus = false, visible = true;
+    private boolean attached = false;
     private boolean canfocus = false, autofocus = false;
     public boolean canactivate = false, cancancel = false;
     public Widget focused;
     public Indir<Resource> cursor = null;
     public Object tooltip = null;
+    public int gkey;
     private Widget prevtt;
     static Map<String, Factory> types = new TreeMap<String, Factory>();
 
@@ -54,14 +56,14 @@ public class Widget {
 
     @RName("cnt")
     public static class $Cont implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             return (new Widget((Coord) args[0]));
         }
     }
 
     @RName("ccnt")
     public static class $CCont implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             Widget ret = new Widget((Coord) args[0]) {
                 public void presize() {
                     c = parent.sz.div(2).sub(sz.div(2));
@@ -77,8 +79,8 @@ public class Widget {
 
     @RName("fcnt")
     public static class $FCont implements Factory {
-        public Widget create(Widget parent, Object[] args) {
-            Widget ret = new Widget(parent.sz) {
+        public Widget create(UI ui, Object[] args) {
+            Widget ret = new Widget(Coord.z) {
                 Collection<Widget> fill = new ArrayList<Widget>();
 
                 public void presize() {
@@ -130,7 +132,7 @@ public class Widget {
     }
     @RName("acnt")
     public static class $ACont implements Factory {
-	public Widget create(Widget parent, final Object[] args) {
+	public Widget create(UI ui, final Object[] args) {
 	    final String expr = (String)args[0];
 	    return(new AlignPanel() {
 		    protected Coord getc() {
@@ -142,7 +144,7 @@ public class Widget {
 
     @Resource.PublishedCode(name = "wdg", instancer = FactMaker.class)
     public interface Factory {
-        public Widget create(Widget parent, Object[] par);
+        public Widget create(UI ui, Object[] par);
     }
 
     public static class FactMaker implements Resource.PublishedCode.Instancer {
@@ -150,13 +152,13 @@ public class Widget {
             if (Factory.class.isAssignableFrom(cl))
                 return (cl.asSubclass(Factory.class).newInstance());
             try {
-                final Method mkm = cl.getDeclaredMethod("mkwidget", Widget.class, Object[].class);
+                final Method mkm = cl.getDeclaredMethod("mkwidget", UI.class, Object[].class);
                 int mod = mkm.getModifiers();
                 if (Widget.class.isAssignableFrom(mkm.getReturnType()) && ((mod & Modifier.STATIC) != 0) && ((mod & Modifier.PUBLIC) != 0)) {
                     return (new Factory() {
-                        public Widget create(Widget parent, Object[] args) {
+                        public Widget create(UI ui, Object[] args) {
                             try {
-                                return ((Widget) mkm.invoke(null, parent, args));
+                                return ((Widget) mkm.invoke(null, ui, args));
                             } catch (Exception e) {
                                 if (e instanceof RuntimeException) throw ((RuntimeException) e);
                                 throw (new RuntimeException(e));
@@ -233,6 +235,7 @@ public class Widget {
         this.ui = ui;
         this.c = c;
         this.sz = sz;
+        this.attached = true;
     }
 
     protected void attach(UI ui) {
@@ -241,12 +244,20 @@ public class Widget {
             ch.attach(ui);
     }
 
+    protected void attached() {
+        attached = true;
+        for (Widget ch = child; ch != null; ch = ch.next)
+            ch.attached();
+    }
+
     private <T extends Widget> T add0(T child) {
-        if (this.ui != null)
+        if ((child.ui == null) && (this.ui != null))
             ((Widget) child).attach(this.ui);
         child.parent = this;
         child.link();
         child.added();
+        if (attached)
+            child.attached();
         if (((Widget) child).canfocus && child.visible)
             newfocusable(child);
         return (child);
@@ -263,14 +274,12 @@ public class Widget {
     }
 
     public <T extends Widget> T add(T child, Coord c) {
-        child.c = c;
         if (child instanceof Window) {
-            try {
-                Window wnd = (Window) child;
-                if (Window.persistentwnds.contains(wnd.origcap))
-                    child.c = Utils.getprefc(wnd.origcap + "_c", c);
-            } catch (Exception e) {
-            }
+            child.c = Utils.getprefc(((Window) child).origcap + "_c", c);
+        } else if (child instanceof BeltWnd) {   // FIXME. this is ugly
+            child.c = Utils.getprefc(((BeltWnd) child).origcap + "_c", c);
+        } else {
+            child.c = c;
         }
         return (add(child));
     }
@@ -308,6 +317,8 @@ public class Widget {
                 st.push(args[off++]);
             } else if (op == '$') {
                 st.push(self);
+            } else if(op == '@') {
+                st.push(this);
             } else if (op == '_') {
                 st.push(st.peek());
             } else if (op == '.') {
@@ -326,6 +337,9 @@ public class Widget {
                 st.push(w.c.add(w.sz));
             } else if (op == 'p') {
                 st.push(((Widget) st.pop()).c);
+            } else if(op == 'P') {
+                Widget parent = (Widget)st.pop();
+                st.push(((Widget)st.pop()).parentpos(parent));
             } else if (op == 's') {
                 st.push(((Widget) st.pop()).sz);
             } else if (op == 'w') {
@@ -391,17 +405,13 @@ public class Widget {
     public void addchild(Widget child, Object... args) {
         if (args[0] instanceof Coord) {
             add(child, (Coord) args[0]);
+        } else if (args[0] instanceof Coord2d) {
+            add(child, ((Coord2d) args[0]).mul(new Coord2d(this.sz.sub(child.sz))).round());
         } else if (args[0] instanceof String) {
             add(child, relpos((String) args[0], child, args, 1));
         } else {
-            throw (new RuntimeException("Unknown child widget creation specification."));
+            throw (new UI.UIException("Unknown child widget creation specification.", null, args));
         }
-    }
-
-    public Widget makechild(Factory type, Object[] pargs, Object[] cargs) {
-        Widget child = type.create(this, cargs);
-        addchild(child, pargs);
-        return (child);
     }
 
     public void link() {
@@ -592,11 +602,16 @@ public class Widget {
             cancancel = (Integer) args[0] != 0;
         } else if (msg == "autofocus") {
             autofocus = (Integer) args[0] != 0;
-        } else if (msg == "focus") {
-            Widget w = ui.widgets.get((Integer) args[0]);
-            if (w != null) {
-                if (w.canfocus)
-                    setfocus(w);
+        } else if(msg == "focus") {
+            int tid = (Integer)args[0];
+            if(tid < 0) {
+                setfocus(null);
+            } else {
+                Widget w = ui.widgets.get(tid);
+                if(w != null) {
+                    if(w.canfocus)
+                        setfocus(w);
+                }
             }
         } else if (msg == "curs") {
             if (args.length == 0)
@@ -627,6 +642,8 @@ public class Widget {
                     }
                 };
             }
+        } else if(msg == "gk") {
+            gkey = (Integer)args[0];
         } else {
             System.err.println("Unhandled widget message: " + msg);
         }
@@ -650,8 +667,8 @@ public class Widget {
             next = wdg.next;
             wdg.tick(dt);
         }
-	/* It would be very nice to do these things in harmless mix-in
-	 * classes, but alas, this is Java. */
+        /* It would be very nice to do these things in harmless mix-in
+         * classes, but alas, this is Java. */
         anims.addAll(nanims);
         nanims.clear();
         for (Iterator<Anim> i = anims.iterator(); i.hasNext(); ) {
@@ -733,7 +750,27 @@ public class Widget {
         }
     }
 
+    private static final Map<Integer, Integer> gkeys = Utils.<Integer, Integer>map().
+            put((int)'0', KeyEvent.VK_0).put((int)'1', KeyEvent.VK_1).put((int)'2', KeyEvent.VK_2).put((int)'3', KeyEvent.VK_3).put((int)'4', KeyEvent.VK_4).
+            put((int)'5', KeyEvent.VK_5).put((int)'6', KeyEvent.VK_6).put((int)'7', KeyEvent.VK_7).put((int)'8', KeyEvent.VK_8).put((int)'9', KeyEvent.VK_9).
+            put((int)'`', KeyEvent.VK_BACK_QUOTE).put((int)'-', KeyEvent.VK_MINUS).put((int)'=', KeyEvent.VK_EQUALS).
+            put(8, KeyEvent.VK_BACK_SPACE).put(9, KeyEvent.VK_TAB).put(13, KeyEvent.VK_ENTER).put(27, KeyEvent.VK_ESCAPE).
+            put(128, KeyEvent.VK_UP).put(129, KeyEvent.VK_RIGHT).put(130, KeyEvent.VK_DOWN).put(131, KeyEvent.VK_LEFT).
+            put(132, KeyEvent.VK_INSERT).put(133, KeyEvent.VK_HOME).put(134, KeyEvent.VK_PAGE_UP).put(135, KeyEvent.VK_DELETE).put(136, KeyEvent.VK_END).put(137, KeyEvent.VK_PAGE_DOWN).map();
+    public static boolean matchgkey(KeyEvent ev, int gkey) {
+        if((gkey & 0xf000) != 0) {
+            return(((UI.modflags(ev) & ((gkey & 0xf000) >> 12)) == ((gkey & 0x0f00) >> 8)) &&
+                    (ev.getKeyCode() == gkeys.get(gkey & 0xff)));
+        } else {
+            return(ev.getKeyChar() == (gkey & 0xff));
+        }
+    }
+
     public boolean globtype(char key, KeyEvent ev) {
+        if((gkey != 0) && matchgkey(ev, gkey)) {
+            wdgmsg("activate");
+            return(true);
+        }
         for (Widget wdg = lchild; wdg != null; wdg = wdg.prev) {
             if (wdg.globtype(key, ev))
                 return (true);
@@ -918,11 +955,15 @@ public class Widget {
     }
 
     public Widget rprev() {
-        if (lchild != null)
-            return (lchild);
-        if (prev != null)
-            return (prev);
-        return (parent);
+        if (prev != null) {
+            Widget lc = prev.lchild;
+            if (lc != null) {
+                for(; lc.lchild != null; lc = lc.lchild);
+                return(lc);
+            }
+            return(prev);
+        }
+        return(parent);
     }
 
     public Widget rnext() {
@@ -951,24 +992,25 @@ public class Widget {
                     T cur = n(Widget.this);
 
                     private T n(Widget w) {
-                        Widget n;
-                        if (w == null) {
-                            return (null);
-                        } else if (w.child != null) {
-                            n = w.child;
-                        } else if (w == Widget.this) {
-                            return (null);
-                        } else if (w.next != null) {
-                            n = w.next;
-                        } else if (w.parent == Widget.this) {
-                            return (null);
-                        } else {
-                            n = w.parent;
+                        for (Widget n; true; w = n) {
+                            if (w == null) {
+                                return (null);
+                            } else if (w.child != null) {
+                                n = w.child;
+                            } else if (w == Widget.this) {
+                                return (null);
+                            } else if (w.next != null) {
+                                n = w.next;
+                            } else {
+                                for (n = w.parent; (n != null) && (n.next == null) && (n != Widget.this); n = n.parent)
+                                    ;
+                                if ((n == null) || (n == Widget.this))
+                                    return (null);
+                                n = n.next;
+                            }
+                            if ((n == null) || cl.isInstance(n))
+                                return (cl.cast(n));
                         }
-                        if ((n == null) || cl.isInstance(n))
-                            return (cl.cast(n));
-                        else
-                            return (n(n));
                     }
 
                     public T next() {
@@ -981,10 +1023,6 @@ public class Widget {
 
                     public boolean hasNext() {
                         return (cur != null);
-                    }
-
-                    public void remove() {
-                        throw (new UnsupportedOperationException());
                     }
                 });
             }

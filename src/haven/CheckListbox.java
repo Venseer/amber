@@ -20,6 +20,10 @@ public class CheckListbox extends Listbox<CheckListboxItem> {
         super(w, h, 18);
     }
 
+    public CheckListbox(int w, int h, int itemh) {
+        super(w, h, itemh);
+    }
+
     protected void itemclick(CheckListboxItem itm, int button) {
         if (button == 1) {
             itm.selected = !itm.selected;

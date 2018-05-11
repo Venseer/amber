@@ -2,6 +2,8 @@ package haven;
 
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 public class MinimapWnd extends Widget {
     private static final Tex bg = Window.bg;
@@ -14,8 +16,8 @@ public class MinimapWnd extends Widget {
     private static final Coord tlm = new Coord(3, 3), brm = new Coord(4, 4);
     public final LocalMiniMap mmap;
     private final MapView map;
-    private IButton center, viewdist, grid;
-    private ToggleButton pclaim, vclaim, realm, lock, mapwnd;
+    private IButton center, viewdist, grid, geoloc;
+    private ToggleButton pclaim, vclaim, realm, mapwnd;
     private boolean minimized;
     private Coord szr;
     private boolean resizing;
@@ -101,7 +103,6 @@ public class MinimapWnd extends Widget {
                 }
             }
         };
-
         center = new IButton("gfx/hud/wndmap/btns/center", "", "", "") {
             {
                 tooltip = Text.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Center the map on player"));
@@ -111,14 +112,34 @@ public class MinimapWnd extends Widget {
                 ((LocalMiniMap) mmap).center();
             }
         };
-        lock = new ToggleButton("gfx/hud/wndmap/btns/lock-d", "gfx/hud/wndmap/btns/lock", Config.maplocked) {
-            {
-                tooltip = Text.render(Resource.getLocString(Resource.BUNDLE_LABEL, "Lock map dragging"));
+        geoloc = new IButton("gfx/hud/wndmap/btns/geoloc", "", "", "") {
+            @Override
+            public Object tooltip(Coord c, Widget prev) {
+                Pair<String, String> coords = getCurCoords();
+                if (coords != null)
+                    tooltip = Text.render(String.format("Current location: %s x %s", coords.a, coords.b));
+                else
+                    tooltip = Text.render("Unable to determine your current location.");
+                return super.tooltip(c, prev);
             }
 
+            @Override
             public void click() {
-                Config.maplocked = !Config.maplocked;
-                Utils.setprefb("maplocked", Config.maplocked);
+                Pair<String, String> coords = getCurCoords();
+                if (coords != null) {
+                    try {
+                        WebBrowser.self.show(new URL(String.format("http://odditown.com/haven/map/#x=%s&y=%s&zoom=9", coords.a, coords.b)));
+                    } catch (WebBrowser.BrowserException e) {
+                        getparent(GameUI.class).error("Could not launch web browser.");
+                    } catch (MalformedURLException e) {
+                    }
+                } else {
+                    getparent(GameUI.class).error("Unable to determine your current location.");
+                }
+            }
+
+            private Pair<String, String> getCurCoords() {
+                return mmap.cur != null ? Config.gridIdsMap.get(mmap.cur.grid.id) : null;
             }
         };
         viewdist = new IButton("gfx/hud/wndmap/btns/viewdist", "", "", "") {
@@ -147,8 +168,8 @@ public class MinimapWnd extends Widget {
         add(vclaim, 29, 3);
         add(realm, 53, 3);
         add(mapwnd, 77, 3);
-        add(center, 101, 3);
-        add(lock, 125, 3);
+        add(geoloc, 101, 3);
+        add(center, 125, 3);
         add(viewdist, 149, 3);
         add(grid, 173, 3);
         pack();
@@ -348,7 +369,7 @@ public class MinimapWnd extends Widget {
             realm.hide();
             mapwnd.hide();
             center.hide();
-            lock.hide();
+            geoloc.hide();
             viewdist.hide();
             grid.hide();
         } else {
@@ -358,7 +379,7 @@ public class MinimapWnd extends Widget {
             realm.show();
             mapwnd.show();
             center.show();
-            lock.show();
+            geoloc.show();
             viewdist.show();
             grid.show();
         }

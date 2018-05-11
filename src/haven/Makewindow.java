@@ -40,16 +40,20 @@ public class Makewindow extends Widget {
     int xoff = 45;
     private static final int qmy = 38, outy = 65;
     public static final Text.Foundry nmf = new Text.Foundry(Text.serif, 20).aa(true);
-    private int qModProduct = -1;
+    private long qModProduct = -1;
     private static final Tex softcapl = Text.render("Softcap:").tex();
     private Tex softcap;
 
     @RName("make")
     public static class $_ implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             return (new Makewindow((String) args[0]));
         }
     }
+
+    private static final OwnerContext.ClassResolver<Makewindow> ctxr = new OwnerContext.ClassResolver<Makewindow>()
+            .add(Glob.class, wdg -> wdg.ui.sess.glob)
+            .add(Session.class, wdg -> wdg.ui.sess);
 
     public class Spec implements GSprite.Owner, ItemInfo.SpriteOwner {
         public Indir<Resource> res;
@@ -63,7 +67,7 @@ public class Makewindow extends Widget {
             this.res = res;
             this.sdt = new MessageBuf(sdt);
             if (num >= 0)
-                this.num = new TexI(Utils.outline2(Text.render(Integer.toString(num), Color.WHITE,  Text.numfnd).img, Utils.contrast(Color.WHITE)));
+                this.num = new TexI(Utils.outline2(Text.render(Integer.toString(num), Color.WHITE,  Text.num10Fnd).img, Utils.contrast(Color.WHITE)));
             else
                 this.num = null;
             this.rawinfo = info;
@@ -120,6 +124,11 @@ public class Makewindow extends Widget {
             return (res.get());
         }
 
+        public <T> T context(Class<T> cl) {
+            return (ctxr.context(cl, Makewindow.this));
+        }
+
+        @Deprecated
         public Glob glob() {
             return (ui.sess.glob);
         }
@@ -258,14 +267,14 @@ public class Makewindow extends Widget {
             }
 
             if (Config.showcraftcap && qmodValues.size() > 0) {
-                int product = 1;
-                for (int cap : qmodValues)
+                long product = 1;
+                for (long cap : qmodValues)
                     product *= cap;
 
                 if (product != qModProduct) {
                     qModProduct = product;
                     softcap = Text.renderstroked("" + (int) Math.pow(product, 1.0 / qmodValues.size()),
-                            Color.WHITE, Color.BLACK, Glob.CAttr.capval).tex();
+                            Color.WHITE, Color.BLACK, Text.num12boldFnd).tex();
                 }
 
                 Coord sz = softcap.sz();

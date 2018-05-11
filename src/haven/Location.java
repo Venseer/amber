@@ -106,10 +106,10 @@ public class Location extends Transform {
                     return ("instanced location");
                 }
 
-                final haven.glsl.ShaderMacro[] shaders = {mkinstanced};
+                final haven.glsl.ShaderMacro shader = mkinstanced;
 
-                public haven.glsl.ShaderMacro[] shaders() {
-                    return (shaders);
+                public haven.glsl.ShaderMacro shader() {
+                    return (shader);
                 }
             };
 

@@ -148,6 +148,8 @@ public class ChatUI extends Widget {
         public int urgency = 0;
 
         public static abstract class Message {
+            public final double time = Utils.ntime();
+
             public abstract Text text();
 
             public abstract Tex tex();
@@ -902,7 +904,7 @@ public class ChatUI extends Widget {
 
     @RName("schan")
     public static class $SChan implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             String name = (String) args[0];
             return (new SimpleChat(false, name));
         }
@@ -910,7 +912,7 @@ public class ChatUI extends Widget {
 
     @RName("mchat")
     public static class $MChat implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             String name = (String) args[0];
             int urgency = (Integer) args[1];
             return (new MultiChat(false, Resource.getLocString(Resource.BUNDLE_LABEL, name), urgency));
@@ -919,14 +921,14 @@ public class ChatUI extends Widget {
 
     @RName("pchat")
     public static class $PChat implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             return (new PartyChat());
         }
     }
 
     @RName("pmchat")
     public static class $PMChat implements Factory {
-        public Widget create(Widget parent, Object[] args) {
+        public Widget create(UI ui, Object[] args) {
             int other = (Integer) args[0];
             return (new PrivChat(true, other));
         }
@@ -964,7 +966,7 @@ public class ChatUI extends Widget {
 
     private class Selector extends Widget {
         public final BufferedImage ctex = Resource.loadimg("gfx/hud/chantex");
-        public final Text.Foundry tf = new Text.Foundry(Text.serif.deriveFont(Font.BOLD, 12)).aa(true);
+        public final Text.Foundry tf = new Text.Foundry(Text.serif.deriveFont(Font.BOLD, Text.cfg.chatName)).aa(true);
         public final Text.Furnace[] nf = {
                 new PUtils.BlurFurn(new PUtils.TexFurn(tf, ctex), 1, 1, new Color(80, 40, 0)),
                 new PUtils.BlurFurn(new PUtils.TexFurn(tf, ctex), 1, 1, new Color(0, 128, 255)),
@@ -1109,7 +1111,7 @@ public class ChatUI extends Widget {
         public final Channel chan;
         public final Text chnm;
         public final Channel.Message msg;
-        public final long time = System.currentTimeMillis();
+        public final double time = Utils.ntime();
 
         private Notification(Channel chan, Channel.Message msg) {
             this.chan = chan;
@@ -1136,11 +1138,11 @@ public class ChatUI extends Widget {
         } else {
             c = br.sub(0, 5);
         }
-        long now = System.currentTimeMillis();
+        double now = Utils.ntime();
         synchronized (notifs) {
             for (Iterator<Notification> i = notifs.iterator(); i.hasNext(); ) {
                 Notification n = i.next();
-                if (now - n.time > 5000) {
+                if (now - n.time > 5.0) {
                     i.remove();
                     continue;
                 }

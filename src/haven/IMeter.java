@@ -40,8 +40,8 @@ public class IMeter extends Widget {
 
     @RName("im")
     public static class $_ implements Factory {
-        public Widget create(Widget parent, Object[] args) {
-            Indir<Resource> bg = parent.ui.sess.getres((Integer) args[0]);
+        public Widget create(UI ui, Object[] args) {
+            Indir<Resource> bg = ui.sess.getres((Integer) args[0]);
             List<Meter> meters = new LinkedList<Meter>();
             for (int i = 1; i < args.length; i += 2)
                 meters.add(new Meter((Color) args[i], (Integer) args[i + 1]));
@@ -93,7 +93,7 @@ public class IMeter extends Widget {
             if (ponyalarm) {
                 try {
                     Resource res = bg.get();
-                    if (res != null && res.name.equals("gfx/hud/meter/mount")) {
+                    if (res != null && res.name.equals("gfx/hud/meter/häst")) {
                         if (meters.get(0).a <= 10) {
                             Audio.play(ponysfx, 1.0);
                             ponyalarm = false;

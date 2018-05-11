@@ -1,6 +1,9 @@
-package haven;
+package haven.timers;
 
 
+import haven.Glob;
+import haven.Session;
+import haven.Utils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -9,11 +12,9 @@ import java.util.List;
 
 public class TimersThread extends Thread {
     private List<TimerWdg> timers = new ArrayList<TimerWdg>();
-    private long time, epoch;
 
-    public void tick(long time, long epoch) {
-        this.time = time;
-        this.epoch = epoch;
+    public TimersThread() {
+        super("Timers Thread");
     }
 
     @Override
@@ -22,18 +23,19 @@ public class TimersThread extends Thread {
             synchronized (timers) {
                 for (int i = 0; i < timers.size(); i++) {
                     TimerWdg timer = timers.get(i);
-                    if (!timer.active)
+                    if (!timer.active || timer.ui == null)
                         continue;
 
-                    long srvtime = globtime();
-                    if (srvtime != 0) {
-                        timer.elapsed = Math.round(srvtime / 3.0) - timer.start;
-                        timer.updateRemaining();
+                    Session sess = timer.ui.sess;
+                    if (!sess.state.equals("") || sess.glob.serverEpoch == 0)
+                        continue;
 
-                        if (timer.elapsed >= timer.duration) {
-                            timer.done();
-                            i--;
-                        }
+                    timer.elapsed = (long)(sess.glob.globtime() * 1000 / Glob.SERVER_TIME_RATIO) - timer.start;
+                    timer.updateRemaining();
+
+                    if (timer.elapsed >= timer.duration) {
+                        timer.done();
+                        i--;
                     }
                 }
             }
@@ -91,25 +93,6 @@ public class TimersThread extends Thread {
             }
             add(t.getString("name"), t.getLong("duration"), start);
         }
-    }
-
-    private long lastrep = 0;
-    private long rgtime = 0;
-
-    public long globtime() {
-        if (time == 0 || epoch == 0)
-            return 0;
-
-        long now = System.currentTimeMillis();
-        long raw = ((now - epoch) * 3) + (time * 1000);
-        if (lastrep == 0) {
-            rgtime = raw;
-        } else {
-            long gd = (now - lastrep) * 3;
-            rgtime += gd;
-        }
-        lastrep = now;
-        return rgtime;
     }
 }
 
